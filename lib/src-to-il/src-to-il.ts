@@ -1713,6 +1713,7 @@ export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpressio
     addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
     addOp(cur, 'Literal', literalOperand(i));
     compileExpression(cur, element);
+    compilingNode(cur, expression);
     addOp(cur, 'ObjectSet');
   }
   // If the array literal ends in an elision, then we need to update the length
@@ -1721,6 +1722,7 @@ export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpressio
     addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
     addOp(cur, 'Literal', literalOperand('length'));
     addOp(cur, 'Literal', literalOperand(expression.elements.length));
+    compilingNode(cur, expression);
     addOp(cur, 'ObjectSet');
   }
 }

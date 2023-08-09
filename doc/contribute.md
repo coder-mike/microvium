@@ -90,6 +90,16 @@ npm run test:js -- -g scope-analysis
 When you're stopped on an instruction, you can inspect the current source code position using
 `VirtualMachine.currentSourceLocation`.
 
+### Heap corruption
+
+Enable `MVM_VERY_EXPENSIVE_MEMORY_CHECKS`
+
+Use `vm_checkHeap` to validate the heap.
+
+Use `vm_checkValue` to check that a value points to a valid allocation if it's a pointer.
+
+Use `vm_getCallStack(vm, 0)` to list the current stack frames.
+
 ## VS Code
 
 I use VS Code for development.

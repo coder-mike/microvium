@@ -17,6 +17,7 @@ void fatalError(void* vm, int e);
 #undef MVM_INCLUDE_DEBUG_CAPABILITY
 #define MVM_INCLUDE_DEBUG_CAPABILITY 1
 
+// Note: don't use MVM_VERY_EXPENSIVE_MEMORY_CHECKS on the "gc" test case.
 #undef MVM_VERY_EXPENSIVE_MEMORY_CHECKS
 #define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 1
 
@@ -35,3 +36,4 @@ void fatalError(void* vm, int e);
 #undef MVM_FREE
 #define MVM_FREE allocator_free
 
+#define MVM_DEBUG_UTILS 1

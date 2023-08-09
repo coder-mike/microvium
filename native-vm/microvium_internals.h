@@ -319,6 +319,10 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define MVM_CASE(value) case value
 #endif
 
+#ifndef MVM_DEBUG_UTILS
+#define MVM_DEBUG_UTILS 0
+#endif
+
 // Allocation headers on functions are different. Nothing needs the allocation
 // size specifically, so the 12 size bits are repurposed.
 /** Flag bit to indicate continuation vs normal func. (1 = continuation) */
@@ -765,7 +769,7 @@ typedef struct vm_TsRegisters { // 28 B on 32-bit machine
   Value* pArgs;
   uint16_t* pCatchTarget; // NULL if no catch block, otherwise points to catch block
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
-  Value closure; // Closure scope
+  Value closure; // Closure scope or VM_VALUE_UNDEFINED
 
   /**
    * Contains the asynchronous callback for the call of the current activation
@@ -850,6 +854,16 @@ typedef struct gc_TsGCCollectionState {
   TsBucket* lastBucket;
   uint16_t* lastBucketEndCapacity;
 } gc_TsGCCollectionState;
+
+typedef struct vm_TsCallStackFrame {
+  uint16_t programCounter;
+  Value* frameBase;
+  int frameDepth; // Number of variables
+  Value* args;
+  int argCount;
+  Value* closure;
+  int closureSlotCount;
+} vm_TsCallStackFrame;
 
 #define TOMBSTONE_HEADER ((TC_REF_TOMBSTONE << 12) | 2)
 
@@ -953,6 +967,15 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
 #endif // MVM_SAFE_MODE
+
+#if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+void vm_checkHeap(mvm_VM* vm);
+void vm_checkValue(mvm_VM* vm, mvm_Value value);
+#endif
+
+#if MVM_DEBUG_UTILS
+vm_TsCallStackFrame* vm_getCallStack(VM* vm, int* out_frameCount);
+#endif
 
 static const Value smallLiterals[] = {
   /* VM_SLV_UNDEFINED */    VM_VALUE_DELETED,

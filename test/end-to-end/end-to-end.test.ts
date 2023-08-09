@@ -21,6 +21,7 @@ import { normalizeIL } from '../../lib/normalize-il';
 import { anyGrepSelector } from '../code-coverage.test';
 import nodeVM from 'vm';
 import { mvm_TeType } from '../../lib/runtime-types';
+import { stringifySourceMap } from '../../lib/source-map';
 
 /*
  * TODO I think it would make sense at this point to have a custom test
@@ -313,9 +314,10 @@ suite('end-to-end', function () {
         writeTextFile(path.resolve(testArtifactDir, '1.post-load.snapshot'), stringifySnapshotIL(postLoadSnapshotInfo, {
           // commentSourceLocations: true
         }));
-        const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true);
+        const { snapshot: postLoadSnapshot, html: postLoadHTML } = encodeSnapshot(postLoadSnapshotInfo, true, true);
         fs.writeFileSync(path.resolve(testArtifactDir, '1.post-load.mvm-bc'), postLoadSnapshot.data, null);
         writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.html'), htmlPageTemplate(postLoadHTML!));
+        writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.source-map'), stringifySourceMap(postLoadSnapshot.sourceMap ?? unexpected()));
         const decoded = decodeSnapshot(postLoadSnapshot);
         writeTextFile(path.resolve(testArtifactDir, '1.post-load.mvm-bc.disassembly'), decoded.disassembly);
         if (!meta.dontCompareDisassembly) {

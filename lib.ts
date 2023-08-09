@@ -152,6 +152,7 @@ export interface SnapshottingOptions {
   // the snapshotting will also output an IL file
   outputSnapshotIL?: boolean;
   snapshotILFilename?: string;
+  generateSourceMap?: boolean;
 }
 
 export interface ModuleSource {

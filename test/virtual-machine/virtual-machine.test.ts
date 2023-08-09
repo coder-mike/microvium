@@ -26,7 +26,7 @@ suite(VirtualMachine.name, function () {
 
     assert.deepEqual(printLog, ['Hello, World!']);
 
-    const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
+    const { snapshot, html } = encodeSnapshot(snapshotInfo, true, false);
     const outputHTML = htmlPageTemplate(html!);
 
     testResults.push(stringifySnapshotIL(snapshotInfo), outputFilenames.snapshot);
@@ -48,7 +48,7 @@ suite(VirtualMachine.name, function () {
     vm.evaluateModule({ sourceText: src, debugFilename: filename });
     const snapshotInfo = vm.createSnapshotIL();
 
-    const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
+    const { snapshot, html } = encodeSnapshot(snapshotInfo, true, false);
     const outputHTML = htmlPageTemplate(html!);
 
     testResults.push(stringifySnapshotIL(snapshotInfo), outputFilenames.snapshot);
@@ -75,7 +75,7 @@ suite(VirtualMachine.name, function () {
     vm.evaluateModule({ sourceText: src, debugFilename: filename });
     const snapshotInfo = vm.createSnapshotIL();
 
-    const { snapshot, html } = encodeSnapshot(snapshotInfo, true);
+    const { snapshot, html } = encodeSnapshot(snapshotInfo, true, false);
     const outputHTML = htmlPageTemplate(html!);
 
     testResults.push(stringifySnapshotIL(snapshotInfo), outputFilenames.snapshot);

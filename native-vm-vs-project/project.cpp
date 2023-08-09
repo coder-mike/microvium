@@ -16,8 +16,12 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "async-await-promise";
-//const string runOnlyTest = "";
+//const string runOnlyTest = "gc";
+const string runOnlyTest = "";
+
+vector<string> skipTests = {
+  "gc",
+};
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = {
@@ -88,6 +92,11 @@ int main()
         cout << "skipping" << endl;
         continue;
       }
+    }
+    // Check if skipTests vector contains this test
+    if (find(skipTests.begin(), skipTests.end(), testName) != skipTests.end()) {
+      cout << "skipping" << endl;
+      continue;
     }
 
     cout << "running" << endl;
@@ -303,7 +312,7 @@ static mvm_TeError vmRunGC(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Va
   return MVM_E_SUCCESS;
 }
 
-static mvm_TeError asyncTestComplete(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {  
+static mvm_TeError asyncTestComplete(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   return MVM_E_SUCCESS;
 }
 

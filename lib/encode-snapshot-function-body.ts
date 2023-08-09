@@ -360,10 +360,18 @@ export function writeFunctionBody(
         const offsetBefore = output.currentOffset;
         opMeta.emitPass3(innerCtx);
         const offsetAfter = output.currentOffset;
-        offsetBefore.bind(offsetBefore => offsetAfter.map(offsetAfter => {
-          const measuredSize = offsetAfter - offsetBefore;
-          hardAssert(measuredSize === opMeta.size, `Operation changed from committed size of ${opMeta.size} to ${measuredSize}. at ${offsetBefore}, ${op}, ${output}`);
+        offsetBefore.bind(offsetBefore_ => offsetAfter.map(offsetAfter => {
+          const measuredSize = offsetAfter - offsetBefore_;
+          hardAssert(measuredSize === opMeta.size, `Operation changed from committed size of ${opMeta.size} to ${measuredSize}. at ${offsetBefore_}, ${op}, ${output}`);
         }));
+        if (op.sourceLoc) {
+          ctx.sourceMapAdd?.({
+            start: offsetBefore,
+            end: offsetAfter,
+            source: op.sourceLoc,
+            op,
+          });
+        }
       }
     }
   }
@@ -387,6 +395,13 @@ interface BlockMeta {
   paddingBeforeBlock?: number;
 }
 
+export interface FutureInstructionSourceMapping {
+  start: Future<number>;
+  end: Future<number>;
+  source: IL.OperationSourceLoc;
+  op: IL.Operation;
+}
+
 export interface InstructionEmitContext {
   getShortCallIndex(callInfo: CallInfo): number;
   offsetOfFunction: (id: IL.FunctionID) => Future<number>;
@@ -396,6 +411,7 @@ export interface InstructionEmitContext {
   preferBlockToBeNext?: (blockId: IL.BlockID) => void;
   addName(offset: Future, type: string, name: string): void;
   requireBlockToBeAligned?: (blockId: IL.BlockID, alignment: '2-byte') => void;
+  sourceMapAdd?(mapping: FutureInstructionSourceMapping): void;
 }
 
 class InstructionEmitter {

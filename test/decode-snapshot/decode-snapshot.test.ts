@@ -34,7 +34,7 @@ suite('decodeSnapshot', function () {
 
     const snapshotToSave = vm.createSnapshotIL();
     const snapshotToSaveStr = stringifySnapshotIL(snapshotToSave);
-    const snapshot = encodeSnapshot(snapshotToSave, false).snapshot;
+    const snapshot = encodeSnapshot(snapshotToSave, false, false).snapshot;
     const decoded = decodeSnapshot(snapshot);
     const snapshotLoaded = stringifySnapshotIL(decoded.snapshotInfo);
     const disassemblyString = decoded.disassembly;

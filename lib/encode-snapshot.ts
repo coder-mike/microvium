@@ -15,10 +15,10 @@ import { SnapshotIL, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } 
 import { crc16ccitt } from 'crc';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
 import { stringifyValue } from './stringify-il';
-import { CallInfo, InstructionEmitContext, writeFunctionBody } from './encode-snapshot-function-body';
+import { CallInfo, InstructionEmitContext, FutureInstructionSourceMapping, writeFunctionBody } from './encode-snapshot-function-body';
+import { SourceMap } from './source-map';
 
-
-export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean): {
+export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean, generateSourceMap: boolean): {
   snapshot: SnapshotClass,
   html?: HTML
 } {
@@ -76,6 +76,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   const importLookup = new Map<IL.HostFunctionID, number>();
   const strings = new Map<string, Future<vm_Reference>>();
   const globalSlotIndexMapping = new Map<VM.GlobalSlotID, number>();
+  const futureSourceMap: FutureInstructionSourceMapping[] = [];
 
   let importCount = 0;
 
@@ -189,8 +190,22 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   if (errInfo) {
     return unexpected('Failed to create snapshot binary: ' + errInfo.err);
   }
+
+  // Emit source map
+  let sourceMap: SourceMap | undefined;
+  if (generateSourceMap) {
+    sourceMap = {
+      operations: futureSourceMap.map(m => ({
+        start: m.start.lastValue ?? unexpected(),
+        end: m.end.lastValue ?? unexpected(),
+        source: m.source,
+        op: m.op,
+      }))
+    };
+  }
+
   return {
-    snapshot: new SnapshotClass(snapshotBuffer, { names }),
+    snapshot: new SnapshotClass(snapshotBuffer, { names }, sourceMap),
     html: generateDebugHTML ? bytecode.toHTML() : undefined
   };
 
@@ -910,6 +925,10 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         index = shortCallTable.length;
         shortCallTable.push(Object.freeze(callInfo));
         return index;
+      },
+
+      sourceMapAdd: !generateSourceMap ? undefined : (mapping: FutureInstructionSourceMapping) => {
+        futureSourceMap.push(mapping);
       }
     };
 
@@ -994,3 +1013,4 @@ export function programAddressToKey({ funcId, blockId, operationIndex }: IL.Prog
 const assertUInt16 = Future.lift((v: number) => hardAssert(isUInt16(v)));
 const assertUInt14 = Future.lift((v: number) => hardAssert(isUInt14(v)));
 const assertIsEven = (v: Future<number>, msg: string) => v.map(v => hardAssert(v % 2 === 0, msg));
+

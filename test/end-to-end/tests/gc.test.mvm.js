@@ -1,8 +1,13 @@
 /*---
 runExportedFunction: 0
 nativeOnly: true
+testOnly: false
 description: Some garbage collection tests
 ---*/
+
+// WARNING: these tests don't work if MVM_VERY_EXPENSIVE_MEMORY_CHECKS is
+// enabled because it triggers garbage collections at unexpected times.
+
 function run() {
   garbage = 0;
   heap = getHeapUsed();
@@ -19,7 +24,6 @@ function function1() {
   globalVariable = [0];
   checkAllocated(10, 0);
 
-  // TODO: When we have closures, we should check with a closure reference as well
   // New array with local reference
   let localVariable1A = [1];
   checkAllocated(10, 0);

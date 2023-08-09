@@ -21,6 +21,7 @@ export interface CLIArgs {
   generatePort?: boolean;
   outputBytes?: boolean;
   outputIL?: boolean;
+  outputSourceMap?: boolean;
 }
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -109,6 +110,9 @@ export async function runApp(args: CLIArgs, silent?: boolean, printHelp?: () => 
     if (args.outputIL) {
       snapshottingOpts.outputSnapshotIL = true;
       snapshottingOpts.snapshotILFilename = snapshotFilename + '.il';
+    }
+    if (args.outputSourceMap) {
+      snapshottingOpts.generateSourceMap = true;
     }
     const snapshot = vm.createSnapshot(snapshottingOpts);
     fs.writeFileSync(snapshotFilename, snapshot.data);

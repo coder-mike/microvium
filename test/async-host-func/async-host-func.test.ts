@@ -279,18 +279,34 @@ suite('async-host-func', function () {
       const print = vmImport(1);
       vmExport(0, run);
 
-      function run() {
-        myAsyncFunc();
+      function run(useSecondAwaiter) {
+        print('Start of run');
+        myAsyncFunc(useSecondAwaiter);
+        print('End of run');
       }
 
-      async function myAsyncFunc() {
+      async function myAsyncFunc(useSecondAwaiter) {
         const promise = asyncHostFunc();
+        if (useSecondAwaiter) {
+          anotherFunc(promise);
+        }
         try {
           const value = await promise;
           print('Promise resolved');
           print(value);
         } catch (e) {
           print('Promise rejected');
+          print(e);
+        }
+      }
+
+      async function anotherFunc(promise) {
+        try {
+          const value = await promise;
+          print('Promise resolved 2');
+          print(value);
+        } catch (e) {
+          print('Promise rejected 2');
           print(e);
         }
       }
@@ -321,27 +337,81 @@ suite('async-host-func', function () {
     }
 
     subTest('immediate-resolve', () => {
-      run();
-      assert.deepEqual(printout, ['Promise resolved', 42]);
+      run(false);
+      assert.deepEqual(printout, [
+        'Start of run',
+        'End of run',
+        'Promise resolved', 42
+      ]);
     });
 
     subTest('immediate-reject', () => {
-      run();
-      assert.deepEqual(printout, ['Promise rejected', 43]);
+      run(false);
+      assert.deepEqual(printout, [
+        'Start of run',
+        'End of run',
+        'Promise rejected', 43
+      ]);
     });
 
     subTest('later-resolve', () => {
-      run();
-      assert.deepEqual(printout, []);
+      run(false);
+      assert.deepEqual(printout, [
+        'Start of run',
+        'End of run',
+      ]);
       callback(true, 142);
-      assert.deepEqual(printout, ['Promise resolved', 142]);
+      assert.deepEqual(printout, [
+        'Start of run',
+        'End of run',
+        'Promise resolved', 142
+      ]);
     });
 
     subTest('later-reject', () => {
-      run();
-      assert.deepEqual(printout, []);
+      run(false);
+      assert.deepEqual(printout, [
+        'Start of run',
+        'End of run',
+      ]);
       callback(false, 'error');
-      assert.deepEqual(printout, ['Promise rejected', 'error']);
+      assert.deepEqual(printout, [
+        'Start of run',
+        'End of run',
+        'Promise rejected', 'error'
+      ]);
+    });
+
+    // Resolve with 2 awaiters
+    subTest('later-resolve', () => {
+      run(true);
+      assert.deepEqual(printout, [
+        'Start of run',
+        'End of run',
+      ]);
+      callback(true, 142);
+      assert.deepEqual(printout, [
+        'Start of run',
+        'End of run',
+        'Promise resolved 2', 142,
+        'Promise resolved', 142,
+      ]);
+    });
+
+    // Reject with 2 awaiters
+    subTest('later-reject', () => {
+      run(true);
+      assert.deepEqual(printout, [
+        'Start of run',
+        'End of run',
+      ]);
+      callback(false, 'error');
+      assert.deepEqual(printout, [
+        'Start of run',
+        'End of run',
+        'Promise rejected 2', 'error',
+        'Promise rejected', 'error',
+      ]);
     });
 
     // WIP: I'm not completely sure but something is giving me segmentation

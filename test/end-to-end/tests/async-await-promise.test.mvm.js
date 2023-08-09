@@ -116,4 +116,5 @@ async function myAsyncFuncReject() {
 
 // TODO: documentation on how to use async-await
 
+// TODO: run tests without safe mode
 // WIP Bump the version numbers, since we have new builtins and operations

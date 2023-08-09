@@ -131,7 +131,7 @@ export class VirtualMachineFriendly implements Microvium {
       }));
     }
     const generateHTML = false; // For debugging
-    const { snapshot, html } = encodeSnapshot(snapshotInfo, generateHTML);
+    const { snapshot, html } = encodeSnapshot(snapshotInfo, generateHTML, opts?.generateSourceMap ?? false);
     if (html) writeTextFile('snapshot.html', html);
     return snapshot;
   }

@@ -24,3 +24,4 @@ temp-proj
 .thoughts
 /test/getting-started/code/script.mvm-bc
 /.vscode/bookmarks.json
+*.source-map

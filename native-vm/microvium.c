@@ -64,6 +64,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     lpProgramCounter = reg->lpProgramCounter; \
     pFrameBase = reg->pFrameBase; \
     pStackPointer = reg->pStackPointer; \
+    VM_EXEC_SAFE_MODE(reg->pStackPointer = NULL;) \
+    VM_EXEC_SAFE_MODE(reg->lpProgramCounter = LongPtr_new(NULL);) \
   } while (false)
 
   #define FLUSH_REGISTER_CACHE() do { \
@@ -72,6 +74,9 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     reg->lpProgramCounter = lpProgramCounter; \
     reg->pFrameBase = pFrameBase; \
     reg->pStackPointer = pStackPointer; \
+    VM_EXEC_SAFE_MODE(pFrameBase = NULL;) \
+    VM_EXEC_SAFE_MODE(pStackPointer = NULL;) \
+    VM_EXEC_SAFE_MODE(lpProgramCounter = LongPtr_new(NULL);) \
   } while (false)
 
   #define READ_PGM_1(target) do { \
@@ -265,19 +270,18 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   //   - Arg count:             /* argc */ vm->stack->reg.argCountAndFlags & 0x7F
   //   - First 4 arg values:    /* args */ vm->stack->reg.pArgs,4
   //
+  //   - Caller PC:             /* caller-pc */ pFrameBase[-1]
+  //
   // Notes:
   //
   //   - The value of VM_VALUE_UNDEFINED is 0x001
   //   - If a value is _odd_, interpret it as a bytecode address by dividing by 2
   //
 
-SUB_DO_NEXT_INSTRUCTION: // TODO: I think I should rename LBL to SUB
+SUB_DO_NEXT_INSTRUCTION:
   CODE_COVERAGE(59); // Hit
 
-  // This is not required for execution but is intended for diagnostics,
-  // required by mvm_getCurrentAddress.
-  // TODO: If MVM_INCLUDE_DEBUG_CAPABILITY is not included, maybe this shouldn't be here, and `mvm_getCurrentAddress` should also not be available.
-  reg->lpProgramCounter = lpProgramCounter;
+  VM_ASSERT(vm, reg->usingCachedRegisters);
 
   // Check we're within range
   #if MVM_DONT_TRUST_BYTECODE
@@ -810,7 +814,8 @@ SUB_OP_EXTENDED_1: {
       FLUSH_REGISTER_CACHE();
       TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
       pObject->dpNext = VM_VALUE_NULL;
-      getProperty(vm, &regP1[1], &pStackPointer[-1], &pObject->dpProto);
+      // WIP: there's actually a problem here I think. The slot &pObject->dpProto is not stable across GC collections
+      getProperty(vm, &regP1[1], &reg->pStackPointer[-1], &pObject->dpProto);
       TeTypeCode tc = deepTypeOf(vm, pObject->dpProto);
       if ((tc != TC_REF_PROPERTY_LIST) && (tc != TC_REF_CLASS) && (tc != TC_REF_ARRAY)) {
         pObject->dpProto = VM_VALUE_NULL;
@@ -930,7 +935,7 @@ SUB_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_OBJECT_GET_1): {
       CODE_COVERAGE(114); // Hit
       FLUSH_REGISTER_CACHE();
-      err = getProperty(vm, pStackPointer - 2, pStackPointer - 1, pStackPointer - 2);
+      err = getProperty(vm, reg->pStackPointer - 2, reg->pStackPointer - 1, reg->pStackPointer - 2);
       CACHE_REGISTERS();
       if (err != MVM_E_SUCCESS) goto SUB_EXIT;
       goto SUB_TAIL_POP_1_PUSH_0;
@@ -963,9 +968,9 @@ SUB_OP_EXTENDED_1: {
         // Note: the intermediate values are saved back to the stack so that
         // they're preserved if there is a GC collection. Even these conversions
         // can trigger a GC collection
-        pStackPointer[-2] = vm_convertToString(vm, pStackPointer[-2]);
-        pStackPointer[-1] = vm_convertToString(vm, pStackPointer[-1]);
-        reg1 = vm_concat(vm, &pStackPointer[-2], &pStackPointer[-1]);
+        reg->pStackPointer[-2] = vm_convertToString(vm, reg->pStackPointer[-2]);
+        reg->pStackPointer[-1] = vm_convertToString(vm, reg->pStackPointer[-1]);
+        reg1 = vm_concat(vm, &reg->pStackPointer[-2], &reg->pStackPointer[-1]);
         CACHE_REGISTERS();
         goto SUB_TAIL_POP_2_PUSH_REG1;
       } else {
@@ -1040,7 +1045,7 @@ SUB_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_OBJECT_SET_1): {
       CODE_COVERAGE(124); // Hit
       FLUSH_REGISTER_CACHE();
-      err = setProperty(vm, pStackPointer - 3);
+      err = setProperty(vm, reg->pStackPointer - 3);
       CACHE_REGISTERS();
       if (err != MVM_E_SUCCESS) {
         CODE_COVERAGE_UNTESTED(265); // Not hit
@@ -1963,7 +1968,7 @@ SUB_OP_EXTENDED_4: {
 
       // Note: leave object on the stack in case a GC cycle is triggered by the array allocation
       FLUSH_REGISTER_CACHE();
-      err = vm_objectKeys(vm, &pStackPointer[-1]);
+      err = vm_objectKeys(vm, &reg->pStackPointer[-1]);
       // TODO: We could maybe eliminate the common CACHE_REGISTERS operation if
       // the exit path checked the flag and cached for us.
       CACHE_REGISTERS();
@@ -1975,7 +1980,7 @@ SUB_OP_EXTENDED_4: {
       CODE_COVERAGE(324); // Hit
 
       FLUSH_REGISTER_CACHE();
-      err = vm_uint8ArrayNew(vm, &pStackPointer[-1]);
+      err = vm_uint8ArrayNew(vm, &reg->pStackPointer[-1]);
       CACHE_REGISTERS();
 
       goto SUB_TAIL_POP_0_PUSH_0;
@@ -2088,7 +2093,7 @@ SUB_OP_EXTENDED_4: {
       // caller, otherwise this will synthesize a Promise and return a callback
       // that resolves or rejects the promise.
       reg2 = vm_asyncStartUnsafe(vm,
-        pFrameBase /* synchronous result slot */
+        reg->pFrameBase /* synchronous result slot */
       );
       vm_push(vm, reg2); // GC-reachable, because vm_scopePushOrNew performs an allocation
 
@@ -2313,7 +2318,7 @@ SUB_AWAIT: {
       // No subscribers yet (hot path)
       regP1[VM_OIS_PROMISE_OUT] = reg->closure;
     } else {
-      CODE_COVERAGE_UNTESTED(716); // Not hit
+      CODE_COVERAGE(716); // Hit
       TeTypeCode tc = deepTypeOf(vm, reg3 /* subscribers */);
 
       // Warning: the stack work here is a bit awkward but required because when
@@ -2325,19 +2330,19 @@ SUB_AWAIT: {
       vm_push(vm, reg1 /* promise */);
       vm_push(vm, reg3 /* subscriberOrArray */);
       if (tc == TC_REF_CLOSURE) {
-        CODE_COVERAGE_UNTESTED(717); // Not hit
+        CODE_COVERAGE(717); // Hit
         // Single subscriber. Upgrade to array
         reg2 = vm_newArray(vm, 2); // [old subscriber, new subscriber]
         vm_push(vm, reg2 /* array */);
-        vm_arrayPush(vm, &pStackPointer[-1] /* array */, &pStackPointer[-2] /* subscriber */);
+        vm_arrayPush(vm, &reg->pStackPointer[-1] /* array */, &reg->pStackPointer[-2] /* subscriber */);
         vm_pop(vm); // array
-        regP1 = ShortPtr_decode(vm, pStackPointer[-2] /* promise */); // May have moved
+        regP1 = ShortPtr_decode(vm, reg->pStackPointer[-2] /* promise */); // May have moved
         regP1[VM_OIS_PROMISE_OUT] = reg2;
-        pStackPointer[-1] = reg2;
+        reg->pStackPointer[-1] = reg2;
       } else {
         CODE_COVERAGE_UNTESTED(718); // Not hit
       }
-      vm_arrayPush(vm, &pStackPointer[-1] /* subscriberOrArray */, &reg->closure);
+      vm_arrayPush(vm, &reg->pStackPointer[-1] /* subscriberOrArray */, &reg->closure);
       vm_pop(vm); // subscriberOrArray
       vm_pop(vm); // promise
     }
@@ -2436,13 +2441,13 @@ SUB_ASYNC_COMPLETE: {
     } else {
       // Multiple subscribers
       // WIP Coverage
-      CODE_COVERAGE_UNTESTED(721); // Not hit
+      CODE_COVERAGE(721); // Hit
       VM_ASSERT(vm, tc == TC_REF_ARRAY);
       TsArray* pArray = (TsArray*)ShortPtr_decode(vm, callbackList);
       int len = VirtualInt14_decode(vm, pArray->viLength);
       Value* subscribers = ShortPtr_decode(vm, pArray->dpData);
       // WIP Coverage
-      TABLE_COVERAGE(len > 2 ? 1 : 0, 2, 722); // Not hit
+      TABLE_COVERAGE(len > 2 ? 1 : 0, 2, 722); // Hit 1/2
       for (int i = 0; i < len; i++) {
         Value callback = subscribers[i];
         vm_scheduleContinuation(vm, callback, reg2, reg3);
@@ -2688,20 +2693,6 @@ SUB_CALL_HOST_COMMON: {
   Value* pResult = pStackPointer++;
   *pResult = VM_VALUE_UNDEFINED;
 
-  // Note: I'm not calling `FLUSH_REGISTER_CACHE` here, even though control is
-  // leaving the `run` function. One reason is that control is _also_ leaving
-  // the current function activation, and the local registers states have no use
-  // to the callee. The other reason is that it's "safer" and cheaper to keep
-  // the activation state local, rather than flushing it to the shared space
-  // `vm->stack->reg` where it could be trashed indirectly by the callee (see
-  // the earlier comment in this block).
-  //
-  // The only the exception to this is the stack pointer, which is obviously
-  // shared between the caller and callee, and the base pointer which is required
-  // if the host function triggers a garbage collection
-  reg->pStackPointer = pStackPointer;
-  reg->pFrameBase = pFrameBase;
-
   // The function `mvm_asyncStart` needs to know the state of the callee flag
   // AF_VOID_CALLED, but we need to save the original state to restore later.
   uint16_t saveArgCountAndFlags = reg->argCountAndFlags;
@@ -2710,6 +2701,8 @@ SUB_CALL_HOST_COMMON: {
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
   mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
   mvm_HostFunctionID hostFunctionID = vm_getHostFunctionId(vm, reg2);
+
+  FLUSH_REGISTER_CACHE();
 
   /*
   Note: this subroutine does not call PUSH_REGISTERS to save the frame boundary.
@@ -2725,34 +2718,27 @@ SUB_CALL_HOST_COMMON: {
   #if (MVM_SAFE_MODE)
     // Take a copy of the registers so we can see later that they're restored to
     // their correct values.
+    VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
     vm_TsRegisters regCopy = *reg;
     // Except that the `closure` register may point to a heap value, so we need
     // to track if it moves.
     mvm_Handle hClosureCopy;
     mvm_initializeHandle(vm, &hClosureCopy);
     mvm_handleSet(&hClosureCopy, reg->closure);
-
-    // Saving the stack pointer here is "flushing the cache registers" since it's
-    // the only one we need to preserve.
-    reg->usingCachedRegisters = false;
   #endif
 
-  regP1 /* pArgs */ = pStackPointer - reg3 - 1;
+  regP1 /* pArgs */ = reg->pStackPointer - reg3 - 1;
 
   // Call the host function
   err = hostFunction(vm, hostFunctionID, pResult, regP1, (uint8_t)reg3);
 
-  if (err != MVM_E_SUCCESS) goto SUB_EXIT;
-
-  // The host function should not have left the stack unbalanced. A failure here
-  // is not really a problem with the host since the Microvium C API doesn't
-  // give the host access to the stack anyway.
-  VM_ASSERT(vm, pStackPointer == reg->pStackPointer);
-  VM_ASSERT(vm, pFrameBase == reg->pFrameBase);
+  if (err != MVM_E_SUCCESS) {
+    CACHE_REGISTERS();
+    goto SUB_EXIT;
+  }
 
   #if (MVM_SAFE_MODE)
-    reg->usingCachedRegisters = true;
-
+    VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
     regCopy.closure = mvm_handleGet(&hClosureCopy);
     mvm_releaseHandle(vm, &hClosureCopy);
 
@@ -2773,16 +2759,13 @@ SUB_CALL_HOST_COMMON: {
     and CACHE_REGISTERS around the host call, since the host doesn't modify or
     use these registers, even if it calls back into the VM (with the exception
     of the stack pointer which is used but restored again afterward).
-
-    Why do I care about this optimization? In part because typical Microvium
-    scripts that I've seen tend to make a _lot_ of host calls, treating host
-    functions roughly like a special-purpose instruction set and the script
-    decides the sequence of instructions.
     */
     regCopy.cpsCallback = reg->cpsCallback; // The cpsCallback register is not preserved
-    regCopy.jobQueue = reg->jobQueue; // The job queue is persistent across host calls
+    regCopy.jobQueue = reg->jobQueue; // The job queue may change
     VM_ASSERT(vm, memcmp(&regCopy, reg, sizeof regCopy) == 0);
   #endif
+
+  CACHE_REGISTERS();
 
   // Restore caller argCountAndFlags
   reg->argCountAndFlags = saveArgCountAndFlags;
@@ -3039,6 +3022,7 @@ static Value vm_newArray(VM* vm, uint16_t capacity) {
     vm_push(vm, result); // GC-reachable
     uint16_t* pData = gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
     result = vm_pop(vm);
+    arr = ShortPtr_decode(vm, result); // Invalidated
     arr->dpData = ShortPtr_encode(vm, pData);
     uint16_t* p = pData;
     uint16_t n = capacity;
@@ -3057,7 +3041,7 @@ static Value vm_newArray(VM* vm, uint16_t capacity) {
 static void vm_arrayPush(VM* vm, Value* pvArr, Value* pvItem) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
-  CODE_COVERAGE_UNTESTED(710); // Not hit
+  CODE_COVERAGE(710); // Hit
 
   TsArray* pArr = ShortPtr_decode(vm, *pvArr);
   uint16_t length = VirtualInt14_decode(vm, pArr->viLength);
@@ -3067,7 +3051,7 @@ static void vm_arrayPush(VM* vm, Value* pvArr, Value* pvItem) {
     CODE_COVERAGE_UNTESTED(711); // Not hit
     capacity = 0;
   } else {
-    CODE_COVERAGE_UNTESTED(712); // Not hit
+    CODE_COVERAGE(712); // Hit
     capacity = vm_getAllocationSize(ShortPtr_decode(vm, pArr->dpData)) / 2;
   }
 
@@ -3652,6 +3636,8 @@ static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
  * Note: the size is passed separately rather than computed from the header
  * because this function is optimized for cases where the size is known at
  * compile time (and even better if this function is inlined).
+ *
+ * WARNING: this does not initialize the data in the allocation.
  */
 static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader) {
   CODE_COVERAGE(189); // Hit
@@ -4479,6 +4465,11 @@ void mvm_runGC(VM* vm, bool squeeze) {
   interpreted in terms of _fromspace_. Forwarding pointers and pointers in
   processed allocations always reference _tospace_.
   */
+
+  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+  vm_checkHeap(vm);
+  #endif
+
   uint16_t n;
   uint16_t* p;
 
@@ -6400,6 +6391,7 @@ static void toInternedString(VM* vm, Value* pValue) {
   // Add the string to the linked list of interned strings
   TsInternedStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsInternedStringCell, TC_REF_FIXED_LENGTH_ARRAY);
   value = *pValue; // Invalidated by potential GC collection
+  vInternedStrings = getBuiltin(vm, BIN_INTERNED_STRINGS);  // Invalidated by potential GC collection
   // Push onto linked list2
   pCell->spNext = vInternedStrings;
   pCell->str = value;
@@ -7507,3 +7499,236 @@ static Value vm_dequeueJob(VM* vm) {
     return result;
   }
 }
+
+/**
+ * Checks the Microvium heap for corruption.
+ *
+ * This function walks the heap and checks that all RAM pointer values point to
+ * legitimate allocations.
+ */
+#if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+void vm_checkHeap(mvm_VM* vm) {
+  // Allocation map is 1 bit per word. The bit is set if the word is the
+  // beginning of an allocation.
+  uint16_t heapSize = getHeapSize(vm);
+  uint8_t* allocationMap = (uint8_t*)malloc((heapSize + 15) / 16);
+  memset(allocationMap, 0, (heapSize + 15) / 16);
+  #define setAllocationMapBit(address) (allocationMap[(address) / 16] |=  (1 << ((address) % 16 / 2)))
+  #define getAllocationMapBit(address) ((allocationMap[(address) / 16] & (1 << ((address) % 16 / 2))) != 0)
+
+  TsBucket* firstBucket = vm->pLastBucket;
+  while (firstBucket && firstBucket->prev) {
+    firstBucket = firstBucket->prev;
+  }
+
+  // 1st pass to find allocations
+  TsBucket* bucket = firstBucket;
+  while (bucket) {
+    uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
+    Value* p = (Value*)bucketBegin;
+    Value* bucketEnd = bucket->pEndOfUsedSpace;
+    uint16_t offsetStart = bucket->offsetStart;
+    while (p < bucketEnd) {
+      uint16_t header = *p++;
+      uint16_t offset = (uint16_t)((uint8_t*)p - bucketBegin) + offsetStart;
+      setAllocationMapBit(offset);
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      Value* next = p + ((size + 1) / 2);
+      if (next > bucketEnd) {
+        MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+        goto cleanup;
+      }
+      p = next;
+    }
+    bucket = bucket->next;
+  }
+
+  // 2st pass to check pointers
+  bucket = firstBucket;
+  while (bucket) {
+    uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
+    Value* p = (Value*)bucketBegin;
+    Value* bucketEnd = bucket->pEndOfUsedSpace;
+    uint16_t offsetStart = bucket->offsetStart;
+    while (p < bucketEnd) {
+      uint16_t header = *p++;
+      Value* pAlloc = p;
+      uint16_t offset = (uint16_t)((uint8_t*)p - bucketBegin) + offsetStart;
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
+      Value* next = pAlloc + ((size + 1) / 2); // Round up
+      if (next > bucketEnd) {
+        MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+      }
+      if (tc >= TC_REF_DIVIDER_CONTAINER_TYPES) {
+        uint16_t words = size / 2; // Round down
+        for (uint16_t slotNumber = 0; slotNumber < words; slotNumber++) {
+          Value value = pAlloc[slotNumber];
+          if (Value_isShortPtr(value)) {
+            Value* target = ShortPtr_decode(vm, value);
+            uint16_t offset = pointerOffsetInHeap(vm, vm->pLastBucket, target);
+            if (!getAllocationMapBit(offset)) {
+              MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+              goto cleanup;
+            }
+          }
+        }
+        p = next;
+      }
+      p = next;
+    }
+    bucket = bucket->next;
+  }
+
+cleanup:
+  free(allocationMap);
+}
+#endif // MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+
+/**
+ * If the value is a RAM pointer, validates that it points to a valid heap
+ * allocation.
+ *
+ * WARNING: Very expensive, since it walks the whole heap to find the
+ * allocation.
+ */
+#if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+void vm_checkValue(mvm_VM* vm, mvm_Value value) {
+  if (!Value_isShortPtr(value)) {
+    return;
+  }
+
+  TsBucket* firstBucket = vm->pLastBucket;
+  while (firstBucket && firstBucket->prev) {
+    firstBucket = firstBucket->prev;
+  }
+
+  TsBucket* bucket = firstBucket;
+  while (bucket) {
+    uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
+    Value* p = (Value*)bucketBegin;
+    Value* bucketEnd = bucket->pEndOfUsedSpace;
+    uint16_t offsetStart = bucket->offsetStart;
+    while (p < bucketEnd) {
+      uint16_t header = *p++;
+      if (ShortPtr_encode(vm, p) == value) {
+        return; // Found
+      }
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      Value* next = p + ((size + 1) / 2);
+      if (next > bucketEnd) {
+        MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+        return;
+      }
+      p = next;
+    }
+    bucket = bucket->next;
+  }
+
+  // Not found. Therefore corrupt.
+  MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+}
+#endif // MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+
+/**
+ * Parses the call stack and returns a pointer to the set of frame.
+ *
+ * The first returned frame is the active frame, and the rest proceed in
+ * descending order.
+ * 
+ * If the registers are currently cached, the first frame will be rubbish.
+ * 
+ * The memory is malloced but re-used on each call to `vm_getCallStack`, 
+ * so the caller should not free it.
+ *
+ * A zero programCounter indicates the end of the call stack, which can be
+ * useful for using this in debug watch. Also the `out_frameCount` is optional.
+ *
+ * If there are no frames, returns NULL.
+ */
+#if MVM_DEBUG_UTILS
+vm_TsCallStackFrame* vm_getCallStack(VM* vm, int* out_frameCount) {
+  static vm_TsCallStackFrame* frames = 0;
+  static int allocatedFramesCount = 0;
+
+  vm_TsStack* stack = vm->stack;
+  if (!stack) {
+    if (out_frameCount) {
+      *out_frameCount = 0;
+    }
+    return NULL;
+  }
+  vm_TsRegisters* reg = &stack->reg;
+  uint16_t* beginningOfStack = getBottomOfStack(stack);
+
+  // Count number of required frames
+  int frameCount = 1;
+  uint16_t* pFrameBase = reg->pFrameBase;
+  while (pFrameBase > beginningOfStack) {
+    frameCount++;
+    pFrameBase -= 4;
+    pFrameBase = pFrameBase - (*pFrameBase) / 2;
+  }
+
+  if (out_frameCount) {
+    *out_frameCount = frameCount;
+  }
+
+  // Allocate enough space. One extra as a kind of "null terminator" for debug purposes
+  if (allocatedFramesCount < frameCount + 1) {
+    free(frames);
+    allocatedFramesCount = frameCount + 1;
+    frames = (vm_TsCallStackFrame*)malloc(sizeof(vm_TsCallStackFrame) * allocatedFramesCount);
+  }
+
+  memset(frames, 0, sizeof(vm_TsCallStackFrame) * allocatedFramesCount);
+
+  vm_TsCallStackFrame* pFrame = frames;
+  VM_ASSERT(vm, pFrame >= frames);
+
+  Value* pStackPointer = reg->pStackPointer;
+  uint16_t programCounter = (uint16_t)LongPtr_sub(reg->lpProgramCounter, vm->lpBytecode);
+  Value* pArgs = reg->pArgs;
+  uint16_t argCountAndFlags = reg->argCountAndFlags;
+  uint16_t argCount = (argCountAndFlags & AF_ARG_COUNT_MASK);
+  Value closure = reg->closure;
+
+  pFrameBase = reg->pFrameBase;
+  uint16_t* endOfFrame = reg->pStackPointer;
+  while (true) {
+    VM_ASSERT(vm, pFrame >= frames);
+    VM_ASSERT(vm, pFrame < frames + frameCount);
+
+    pFrame->programCounter = programCounter;
+    pFrame->frameBase = pFrameBase;
+    pFrame->frameDepth = (int)(pStackPointer - pFrameBase);
+    pFrame->argCount = argCount;
+    pFrame->args = pArgs;
+    pFrame->closure = closure == VM_VALUE_UNDEFINED ? NULL : ShortPtr_decode(vm, closure);
+    pFrame->closureSlotCount = closure == VM_VALUE_UNDEFINED ? 0 : vm_getAllocationSize(ShortPtr_decode(vm, closure)) / 2;
+
+    pFrame++;
+
+    // Unwind frame
+    VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2);
+    pStackPointer = pFrameBase;
+    if (pStackPointer <= beginningOfStack) {
+      break;
+    }
+
+    programCounter = *(--pStackPointer);
+    argCountAndFlags = *(--pStackPointer);
+    argCount = (argCountAndFlags & AF_ARG_COUNT_MASK);
+    closure = *(--pStackPointer);
+    pStackPointer--;
+    pFrameBase = (uint16_t*)((uint8_t*)pStackPointer - *pStackPointer);
+    pArgs = pFrameBase - VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS - argCount;
+
+  }
+
+  VM_ASSERT(vm, pFrameBase == beginningOfStack);
+  VM_ASSERT(vm, pFrame == frames + frameCount);
+
+  return frames;
+}
+#endif // MVM_DEBUG_UTILS

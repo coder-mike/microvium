@@ -315,9 +315,9 @@ export class VirtualMachine {
     return job;
   }
 
-  public createSnapshot(): SnapshotClass {
+  public createSnapshot(generateSourceMap: boolean): SnapshotClass {
     const snapshotInfo = this.createSnapshotIL();
-    const { snapshot } = encodeSnapshot(snapshotInfo, false);
+    const { snapshot } = encodeSnapshot(snapshotInfo, false, generateSourceMap);
     return snapshot;
   }
 
