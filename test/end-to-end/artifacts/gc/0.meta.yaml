@@ -1,3 +1,4 @@
 runExportedFunction: 0
 nativeOnly: true
+testOnly: false
 description: Some garbage collection tests

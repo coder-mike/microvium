@@ -436,28 +436,28 @@ function test_asyncInExpression() {
     LoadVar(index 8);                    // 10                ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
     Literal(lit 0);                      // 11                ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
     Literal(lit 3);                      // 12                ./test/end-to-end/tests/async-await-basic.test.mvm.js:117:5
-    ObjectSet();                         // 9                 ./test/end-to-end/tests/async-await-basic.test.mvm.js:117:5
-    LoadVar(index 8);                    // 10                ./test/end-to-end/tests/async-await-basic.test.mvm.js:117:5
-    Literal(lit 1);                      // 11                ./test/end-to-end/tests/async-await-basic.test.mvm.js:117:5
+    ObjectSet();                         // 9                 ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
+    LoadVar(index 8);                    // 10                ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
+    Literal(lit 1);                      // 11                ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
     LoadVar(index 3);                    // 12 nestedFunc     ./test/end-to-end/tests/async-await-basic.test.mvm.js:118:11
     Literal(lit undefined);              // 13                ./test/end-to-end/tests/async-await-basic.test.mvm.js:118:11
     AwaitCall(count 1);                  // 12                ./test/end-to-end/tests/async-await-basic.test.mvm.js:118:11
     Await();                             // 11                ./test/end-to-end/tests/async-await-basic.test.mvm.js:118:5
     AsyncResume(count 8, count 10);      // 12                ./test/end-to-end/tests/async-await-basic.test.mvm.js:118:5
-    ObjectSet();                         // 9                 ./test/end-to-end/tests/async-await-basic.test.mvm.js:118:5
-    LoadVar(index 8);                    // 10                ./test/end-to-end/tests/async-await-basic.test.mvm.js:118:5
-    Literal(lit 2);                      // 11                ./test/end-to-end/tests/async-await-basic.test.mvm.js:118:5
+    ObjectSet();                         // 9                 ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
+    LoadVar(index 8);                    // 10                ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
+    Literal(lit 2);                      // 11                ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
     LoadVar(index 4);                    // 12 nestedFunc2    ./test/end-to-end/tests/async-await-basic.test.mvm.js:119:11
     Literal(lit undefined);              // 13                ./test/end-to-end/tests/async-await-basic.test.mvm.js:119:11
     AwaitCall(count 1);                  // 12                ./test/end-to-end/tests/async-await-basic.test.mvm.js:119:11
     Await();                             // 11                ./test/end-to-end/tests/async-await-basic.test.mvm.js:119:5
     AsyncResume(count 8, count 10);      // 12                ./test/end-to-end/tests/async-await-basic.test.mvm.js:119:5
-    ObjectSet();                         // 9                 ./test/end-to-end/tests/async-await-basic.test.mvm.js:119:5
-    LoadVar(index 8);                    // 10                ./test/end-to-end/tests/async-await-basic.test.mvm.js:119:5
-    Literal(lit 3);                      // 11                ./test/end-to-end/tests/async-await-basic.test.mvm.js:119:5
+    ObjectSet();                         // 9                 ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
+    LoadVar(index 8);                    // 10                ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
+    Literal(lit 3);                      // 11                ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
     Literal(lit 11);                     // 12                ./test/end-to-end/tests/async-await-basic.test.mvm.js:120:5
-    ObjectSet();                         // 9                 ./test/end-to-end/tests/async-await-basic.test.mvm.js:120:5
-    StoreVar(index 6);                   // 8  x              ./test/end-to-end/tests/async-await-basic.test.mvm.js:120:5
+    ObjectSet();                         // 9                 ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
+    StoreVar(index 6);                   // 8  x              ./test/end-to-end/tests/async-await-basic.test.mvm.js:116:13
     LoadGlobal(name 'assertEqual');      // 9                 ./test/end-to-end/tests/async-await-basic.test.mvm.js:123:3
     Literal(lit undefined);              // 10                ./test/end-to-end/tests/async-await-basic.test.mvm.js:123:3
     LoadVar(index 6);                    // 11 x              ./test/end-to-end/tests/async-await-basic.test.mvm.js:123:15

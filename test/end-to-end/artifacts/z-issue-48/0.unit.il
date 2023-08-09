@@ -108,16 +108,16 @@ function sayHello() {
     LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:13
     Literal(lit 0);                      // 5                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:13
     Literal(lit 1);                      // 6                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:14
-    ObjectSet();                         // 3                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:14
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:14
-    Literal(lit 1);                      // 5                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:14
+    ObjectSet();                         // 3                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:13
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:13
+    Literal(lit 1);                      // 5                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:13
     Literal(lit 2);                      // 6                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:17
-    ObjectSet();                         // 3                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:17
-    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:17
-    Literal(lit 2);                      // 5                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:17
+    ObjectSet();                         // 3                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:13
+    LoadVar(index 2);                    // 4                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:13
+    Literal(lit 2);                      // 5                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:13
     Literal(lit 3);                      // 6                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:20
-    ObjectSet();                         // 3                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:20
-    StoreVar(index 0);                   // 2  arr            ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:20
+    ObjectSet();                         // 3                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:13
+    StoreVar(index 0);                   // 2  arr            ./test/end-to-end/tests/z-issue-48.test.mvm.js:23:13
     Literal(lit 0);                      // 3                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:24:16
     StoreVar(index 1);                   // 2  i              ./test/end-to-end/tests/z-issue-48.test.mvm.js:24:16
     Jump(@block1);                       // 2                 ./test/end-to-end/tests/z-issue-48.test.mvm.js:24:16

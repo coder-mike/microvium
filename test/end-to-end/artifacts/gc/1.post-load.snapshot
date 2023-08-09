@@ -68,7 +68,6 @@ function function1() {
     Literal(lit 10);
     Literal(lit 0);
     Call(count 3, flag true);
-    // TODO: When we have closures, we should check with a closure reference as well
     // New array with local reference
     ArrayNew();
     LoadVar(index 2);
@@ -195,8 +194,11 @@ function nestedFunction() {
 // ---
 runExportedFunction: 0
 nativeOnly: true
+testOnly: false
 description: Some garbage collection tests
 ---
+// WARNING: these tests don't work if MVM_VERY_EXPENSIVE_MEMORY_CHECKS is
+// enabled because it triggers garbage collections at unexpected times.
 function run() {
   entry:
     Literal(lit 0);

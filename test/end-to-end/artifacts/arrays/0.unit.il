@@ -76,34 +76,34 @@ function init() {
     LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
     Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
     Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:27:8
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:8
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:8
-    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:27:8
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
     Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:27:11
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:11
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:11
-    Literal(lit 2);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:27:11
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    Literal(lit 2);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
     Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:27:14
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:14
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:14
-    StoreGlobal(name 'b');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:14
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:27:14
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    StoreGlobal(name 'b');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
     ArrayNew();                          // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
     LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
     Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
     Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:28:8
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:8
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:8
-    Literal(lit 2);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:28:8
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Literal(lit 2);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
     Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:28:13
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:13
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:13
-    Literal(lit 'length');               // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:28:13
-    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:28:13
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:13
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:13
-    StoreGlobal(name 'c');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:13
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:28:13
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Literal(lit 'length');               // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    StoreGlobal(name 'c');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
     ArrayNew();                          // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
     LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
     Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
@@ -114,36 +114,36 @@ function init() {
     LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
     Literal(lit 0);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
     Literal(lit 1);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:32:9
-    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:32:9
-    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:32:9
-    Literal(lit 1);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:32:9
+    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
+    Literal(lit 1);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
     Literal(lit 2);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:33:9
-    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:33:9
-    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:33:9
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/arrays.test.mvm.js:33:9
-    Literal(lit 1);                      // 6                 ./test/end-to-end/tests/arrays.test.mvm.js:33:9
+    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
+    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    Literal(lit 1);                      // 6                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
     ArrayNew();                          // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
     LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
     Literal(lit 0);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
     Literal(lit 3);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:36:9
-    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:36:9
-    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:36:9
-    Literal(lit 1);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:36:9
+    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
+    Literal(lit 1);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
     Literal(lit 4);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:37:9
-    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:37:9
-    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:37:9
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/arrays.test.mvm.js:37:9
-    Literal(lit 2);                      // 6                 ./test/end-to-end/tests/arrays.test.mvm.js:37:9
+    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
+    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    Literal(lit 2);                      // 6                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
     Literal(lit 5);                      // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:39:7
-    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:39:7
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:39:7
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:39:7
-    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:39:7
+    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
     Literal(lit 6);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:41:5
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:41:5
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:41:5
-    StoreGlobal(name 'd');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:41:5
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:41:5
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    StoreGlobal(name 'd');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:43:2
     Return();                            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:43:2
 }
