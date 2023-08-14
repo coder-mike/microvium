@@ -1,4 +1,4 @@
-Bytecode size: 3480 B
+Bytecode size: 4202 B
 
 Addr    Size
 ==== =======
@@ -7,8 +7,8 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 3480
-0006       2     expectedCRC: aabf
+0004       2     bytecodeSize: 4202
+0006       2     expectedCRC: 00e0
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -1940,7 +1940,7 @@ Addr    Size
 0b9c       2     Handle: undefined
 0b9e       2     Handle: deleted
 0ba0       2     Handle: &0bd8
-0ba2   70  - # GC allocations
+0ba2   5a  - # GC allocations
 0ba2       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
 0ba4    8  -     # TsPropertyList
 0ba4       2         dpNext: null
@@ -1968,26 +1968,29 @@ Addr    Size
 0bcc       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
 0bce    8  -     # TsPropertyList
 0bce       2         dpNext: null
-0bd0       2         dpProto: &0c0a
+0bd0       2         dpProto: &0bea
 0bd2       2         key: &00e8
 0bd4       2         value: 18
-0bd6       2     Header [Size: 20, Type: TC_REF_PROPERTY_LIST]
-0bd8   14  -     # TsPropertyList
-0bd8       2         dpNext: null
+0bd6       2     Header [Size: 16, Type: TC_REF_PROPERTY_LIST]
+0bd8   10  -     # TsPropertyList
+0bd8       2         dpNext: &0bf4
 0bda       2         dpProto: null
 0bdc       2         key: &00b0
-0bde       2         value: &0c0a
+0bde       2         value: &0bea
 0be0       2         key: &00bc
 0be2       2         value: &020c
 0be4       2         key: &00d0
 0be6       2         value: 42
-0be8       2         key: &00e8
-0bea       2         value: 3
-0bec      1c     <unused>
-0c08       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0c0a    8  -     # TsPropertyList
-0c0a       2         dpNext: null
-0c0c       2         dpProto: null
-0c0e       2         key: &00dc
-0c10       2         value: &01fc
-0c12     186 <unused>
+0be8       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0bea    8  -     # TsPropertyList
+0bea       2         dpNext: null
+0bec       2         dpProto: null
+0bee       2         key: &00dc
+0bf0       2         value: &01fc
+0bf2       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0bf4    8  -     # Child TsPropertyList
+0bf4       2         dpNext: null
+0bf6       2         dpProto: null
+0bf8       2         key: &00e8
+0bfa       2         value: 3
+0bfc     46e <unused>

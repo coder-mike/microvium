@@ -1436,11 +1436,11 @@ typedef struct mvm_TsCallStackFrame {
 
 typedef struct mvm_TsHeapAllocationInfo {
   // Note: the short names are because they display better in the debugger
-  uint16_t o; // offset (what the address would be if serialized in a snapshot)
   uint16_t a; // Lower 16-bits of address
   TeTypeCode t; // type code
   uint16_t s; // size
-  mvm_Value* address; // address
+  uint16_t offset; // What the address would be if serialized in a snapshot
+  mvm_Value* address;
 } mvm_TsHeapAllocationInfo;
 
 #define TOMBSTONE_HEADER ((TC_REF_TOMBSTONE << 12) | 2)
@@ -2470,7 +2470,7 @@ SUB_OP_EXTENDED_1: {
       TeTypeCode tc = deepTypeOf(vm, regP1[1] /* prototype */);
       reg2 /* internalSlotCount */ = 0;
       if (tc == TC_REF_PROPERTY_LIST) {
-        CODE_COVERAGE_UNTESTED(723); // Not hit
+        CODE_COVERAGE(723); // Hit
         regP2 /* pPrototype */ = (Value*)ShortPtr_decode(vm, regP1[1]);
         // Look for the magic value that tells us how many prototype slots there
         // are.
@@ -2494,7 +2494,7 @@ SUB_OP_EXTENDED_1: {
 
       // Internal slots
       if (reg2) {
-        CODE_COVERAGE_UNTESTED(726); // Not hit
+        CODE_COVERAGE(726); // Hit
         regP2 /* pPrototype */ = ShortPtr_decode(vm, regP1[1] /* dpProto */);
         // Make sure the prototype actually has the slots we want to read
         VM_ASSERT(vm, vm_getAllocationSize(regP2) >= 4 + reg2);
@@ -2503,7 +2503,7 @@ SUB_OP_EXTENDED_1: {
           *p++ = *regP2++;
         }
       } else {
-        CODE_COVERAGE_UNTESTED(727); // Not hit
+        CODE_COVERAGE(727); // Hit
       }
 
       regP1[1] /* this */ = ShortPtr_encode(vm, pObject);
@@ -3762,7 +3762,7 @@ SUB_OP_EXTENDED_4: {
  *     Nothing
  * ------------------------------------------------------------------------- */
     MVM_CASE (VM_OP4_SCOPE_SAVE): {
-      CODE_COVERAGE_UNTESTED(728); // Not hit
+      CODE_COVERAGE(728); // Hit
       PUSH(reg->closure);
       goto SUB_TAIL_POP_0_PUSH_0;
     }
@@ -3827,10 +3827,6 @@ SUB_OP_EXTENDED_4: {
       // the job queue).
 
       CODE_COVERAGE(663); // Hit
-
-      // The callback is stored in slot[1] in the closure
-      regLP1 /* pCallback */ = vm_findScopedVariable(vm, 1);
-      reg1 /* callback */ = LongPtr_read2_aligned(regLP1);
 
       reg2 /* result */ = POP();
 
@@ -4040,7 +4036,7 @@ SUB_AWAIT: {
         regP1[VM_OIS_PROMISE_OUT] = reg2;
         reg->pStackPointer[-1] = reg2;
       } else {
-        CODE_COVERAGE_UNTESTED(718); // Not hit
+        CODE_COVERAGE(718); // Hit
       }
       vm_arrayPush(vm, &reg->pStackPointer[-1] /* subscriberOrArray */, &reg->closure);
       vm_pop(vm); // subscriberOrArray
@@ -4140,18 +4136,22 @@ SUB_ASYNC_COMPLETE: {
       vm_scheduleContinuation(vm, callbackList, reg2, reg3);
     } else {
       // Multiple subscribers
-      // WIP Coverage
       CODE_COVERAGE(721); // Hit
       VM_ASSERT(vm, tc == TC_REF_ARRAY);
       TsArray* pArray = (TsArray*)ShortPtr_decode(vm, callbackList);
       int len = VirtualInt14_decode(vm, pArray->viLength);
-      Value* subscribers = ShortPtr_decode(vm, pArray->dpData);
-      // WIP Coverage
-      TABLE_COVERAGE(len > 2 ? 1 : 0, 2, 722); // Hit 1/2
+      vm_push(vm, reg3 /* resultOrError */); // GC-reachable
+      vm_push(vm, pArray->dpData); // GC-reachable
+      TABLE_COVERAGE(len > 2 ? 1 : 0, 2, 722); // Hit 2/2
       for (int i = 0; i < len; i++) {
+        // Note: the subscribers list is may move due to GC collections
+        // caused by scheduling the continuation.
+        Value* subscribers = ShortPtr_decode(vm, reg->pStackPointer[-1]);
         Value callback = subscribers[i];
-        vm_scheduleContinuation(vm, callback, reg2, reg3);
+        vm_scheduleContinuation(vm, callback, reg2, reg->pStackPointer[-2]);
       }
+      vm_pop(vm); // dpData
+      vm_pop(vm); // resultOrError
     }
   }
   CACHE_REGISTERS();
@@ -4757,7 +4757,7 @@ static void vm_arrayPush(VM* vm, Value* pvArr, Value* pvItem) {
 
   // Need to expand?
   if (length >= capacity) {
-    CODE_COVERAGE_UNTESTED(713); // Not hit
+    CODE_COVERAGE(713); // Hit
     // Slow path
     capacity = capacity * 2;
     if (capacity < VM_ARRAY_INITIAL_CAPACITY) {
@@ -4780,8 +4780,6 @@ static void vm_arrayPush(VM* vm, Value* pvArr, Value* pvItem) {
 static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess, Value resultOrError) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   CODE_COVERAGE(714); // Hit
-
-  vm_TsRegisters* reg = &vm->stack->reg;
 
   vm_push(vm, resultOrError); // anchor to GC
   vm_push(vm, continuation); // anchor to GC
@@ -5101,6 +5099,20 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
   } else {
     CODE_COVERAGE(436); // Hit
   }
+
+  #if MVM_DEBUG_UTILS
+  // Dummy code to prevent optimizer collection of debug utils, which may only
+  // be used in the debugger and so might be optimized out unless we pretend to
+  // use them. This code should never execute but I'm hoping that the optimizer
+  // doesn't realize that.
+  if ((intptr_t)vm == -1) {
+    mvm_checkHeap(vm);
+    mvm_readHeapCount(vm);
+    mvm_checkValue(vm, 0);
+    mvm_readCallStack(vm, 0);
+    mvm_readHeap(vm, 0);
+  }
+  #endif
 
 SUB_EXIT:
   if (err != MVM_E_SUCCESS) {
@@ -9513,10 +9525,10 @@ mvm_TsHeapAllocationInfo* mvm_readHeap(VM* vm, int* out_count) {
 
       VM_ASSERT(vm, i < allocatedHeapCount - 1);
       heap[i++] = (mvm_TsHeapAllocationInfo){
-        .o = offset,
         .a = (uint16_t)((intptr_t)p),
         .t = tc,
         .s = size,
+        .offset = offset,
         .address = p,
       };
 
