@@ -1,9 +1,9 @@
 export 0 = &function run;
 
 slot GlobalClass = class (&function GlobalClass, &allocation 10);
-slot ['global:Microvium'] = &allocation 2;
-slot ['global:Number'] = &allocation 4;
-slot ['global:Reflect'] = &allocation 1;
+slot ['global:Microvium'] = &allocation 4;
+slot ['global:Number'] = &allocation 6;
+slot ['global:Reflect'] = &allocation 3;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot globalInst = &allocation 12;
@@ -1741,10 +1741,6 @@ function typeCodeOf() {
     Return();
 }
 
-allocation 1 = {
-  ownKeys: &function ['Reflect.ownKeys'],
-};
-
 allocation 10 = {
   myProp: 42,
   myStaticMethod: &function GlobalClass_myStaticMethod,
@@ -1759,13 +1755,17 @@ allocation 12 = {
   x: 15,
 };
 
-allocation 2 = {
+allocation 3 = {
+  ownKeys: &function ['Reflect.ownKeys'],
+};
+
+allocation 4 = {
   isMicrovium: true,
   newUint8Array: &function ['Microvium.newUint8Array'],
   noOpFunction: no-op-function,
   typeCodeOf: &function typeCodeOf,
 };
 
-allocation 4 = {
+allocation 6 = {
   isNaN: &function Number_isNaN,
 };

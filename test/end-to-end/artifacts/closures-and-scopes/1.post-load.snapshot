@@ -4,7 +4,7 @@ slot basics = &function basics;
 slot closureOperations = &function closureOperations;
 slot differentVariableTypes = &function differentVariableTypes;
 slot f = &allocation 10;
-slot ['global:Number'] = &allocation 4;
+slot ['global:Number'] = &allocation 6;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot makeIncrementorA = &function makeIncrementorA;
@@ -974,6 +974,6 @@ allocation 10 = Closure [
   3,
 ];
 
-allocation 4 = {
+allocation 6 = {
   isNaN: &function Number_isNaN,
 };

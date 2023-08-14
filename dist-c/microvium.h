@@ -76,6 +76,7 @@ typedef enum mvm_TeError {
   /* 53 */ MVM_E_ASYNC_WITHOUT_AWAIT, // mvm_asyncStart can only be used with a script that has await points. Add at least one (reachable) await point to the script.
   /* 54 */ MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE, // Can only await a promise in Microvium
   /* 55 */ MVM_E_HEAP_CORRUPT, // Microvium's internal heap is not in a consistent state
+  /* 56 */ MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT, // The prototype property of a class must be null or a plain object
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -418,6 +419,8 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
 /**
  * Set a breakpoint on the given bytecode address.
  *
+ * Use (-1) to break on every instruction.
+ *
  * Whenever the VM executes the instruction at the given bytecode address, the
  * VM will invoke the breakpoint callback (see mvm_dbg_setBreakpointCallback).
  *
@@ -432,7 +435,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
  * Setting a breakpoint a second time on the same address of an existing active
  * breakpoint will have no effect.
  */
-void mvm_dbg_setBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
+void mvm_dbg_setBreakpoint(mvm_VM* vm, int bytecodeAddress);
 
 /**
  * Remove a breakpoint added by mvm_dbg_setBreakpoint
@@ -440,7 +443,7 @@ void mvm_dbg_setBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
 void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
 
 /**
- * Set the function to be called when any breakpoint is hit.
+ * Set the function to be called when any breakpoint is hit. 
  *
  * The callback only applies to the given virtual machine (the callback can be
  * different for different VMs).

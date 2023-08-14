@@ -1,4 +1,4 @@
-Bytecode size: 428 B
+Bytecode size: 436 B
 
 Addr    Size
 ==== =======
@@ -7,8 +7,8 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
-0004       2     bytecodeSize: 428
-0006       2     expectedCRC: d8ca
+0004       2     bytecodeSize: 436
+0006       2     expectedCRC: 2cd0
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -215,8 +215,12 @@ Addr    Size
 01a0       2     Handle: &01a8
 01a2       2     Handle: deleted
 01a4       2     Handle: undefined
-01a6    6  - # GC allocations
-01a6       2     Header [Size: 4, Type: TC_REF_PROPERTY_LIST]
-01a8    4  -     # TsPropertyList
+01a6    e  - # GC allocations
+01a6       2     Header [Size: 12, Type: TC_REF_PROPERTY_LIST]
+01a8    c  -     # TsPropertyList
 01a8       2         dpNext: null
 01aa       2         dpProto: null
+01ac       2         key: -8192
+01ae       2         value: 2
+01b0       2         key: -1
+01b2       2         value: undefined

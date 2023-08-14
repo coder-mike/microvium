@@ -1,8 +1,8 @@
 export 0 = &function run;
 
 slot Error = class (&function Error, &allocation 10);
-slot ['global:Promise'] = &allocation 5;
-slot ['global:Reflect'] = &allocation 1;
+slot ['global:Promise'] = class (&function promiseConstructor, &allocation 2);
+slot ['global:Reflect'] = &allocation 3;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot ['global:asyncTestComplete'] = host function 6;
@@ -10,8 +10,10 @@ slot myAsyncFunc = &function myAsyncFunc;
 slot myAsyncFuncReject = &function myAsyncFuncReject;
 slot runAsync = &function runAsync;
 slot test_asyncReturnsPromise = &function test_asyncReturnsPromise;
+slot test_awaitMustBeAsynchronous = &function test_awaitMustBeAsynchronous;
 slot test_promiseAwait = &function test_promiseAwait;
 slot test_promiseAwaitReject = &function test_promiseAwaitReject;
+slot test_promiseConstructor = &function test_promiseConstructor;
 slot test_promiseKeys = &function test_promiseKeys;
 
 function Error() {
@@ -30,6 +32,16 @@ function ['Reflect.ownKeys']() {
   entry:
     LoadArg(index 1);
     ObjectKeys();
+    Return();
+}
+
+function anonymous() {
+  entry:
+    LoadArg(index 1);
+    Literal(lit undefined);
+    Literal(lit 42);
+    Call(count 2, flag true);
+    Literal(lit undefined);
     Return();
 }
 
@@ -57,6 +69,35 @@ function asyncHostCallback() {
     AsyncComplete();
 }
 
+function inner() {
+  entry:
+    AsyncStart(count 4, flag true);
+    Literal(lit deleted);
+    LoadGlobal(name 'myAsyncFunc');
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 3);
+    LoadScoped(index 10);
+    Literal(lit '; Before await');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 10);
+    Pop(count 1);
+    LoadVar(index 3);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    LoadScoped(index 10);
+    Literal(lit '; After await');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 10);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
 function myAsyncFunc() {
   entry:
     AsyncStart(count 2, flag false);
@@ -72,6 +113,43 @@ function myAsyncFuncReject() {
     Literal(lit '42');
     New(count 2);
     Throw();
+}
+
+function promiseConstructor() {
+  entry:
+    LoadArg(index 1);
+    Literal(lit undefined);
+    ScopeNew(count 2);
+    Literal(lit &function promiseResolve);
+    StoreScoped(index 0);
+    LoadArg(index 0);
+    StoreScoped(index 1);
+    ScopeSave();
+    ScopeNew(count 2);
+    Literal(lit &function promiseReject);
+    StoreScoped(index 0);
+    LoadArg(index 0);
+    StoreScoped(index 1);
+    ScopeSave();
+    Call(count 3, flag true);
+    LoadArg(index 0);
+    Return();
+}
+
+function promiseReject() {
+  entry:
+    Literal(lit undefined);
+    LoadArg(index 1);
+    Literal(lit false);
+    AsyncComplete();
+}
+
+function promiseResolve() {
+  entry:
+    Literal(lit undefined);
+    LoadArg(index 1);
+    Literal(lit true);
+    AsyncComplete();
 }
 
 function run() {
@@ -101,6 +179,18 @@ function runAsync() {
     AsyncResume(count 2, count 2);
     Pop(count 1);
     LoadGlobal(name 'test_promiseAwaitReject');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_awaitMustBeAsynchronous');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_promiseConstructor');
     Literal(lit undefined);
     AwaitCall(count 1);
     Await();
@@ -146,6 +236,42 @@ function test_asyncReturnsPromise() {
     Pop(count 1);
     Literal(lit undefined);
     Return();
+}
+
+function test_awaitMustBeAsynchronous() {
+  entry:
+    AsyncStart(count 5, flag false);
+    Literal(lit &function inner);
+    ClosureNew();
+    Literal(lit deleted);
+    Literal(lit 'Start');
+    StoreScoped(index 4);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 4);
+    // No await - should not block
+    LoadScoped(index 4);
+    Literal(lit '; After inner()');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 4);
+    Pop(count 1);
+    LoadVar(index 4);
+    Await();
+    AsyncResume(count 2, count 4);
+    Pop(count 1);
+    // The key here is that "After inner" should come before "After await",
+    // because even though myAsyncFunc resolves immediately, the continuation
+    // should be scheduled asynchronously.
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 4);
+    Literal(lit 'Start; Before await; After inner(); After await');
+    Call(count 3, flag true);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
 }
 
 function test_promiseAwait() {
@@ -203,6 +329,30 @@ function test_promiseAwaitReject() {
     Jump(@block4);
   block4:
     Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_promiseConstructor() {
+  entry:
+    AsyncStart(count 4, flag false);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous);
+    New(count 2);
+    StoreVar(index 3);
+    LoadVar(index 3);
+    Await();
+    AsyncResume(count 2, count 4);
+    StoreVar(index 4);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 42);
+    Call(count 3, flag true);
+    Pop(count 2);
     Literal(lit undefined);
     AsyncReturn();
 }
@@ -273,7 +423,6 @@ function test_promiseKeys() {
 }
 
 allocation 1 = {
-  ownKeys: &function ['Reflect.ownKeys'],
 };
 
 allocation 10 = {
@@ -283,9 +432,10 @@ allocation 10 = {
 allocation 11 = {
 };
 
-allocation 5 = {
-  prototype: &allocation 6,
+allocation 2 = {
+  prototype: &allocation 1,
 };
 
-allocation 6 = {
+allocation 3 = {
+  ownKeys: &function ['Reflect.ownKeys'],
 };

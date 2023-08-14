@@ -1,6 +1,6 @@
 export 0 = &function run;
 
-slot ['global:Reflect'] = &allocation 1;
+slot ['global:Reflect'] = &allocation 3;
 slot ['global:assertEqual'] = host function 3;
 slot keysBeforeSnapshot = &allocation 11;
 slot objBeforeSnapshot = &allocation 10;
@@ -141,10 +141,6 @@ function run() {
     Return();
 }
 
-allocation 1 = {
-  ownKeys: &function ['Reflect.ownKeys'],
-};
-
 allocation 10 = {
   x: 5,
   y: 10,
@@ -154,6 +150,10 @@ allocation 11 = [
   'x',
   'y',
 ];
+
+allocation 3 = {
+  ownKeys: &function ['Reflect.ownKeys'],
+};
 
 allocation 7 = {
   push: &function Array_push,

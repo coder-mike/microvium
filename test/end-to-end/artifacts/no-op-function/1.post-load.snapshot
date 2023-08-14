@@ -1,7 +1,7 @@
 export 0 = &function run;
 
-slot ['global:Microvium'] = &allocation 2;
-slot ['global:Number'] = &allocation 4;
+slot ['global:Microvium'] = &allocation 4;
+slot ['global:Number'] = &allocation 6;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 
@@ -117,13 +117,13 @@ function typeCodeOf() {
     Return();
 }
 
-allocation 2 = {
+allocation 4 = {
   isMicrovium: true,
   newUint8Array: &function ['Microvium.newUint8Array'],
   noOpFunction: no-op-function,
   typeCodeOf: &function typeCodeOf,
 };
 
-allocation 4 = {
+allocation 6 = {
   isNaN: &function Number_isNaN,
 };

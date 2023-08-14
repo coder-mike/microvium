@@ -1,7 +1,7 @@
 export 0 = &function run;
 
 slot buf1 = &allocation 10;
-slot ['global:Microvium'] = &allocation 2;
+slot ['global:Microvium'] = &allocation 4;
 slot ['global:assertEqual'] = host function 3;
 
 function ['Microvium.newUint8Array']() {
@@ -134,7 +134,7 @@ function typeCodeOf() {
 
 allocation 10 = Uint8Array { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-allocation 2 = {
+allocation 4 = {
   isMicrovium: true,
   newUint8Array: &function ['Microvium.newUint8Array'],
   noOpFunction: no-op-function,

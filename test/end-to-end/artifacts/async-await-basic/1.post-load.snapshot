@@ -1533,7 +1533,7 @@ function test_syncClosureInAsync() {
     AsyncReturn();
 }
 
-allocation 6 = {
+allocation 1 = {
 };
 
 allocation 7 = {
