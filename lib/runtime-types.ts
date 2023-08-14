@@ -88,6 +88,7 @@ export enum mvm_TeError {
   /* 53 */ MVM_E_ASYNC_WITHOUT_AWAIT, // mvm_asyncStart can only be used with a script that has await points. Add at least one (reachable) await point to the script.
   /* 54 */ MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE, // Can only await a promise in Microvium
   /* 55 */ MVM_E_HEAP_CORRUPT, // Microvium's internal heap is not in a consistent state
+  /* 56 */ MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT, // The prototype property of a class must be null or a plain object
 };
 
 

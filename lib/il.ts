@@ -146,6 +146,7 @@ export interface OtherOperation extends OperationBase {
     | 'ScopeDiscard'
     | 'ScopeNew'
     | 'ScopePop'
+    | 'ScopeSave'
     | 'ScopePush'
     | 'StartTry'
     | 'StoreGlobal'

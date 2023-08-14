@@ -1,10 +1,10 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality with promises
-assertionCount: 6
+assertionCount: 8
 isAsync: true
-# testOnly: true
-# skip: true
+testOnly: false
+skip: false
 ---*/
 vmExport(0, run);
 
@@ -21,6 +21,8 @@ async function runAsync() {
     test_promiseKeys();
     await test_promiseAwait();
     await test_promiseAwaitReject();
+    await test_awaitMustBeAsynchronous();
+    await test_promiseConstructor();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -73,11 +75,31 @@ async function myAsyncFuncReject() {
   throw new Error('42');
 }
 
-// TODO: there's a random segmentation fault. Not sure what's causing it. Seems
-// to happen asynchronously, so maybe it's the callback/promise being freed. I
-// first noticed it after adding the test `resolving-host-promise`. Also I added
-// `test_promiseAwaitReject` right before that, but it seems less likely to be
-// the issue. It doesn't occur every time. In fact, most times not.
+async function test_awaitMustBeAsynchronous() {
+  let s = 'Start';
+  const promise = inner(); // No await - should not block
+  s += '; After inner()';
+  await promise;
+  // The key here is that "After inner" should come before "After await",
+  // because even though myAsyncFunc resolves immediately, the continuation
+  // should be scheduled asynchronously.
+  assertEqual(s, 'Start; Before await; After inner(); After await');
+
+  async function inner() {
+    const promise = myAsyncFunc();
+    s += '; Before await';
+    await promise;
+    s += '; After await';
+  }
+}
+
+async function test_promiseConstructor() {
+  const promise = new Promise((resolve, reject) => {
+    resolve(42);
+  });
+  const result = await promise;
+  assertEqual(result, 42);
+}
 
 // TODO: Await unresolved promise with 1 existing subscriber
 // TODO: Await unresolved promise with 2 existing subscribers
@@ -85,7 +107,7 @@ async function myAsyncFuncReject() {
 // TODO: Await unresolved promise which becomes resolved
 // TODO: Await unresolved promise which becomes rejected
 // TODO: Await immediately-rejected promise
-// TODO: await must be asynchronous on job queue
+
 // TODO: multiple awaits on the same promise
 // TODO: awaiting an already-resolved promise
 // TODO: awaiting an already-rejected promise

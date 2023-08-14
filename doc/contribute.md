@@ -92,13 +92,19 @@ When you're stopped on an instruction, you can inspect the current source code p
 
 ### Heap corruption
 
-Enable `MVM_VERY_EXPENSIVE_MEMORY_CHECKS`
+Enable `MVM_VERY_EXPENSIVE_MEMORY_CHECKS` and `MVM_DEBUG_UTILS`.
 
-Use `vm_checkHeap` to validate the heap.
+Use `mvm_checkHeap` to validate the heap.
 
-Use `vm_checkValue` to check that a value points to a valid allocation if it's a pointer.
+Use `mvm_checkValue` to check that a value points to a valid allocation if it's a pointer.
 
-Use `vm_getCallStack(vm, 0)` to list the current stack frames.
+Use `mvm_readCallStack(vm, 0)` to list the current stack frames.
+
+Use `mvm_readHeapCount(vm)` to count the number of heap allocations.
+
+Use `mvm_readHeap(vm, 0)` to parse the whole heap into a structure that's easier to view in a debugger.
+
+In the C++ project, there is also `allocator_checkHeap`.
 
 ## VS Code
 

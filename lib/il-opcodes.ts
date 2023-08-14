@@ -60,6 +60,7 @@ export const opcodes = {
   'ScopeNew':      { operands: ['CountOperand'                ], stackChange: 0                      },
   'ScopePop':      { operands: [                              ], stackChange: 0                      },
   'ScopePush':     { operands: ['CountOperand'                ], stackChange: 0                      },
+  'ScopeSave':     { operands: [                              ], stackChange: 1                      },
   'StartTry':      { operands: ['LabelOperand'                ], stackChange: 2                      },
   'StoreGlobal':   { operands: ['NameOperand'                 ], stackChange: -1                     },
   'StoreScoped':   { operands: ['IndexOperand'                ], stackChange: -1                     },

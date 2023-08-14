@@ -466,6 +466,9 @@ typedef enum vm_TeObjectInternalSlots {
   VM_OIS_NEXT = 0,
   VM_OIS_PROTO = 1,
 
+  VM_OIS_PROTO_SLOT_MAGIC_KEY = 2,
+  VM_OIS_PROTO_SLOT_COUNT = 3,
+
   VM_OIS_PROMISE_STATUS = 2, // vm_TePromiseStatus
   VM_OIS_PROMISE_OUT = 3, // Result if resolved, error if rejected, undefined or subscriber or subscriber-list if pending
 } vm_TeObjectInternalSlots;
@@ -478,6 +481,8 @@ typedef enum vm_TePromiseStatus {
   VM_PROMISE_STATUS_RESOLVED = VIRTUAL_INT14_ENCODE(-2),
   VM_PROMISE_STATUS_REJECTED = VIRTUAL_INT14_ENCODE(-3),
 } vm_TePromiseStatus;
+
+#define VM_PROTO_SLOT_MAGIC_KEY_VALUE VIRTUAL_INT14_ENCODE(-0x2000)
 
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
@@ -673,7 +678,7 @@ typedef struct TsBucket {
 
 typedef struct TsBreakpoint {
   struct TsBreakpoint* next;
-  uint16_t bytecodeAddress;
+  int bytecodeAddress;
 } TsBreakpoint;
 
 /*
@@ -855,7 +860,7 @@ typedef struct gc_TsGCCollectionState {
   uint16_t* lastBucketEndCapacity;
 } gc_TsGCCollectionState;
 
-typedef struct vm_TsCallStackFrame {
+typedef struct mvm_TsCallStackFrame {
   uint16_t programCounter;
   Value* frameBase;
   int frameDepth; // Number of variables
@@ -863,7 +868,16 @@ typedef struct vm_TsCallStackFrame {
   int argCount;
   Value* closure;
   int closureSlotCount;
-} vm_TsCallStackFrame;
+} mvm_TsCallStackFrame;
+
+typedef struct mvm_TsHeapAllocationInfo {
+  // Note: the short names are because they display better in the debugger
+  uint16_t o; // offset (what the address would be if serialized in a snapshot)
+  uint16_t a; // Lower 16-bits of address
+  TeTypeCode t; // type code
+  uint16_t s; // size
+  mvm_Value* address; // address
+} mvm_TsHeapAllocationInfo;
 
 #define TOMBSTONE_HEADER ((TC_REF_TOMBSTONE << 12) | 2)
 
@@ -889,7 +903,7 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
-static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
+static void* gc_allocate(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
@@ -936,7 +950,7 @@ static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i);
 static inline int16_t VirtualInt14_decode(VM* vm, VirtualInt14 viInt);
 static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord);
 static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp);
-static inline void vm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber);
+static inline void mvm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber);
 static inline uint16_t vm_getAllocationSize(void* pAllocation);
 static inline uint16_t vm_getAllocationSize_long(LongPtr lpAllocation);
 static inline TeTypeCode vm_getAllocationType(void* pAllocation);
@@ -968,13 +982,12 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
 #endif // MVM_SAFE_MODE
 
-#if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-void vm_checkHeap(mvm_VM* vm);
-void vm_checkValue(mvm_VM* vm, mvm_Value value);
-#endif
-
 #if MVM_DEBUG_UTILS
-vm_TsCallStackFrame* vm_getCallStack(VM* vm, int* out_frameCount);
+void mvm_checkHeap(mvm_VM* vm);
+int mvm_readHeapCount(VM* vm);
+void mvm_checkValue(mvm_VM* vm, mvm_Value value);
+mvm_TsCallStackFrame* mvm_readCallStack(VM* vm, int* out_frameCount);
+mvm_TsHeapAllocationInfo* mvm_readHeap(VM* vm, int* out_count);
 #endif
 
 static const Value smallLiterals[] = {
@@ -1054,13 +1067,24 @@ static const uint8_t typeByTC[TC_END] = {
 static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 #endif
 
+#if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+  #define VM_POTENTIAL_GC_POINT(vm) do { \
+    mvm_runGC(vm, false); \
+    VM_EXEC_SAFE_MODE(vm->gc_potentialCycleNumber++;) \
+  } while (0)
+#else
+  #define VM_POTENTIAL_GC_POINT(vm) do { \
+    VM_EXEC_SAFE_MODE(vm->gc_potentialCycleNumber++;) \
+  } while (0)
+#endif
+
 // MVM_LOCAL declares a local variable whose value would become invalidated if
 // the GC performs a cycle. All access to the local should use MVM_GET_LOCAL AND
 // MVM_SET_LOCAL. This only needs to be used for pointer values or values that
 // might hold a pointer.
 #if MVM_SAFE_MODE
 #define MVM_LOCAL(type, varName, initial) type varName ## Value = initial; uint8_t _ ## varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
-#define MVM_GET_LOCAL(varName) (vm_checkValueAccess(vm, _ ## varName ## PotentialCycleNumber), varName ## Value)
+#define MVM_GET_LOCAL(varName) (mvm_checkValueAccess(vm, _ ## varName ## PotentialCycleNumber), varName ## Value)
 #define MVM_SET_LOCAL(varName, value) varName ## Value = value; _ ## varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
 #else
 #define MVM_LOCAL(type, varName, initial) type varName = initial

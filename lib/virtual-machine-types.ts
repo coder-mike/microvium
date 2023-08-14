@@ -4,9 +4,12 @@ import { ModuleSourceText } from '../lib';
 
 export const VM_OIS_PROMISE_STATUS = 2;
 export const VM_OIS_PROMISE_OUT = 3;
+export const VM_OIS_PROTO_SLOT_MAGIC_KEY = 2;
+export const VM_OIS_PROTO_SLOT_COUNT = 3;
 export const VM_PROMISE_STATUS_PENDING = IL.numberValue(-1);
 export const VM_PROMISE_STATUS_RESOLVED = IL.numberValue(-2);
 export const VM_PROMISE_STATUS_REJECTED = IL.numberValue(-3);
+export const VM_PROTO_SLOT_MAGIC_KEY_VALUE = IL.numberValue(-0x2000);
 
 export type GlobalSlotID = string;
 

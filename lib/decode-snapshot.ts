@@ -574,7 +574,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
   function decodeVirtualInt14(u16: UInt16): IL.NumberValue {
     u16 = u16 >> 2;
-    const value = u16 > 0x2000 ? u16 - 0x4000 : u16;
+    const value = u16 >= 0x2000 ? u16 - 0x4000 : u16;
     return { type: 'NumberValue', value };
   }
 
@@ -1110,6 +1110,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       } else if (dpProto.type !== 'NullValue') {
         return invalidOperation('Only the first TsPropertyList in the chain should have a prototype.');
       }
+
       const propsOffset = groupOffset + 4;
       const propCount = (groupSize - 4) / 4; // Each key-value pair is 4 bytes
       for (let i = 0; i < propCount; i++) {
@@ -1793,6 +1794,16 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
                     operands: []
                   },
                   disassembly: 'ScopePop'
+                };
+              }
+
+              case vm_TeOpcodeEx4.VM_OP4_SCOPE_SAVE: {
+                return {
+                  operation: {
+                    opcode: 'ScopeSave',
+                    operands: []
+                  },
+                  disassembly: 'ScopeSave'
                 };
               }
 

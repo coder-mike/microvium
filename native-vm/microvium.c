@@ -296,7 +296,7 @@ SUB_DO_NEXT_INSTRUCTION:
       TsBreakpoint* pBreakpoint = vm->pBreakpoints;
       uint16_t currentBytecodeAddress = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
       do {
-        if (pBreakpoint->bytecodeAddress == currentBytecodeAddress) {
+        if ((pBreakpoint->bytecodeAddress == -1) || (pBreakpoint->bytecodeAddress == (int)currentBytecodeAddress)) {
           FLUSH_REGISTER_CACHE();
           mvm_TfBreakpointCallback breakpointCallback = vm->breakpointCallback;
           if (breakpointCallback)
@@ -761,7 +761,7 @@ SUB_OP_EXTENDED_1: {
       CODE_COVERAGE(599); // Hit
 
       FLUSH_REGISTER_CACHE();
-      Value* pClosure = gc_allocateWithHeader(vm, 4, TC_REF_CLOSURE);
+      Value* pClosure = gc_allocate(vm, 4, TC_REF_CLOSURE);
       CACHE_REGISTERS();
       reg1 = ShortPtr_encode(vm, pClosure);
       *pClosure++ = POP(); // The function pointer
@@ -781,26 +781,14 @@ SUB_OP_EXTENDED_1: {
       READ_PGM_1(reg1); // arg count
 
       regP1 = &pStackPointer[-reg1 - 1]; // Pointer to class
-      reg1 /*argCountAndFlags*/ |= AF_PUSHED_FUNCTION;
       reg2 /*class*/ = regP1[0];
+
       // Can only `new` classes in Microvium
       if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
         err = MVM_E_USING_NEW_ON_NON_CLASS;
         goto SUB_EXIT;
       }
 
-      regLP1 = DynamicPtr_decode_long(vm, reg2);
-      // Note: using the stack as a temporary store because things can shift
-      // during a GC collection and we these temporaries to be GC-visible. It's
-      // safe to trash these particular slots. The regP1[1] slot holds the
-      // `this` value passed by the caller, which will always be undefined
-      // because `new` doesn't allows passing a `this`, and `regP1[0]` holds the
-      // class, which we've already read.
-      regP1[1] /*props*/ = READ_FIELD_2(regLP1, TsClass, staticProps);
-      regP1[0] /*func*/ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
-
-      // Using the stack just to root this in the GC graph
-      PUSH(getBuiltin(vm, BIN_STR_PROTOTYPE));
       // We've already checked that the target of the `new` operation is a
       // class. A class cannot existed without a `prototype` property. If the
       // class was created at compile time, the "prototype" string will be
@@ -810,23 +798,68 @@ SUB_OP_EXTENDED_1: {
       // sequences of instructions that also includes reference to the
       // "prototype" string. So either way, the fact that we're at this point in
       // the code means that the "prototype" string must exist as a builtin.
-      VM_ASSERT(vm, pStackPointer[-1] != VM_VALUE_UNDEFINED);
+      VM_ASSERT(vm, getBuiltin(vm, BIN_STR_PROTOTYPE) != VM_VALUE_UNDEFINED);
+
+      regLP1 = DynamicPtr_decode_long(vm, reg2);
+      regP1[0] /*func*/ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
+      // Note: this trashes the `this` slot, but it's ok because we set it later to the new object
+      regP1[1] /*props*/ = READ_FIELD_2(regLP1, TsClass, staticProps);
+
+      PUSH(getBuiltin(vm, BIN_STR_PROTOTYPE)); // "prototype" string
+
+      // Get the prototype property of the class. Now regP1[1] is the prototype.
       FLUSH_REGISTER_CACHE();
-      TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
-      pObject->dpNext = VM_VALUE_NULL;
-      // WIP: there's actually a problem here I think. The slot &pObject->dpProto is not stable across GC collections
-      getProperty(vm, &regP1[1], &reg->pStackPointer[-1], &pObject->dpProto);
-      TeTypeCode tc = deepTypeOf(vm, pObject->dpProto);
-      if ((tc != TC_REF_PROPERTY_LIST) && (tc != TC_REF_CLASS) && (tc != TC_REF_ARRAY)) {
-        pObject->dpProto = VM_VALUE_NULL;
+      getProperty(vm, &regP1[1], &reg->pStackPointer[-1], &regP1[1]);
+
+      vm_pop(vm); // "prototype" string
+
+      TeTypeCode tc = deepTypeOf(vm, regP1[1] /* prototype */);
+      reg2 /* internalSlotCount */ = 0;
+      if (tc == TC_REF_PROPERTY_LIST) {
+        CODE_COVERAGE(723); // Hit
+        regP2 /* pPrototype */ = (Value*)ShortPtr_decode(vm, regP1[1]);
+        // Look for the magic value that tells us how many prototype slots there
+        // are.
+        if ((vm_getAllocationSize(regP2) >= 4) &&
+          (regP2[VM_OIS_PROTO_SLOT_MAGIC_KEY] == VM_PROTO_SLOT_MAGIC_KEY_VALUE)
+        ) {
+          reg2 /* internalSlotCount */ = VirtualInt14_decode(vm, regP2[VM_OIS_PROTO_SLOT_COUNT]);
+        }
+      } else if (tc == TC_VAL_NULL) {
+        CODE_COVERAGE_UNTESTED(724); // Not hit
+      } else {
+        CODE_COVERAGE_ERROR_PATH(725); // Not hit
+        err = MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT;
+        goto SUB_EXIT;
       }
+
+      Value* pObject = gc_allocate(vm, sizeof(TsPropertyList) + reg2 * sizeof(Value), TC_REF_PROPERTY_LIST);
+      Value* p = pObject;
+      *p++ = VM_VALUE_NULL; // dpNext
+      *p++ = regP1[1]; // dpProto
+
+      // Internal slots
+      if (reg2) {
+        CODE_COVERAGE(726); // Hit
+        regP2 /* pPrototype */ = ShortPtr_decode(vm, regP1[1] /* dpProto */);
+        // Make sure the prototype actually has the slots we want to read
+        VM_ASSERT(vm, vm_getAllocationSize(regP2) >= 4 + reg2);
+        regP2 = &regP2[4]; // Skip header and the magic number and slot count
+        while (reg2--) {
+          *p++ = *regP2++;
+        }
+      } else {
+        CODE_COVERAGE(727); // Hit
+      }
+
+      regP1[1] /* this */ = ShortPtr_encode(vm, pObject);
+
       CACHE_REGISTERS();
-      POP(); // BIN_STR_PROTOTYPE
+
       if (err != MVM_E_SUCCESS) goto SUB_EXIT;
 
-      // The first argument is the `this` value
-      regP1[1] = ShortPtr_encode(vm, pObject);
-
+      // The slot that was used for the class is now used for the function reference
+      reg1 /*argCountAndFlags*/ |= AF_PUSHED_FUNCTION;
       reg2 = regP1[0];
       reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
 
@@ -1114,7 +1147,7 @@ SUB_THROW: {
 
   // Jump to the catch block
   reg2 = pStackPointer[1];
-  // WIP: These values are no deserializable by the snapshot decoder, so this will need to change
+  // WIP: These values are not deserializable by the snapshot decoder, so this will need to change
   VM_ASSERT(vm, (reg2 & 1) == 1); // The high bit will be set to avoid conflict with GC
   lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
 
@@ -1575,7 +1608,7 @@ SUB_OP_EXTENDED_2: {
 
 SUB_FIXED_ARRAY_NEW: {
   FLUSH_REGISTER_CACHE();
-  uint16_t* arr = gc_allocateWithHeader(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* arr = gc_allocate(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
   CACHE_REGISTERS();
   uint16_t* p = arr;
   // Note: when reading a DELETED value from the array, it will read as
@@ -1998,7 +2031,7 @@ SUB_OP_EXTENDED_4: {
       // opcodes together according to whether they flush the register cache.
       // Also maybe they could be dispatched through a lookup table.
       FLUSH_REGISTER_CACHE();
-      TsClass* pClass = gc_allocateWithHeader(vm, sizeof (TsClass), TC_REF_CLASS);
+      TsClass* pClass = gc_allocate(vm, sizeof (TsClass), TC_REF_CLASS);
       CACHE_REGISTERS();
       pClass->constructorFunc = pStackPointer[-2];
       pClass->staticProps = pStackPointer[-1];
@@ -2050,7 +2083,6 @@ SUB_OP_EXTENDED_4: {
 /* ------------------------------------------------------------------------- */
     MVM_CASE (VM_OP4_SCOPE_POP): {
       CODE_COVERAGE(649); // Hit
-
       reg1 = reg->closure;
       VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
       LongPtr lpClosure = DynamicPtr_decode_long(vm, reg1);
@@ -2059,11 +2091,25 @@ SUB_OP_EXTENDED_4: {
       // The pointer to the parent scope is the last slot in the closure
       reg1 = LongPtr_read2_aligned(LongPtr_add(lpClosure, size - 2));
       reg->closure = reg1;
-      #if MVM_SAFE_MODE
-        VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
-        VM_ASSERT(vm, size >= 2);
-        VM_ASSERT(vm, (deepTypeOf(vm, reg1) == TC_REF_CLOSURE) || (deepTypeOf(vm, reg1) == TC_VAL_DELETED));
-      #endif
+
+      VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
+      VM_ASSERT(vm, size >= 2);
+      VM_ASSERT(vm, (deepTypeOf(vm, reg1) == TC_REF_CLOSURE) || (deepTypeOf(vm, reg1) == TC_VAL_DELETED));
+
+      goto SUB_TAIL_POP_0_PUSH_0;
+    }
+
+/** -------------------------------------------------------------------------
+ *                             VM_OP4_SCOPE_SAVE
+ *
+ * Saves the current closure by pushing it to the stack.
+ *
+ *   Expects:
+ *     Nothing
+ * ------------------------------------------------------------------------- */
+    MVM_CASE (VM_OP4_SCOPE_SAVE): {
+      CODE_COVERAGE(728); // Hit
+      PUSH(reg->closure);
       goto SUB_TAIL_POP_0_PUSH_0;
     }
 
@@ -3020,7 +3066,7 @@ static Value vm_newArray(VM* vm, uint16_t capacity) {
 
   if (capacity) {
     vm_push(vm, result); // GC-reachable
-    uint16_t* pData = gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+    uint16_t* pData = gc_allocate(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
     result = vm_pop(vm);
     arr = ShortPtr_decode(vm, result); // Invalidated
     arr->dpData = ShortPtr_encode(vm, pData);
@@ -3086,7 +3132,7 @@ static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess,
   vm_push(vm, resultOrError); // anchor to GC
   vm_push(vm, continuation); // anchor to GC
 
-  Value* closure = gc_allocateWithHeader(vm, 4 * 2, TC_REF_CLOSURE);
+  Value* closure = gc_allocate(vm, 4 * 2, TC_REF_CLOSURE);
 
   closure[0] = getBuiltin(vm, BIN_ASYNC_CONTINUE);
   closure[1] = vm_pop(vm); // continuation
@@ -3106,7 +3152,7 @@ static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   int size = slotCount * 2;
 
-  uint16_t* newScope = gc_allocateWithHeader(vm, size, TC_REF_CLOSURE);
+  uint16_t* newScope = gc_allocate(vm, size, TC_REF_CLOSURE);
 
   uint16_t* p = newScope;
   while (--slotCount) { // Note: pre-decrement so will stop one short of the end
@@ -3546,7 +3592,7 @@ void mvm_free(VM* vm) {
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
  */
-static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
+static void* gc_allocate(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
   uint16_t* p;
   uint16_t* end;
 
@@ -3572,17 +3618,7 @@ static void* gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, TeTypeCode typeCo
   // since even a 1-char string (+null terminator) is a 4-byte allocation.
   VM_ASSERT(vm, sizeIncludingHeader >= 4);
 
-  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-    // Each time a GC collection _could_ occur, we do it. This is to catch
-    // insidious bugs where the only reference to something is a native
-    // reference and so the GC sees it as unreachable, but the native pointer
-    // appears to work fine until once in a blue moon a GC collection is
-    // triggered at exactly the right time.
-    mvm_runGC(vm, false);
-  #endif
-  #if MVM_SAFE_MODE
-  vm->gc_potentialCycleNumber++;
-  #endif
+  VM_POTENTIAL_GC_POINT(vm);
 
 RETRY:
   pBucket = vm->pLastBucket;
@@ -3619,11 +3655,11 @@ static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
 
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
   TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
-  return gc_allocateWithHeader(vm, size, tc);
+  return gc_allocate(vm, size, tc);
 }
 
 /*
- * This function is like gc_allocateWithHeader except that it's optimized for
+ * This function is like gc_allocate except that it's optimized for
  * situations where:
  *
  *   1. The header can be precomputed to a C constant, rather than assembling it
@@ -3653,17 +3689,7 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
   VM_ASSERT(vm, sizeIncludingHeader >= 4);
   VM_ASSERT(vm, vm_getAllocationSizeExcludingHeaderFromHeaderWord(header) == sizeIncludingHeader - 2);
 
-  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-    // Each time a GC collection _could_ occur, we do it. This is to catch
-    // insidious bugs where the only reference to something is a native
-    // reference and so the GC sees it as unreachable, but the native pointer
-    // appears to work fine until once in a blue moon a GC collection is
-    // triggered at exactly the right time.
-    mvm_runGC(vm, false);
-  #endif
-  #if MVM_SAFE_MODE
-    vm->gc_potentialCycleNumber++;
-  #endif
+  VM_POTENTIAL_GC_POINT(vm);
 
   TsBucket* pBucket = vm->pLastBucket;
   if (!pBucket) {
@@ -4265,6 +4291,10 @@ static void gc_processShortPtrValue(gc_TsGCCollectionState* gc, Value* pValue) {
     return;
   } else {
     CODE_COVERAGE(465); // Hit
+    // Tombstones always have exactly the header `TOMBSTONE_HEADER`. If it has
+    // the type-code of TC_REF_TOMBSTONE but is not a tombstone then it's likely
+    // a corrupt header or pValue does not point to a legitimate allocation.
+    VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) != TC_REF_TOMBSTONE);
   }
   // Otherwise, we need to move the allocation
 
@@ -4467,7 +4497,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   */
 
   #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-  vm_checkHeap(vm);
+  mvm_checkHeap(vm);
   #endif
 
   uint16_t n;
@@ -4605,23 +4635,30 @@ void mvm_runGC(VM* vm, bool squeeze) {
       VM_ASSERT(vm, p < bucket->pEndOfUsedSpace);
       uint16_t header = *p++;
       uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
-      uint16_t words = (size + 1) >> 1;
+
+      uint16_t* next = p + ((size + 1) >> 1); // round up
 
       // Note: we're comparing the header words here to compare the type code.
       // The RHS here is constant
       if (header < (uint16_t)(TC_REF_DIVIDER_CONTAINER_TYPES << 12)) { // Non-container types
         CODE_COVERAGE(502); // Hit
-        p += words;
+        p = next;
         continue;
-      } else {
-        // Else, container types
+      } else { // Else, container types
         CODE_COVERAGE(505); // Hit
-      }
 
-      while (words--) { // Hot loop
-        if (Value_isShortPtr(*p))
-          gc_processValue(&gc, p);
-        p++;
+        // Note: we round down in calculating the number of words in the container
+        // that may contain a valid pointer. In particular this allows zero-length
+        // containers to have a size of 1 byte, which is rounded up to a 2-byte
+        // allocation (the minimum size large enough for the tombstone) but rounded
+        // down to zer when treated as the container dimension.
+        uint16_t words = size >> 1; // round down
+        while (words--) { // Hot loop
+          if (Value_isShortPtr(*p))
+            gc_processValue(&gc, p);
+          p++;
+        }
+        p = next;
       }
     }
 
@@ -5427,7 +5464,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   }
 
   // Note: allocating 1 extra byte for the extra null terminator
-  char* pData = gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
+  char* pData = gc_allocate(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
   *out_pData = pData;
   // Null terminator
   pData[sizeBytes] = '\0';
@@ -5771,7 +5808,7 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
   }
   VM_ASSERT(vm, newCapacity != 0);
 
-  uint16_t* pNewData = gc_allocateWithHeader(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* pNewData = gc_allocate(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
   // Copy values from the old array. Note that the above allocation can trigger
   // a GC collection which moves the array, so we need to decode the value again
   TsArray* arr = DynamicPtr_decode_native(vm, *pvArr);
@@ -5870,7 +5907,7 @@ SUB_OBJECT_KEYS:
   }
 
   // Allocate the new array.
-  Value* pArr = gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
+  Value* pArr = gc_allocate(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
   obj = *inout_slot; // Invalidated by potential GC collection
 
   // Populate the array
@@ -6199,6 +6236,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
 
   // This function may trigger a GC cycle because it may add a cell to the string intern table
   VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
+  VM_POTENTIAL_GC_POINT(vm);
 
   // Property names in microvium are either integer indexes or non-integer interned strings
   TeTypeCode type = deepTypeOf(vm, *value);
@@ -6954,7 +6992,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
 
 #if MVM_INCLUDE_DEBUG_CAPABILITY
 
-void mvm_dbg_setBreakpoint(VM* vm, uint16_t bytecodeAddress) {
+void mvm_dbg_setBreakpoint(VM* vm, int bytecodeAddress) {
   CODE_COVERAGE_UNTESTED(588); // Not hit
 
   // These checks on the bytecode address are assertions rather than user faults
@@ -6962,8 +7000,8 @@ void mvm_dbg_setBreakpoint(VM* vm, uint16_t bytecodeAddress) {
   // derived from some kind of debug symbol file. In a production environment,
   // setting a breakpoint on an address that's never executed (e.g. because it's
   // not executable) is not a VM failure.
-  VM_ASSERT(vm, bytecodeAddress >= getSectionOffset(vm->lpBytecode, BCS_ROM));
-  VM_ASSERT(vm, bytecodeAddress < getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_ROM)));
+  VM_ASSERT(vm, (bytecodeAddress == - 1) || (bytecodeAddress >= getSectionOffset(vm->lpBytecode, BCS_ROM)));
+  VM_ASSERT(vm, (bytecodeAddress == -1) || (bytecodeAddress < getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_ROM))));
 
   mvm_dbg_removeBreakpoint(vm, bytecodeAddress);
   TsBreakpoint* breakpoint = vm_malloc(vm, sizeof (TsBreakpoint));
@@ -7082,7 +7120,7 @@ static Value vm_cloneContainer(VM* vm, Value* pArr) {
   LongPtr* lpSource = DynamicPtr_decode_long(vm, *pArr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-  uint16_t* newArray = gc_allocateWithHeader(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
+  uint16_t* newArray = gc_allocate(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
 
   // May have moved during allocation
   lpSource = DynamicPtr_decode_long(vm, *pArr);
@@ -7106,7 +7144,7 @@ static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr) {
   return *pStackPointerAfterDecr;
 }
 
-static inline void vm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber) {
+static inline void mvm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber) {
   VM_ASSERT(vm, vm->gc_potentialCycleNumber == potentialCycleNumber);
 }
 
@@ -7147,7 +7185,7 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
   }
   size = VirtualInt14_decode(vm, size);
 
-  uint8_t* p = gc_allocateWithHeader(vm, size, TC_REF_UINT8_ARRAY);
+  uint8_t* p = gc_allocate(vm, size, TC_REF_UINT8_ARRAY);
   *slot = ShortPtr_encode(vm, p);
   memset(p, 0, size);
 
@@ -7160,8 +7198,8 @@ mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t sizeBy
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
     return VM_VALUE_UNDEFINED;
   }
-  // Note: gc_allocateWithHeader will also check the size
-  uint8_t* p = gc_allocateWithHeader(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
+  // Note: gc_allocate will also check the size
+  uint8_t* p = gc_allocate(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
   Value result = ShortPtr_encode(vm, p);
   memcpy(p, data, sizeBytes);
   return result;
@@ -7297,7 +7335,7 @@ static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount) {
   VM_ASSERT(vm, (internalSlotCount % 2) == 0);
   size_t size = sizeof(TsPropertyList) + internalSlotCount * sizeof(Value);
   vm_push(vm, prototype); // GC reachable
-  TsPropertyList* pObject = gc_allocateWithHeader(vm, (uint16_t)size, TC_REF_PROPERTY_LIST);
+  TsPropertyList* pObject = gc_allocate(vm, (uint16_t)size, TC_REF_PROPERTY_LIST);
   pObject->dpProto = vm_pop(vm); // prototype
   pObject->dpNext = VM_VALUE_NULL;
 
@@ -7332,7 +7370,7 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
   // Anchor on stack
   vm_push(vm, callbackOrPromise);
 
-  uint16_t* pClosure = gc_allocateWithHeader(vm, 4, TC_REF_CLOSURE);
+  uint16_t* pClosure = gc_allocate(vm, 4, TC_REF_CLOSURE);
   pClosure[0] = asyncHostCallback;
   pClosure[1] = vm_pop(vm); // callbackOrPromise
   mvm_Value closureValue = ShortPtr_encode(vm, pClosure);
@@ -7397,7 +7435,7 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
     // (cycle). Each element in the linked cycle is a triple with [prev, job,
     // next]. Here there is only one node in the cycle, so the next and prev are
     // itself.
-    firstNode = (Value*)gc_allocateWithHeader(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
+    firstNode = (Value*)gc_allocate(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
     firstNodeRef = ShortPtr_encode(vm, firstNode);
     firstNode[0] = firstNodeRef; // prev
     firstNode[1] = reg->jobQueue; // job
@@ -7415,7 +7453,7 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
   VM_ASSERT(vm, deepTypeOf(vm, reg->jobQueue) == TC_REF_FIXED_LENGTH_ARRAY);
 
   // Create a new node in the linked cycle
-  Value* newNode = gc_allocateWithHeader(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
+  Value* newNode = gc_allocate(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
   VM_EXEC_SAFE_MODE(firstNodeRef = VM_VALUE_DELETED); // Invalidated
   VM_EXEC_SAFE_MODE(firstNode = 0); // Invalidated
   VM_EXEC_SAFE_MODE(jobClosure = VM_VALUE_DELETED); // Invalidated
@@ -7506,8 +7544,8 @@ static Value vm_dequeueJob(VM* vm) {
  * This function walks the heap and checks that all RAM pointer values point to
  * legitimate allocations.
  */
-#if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-void vm_checkHeap(mvm_VM* vm) {
+#if MVM_DEBUG_UTILS
+void mvm_checkHeap(mvm_VM* vm) {
   // Allocation map is 1 bit per word. The bit is set if the word is the
   // beginning of an allocation.
   uint16_t heapSize = getHeapSize(vm);
@@ -7583,7 +7621,7 @@ void vm_checkHeap(mvm_VM* vm) {
 cleanup:
   free(allocationMap);
 }
-#endif // MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+#endif // MVM_DEBUG_UTILS
 
 /**
  * If the value is a RAM pointer, validates that it points to a valid heap
@@ -7592,8 +7630,8 @@ cleanup:
  * WARNING: Very expensive, since it walks the whole heap to find the
  * allocation.
  */
-#if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-void vm_checkValue(mvm_VM* vm, mvm_Value value) {
+#if MVM_DEBUG_UTILS
+void mvm_checkValue(mvm_VM* vm, mvm_Value value) {
   if (!Value_isShortPtr(value)) {
     return;
   }
@@ -7628,17 +7666,17 @@ void vm_checkValue(mvm_VM* vm, mvm_Value value) {
   // Not found. Therefore corrupt.
   MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
 }
-#endif // MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+#endif // MVM_DEBUG_UTILS
 
 /**
  * Parses the call stack and returns a pointer to the set of frame.
  *
  * The first returned frame is the active frame, and the rest proceed in
  * descending order.
- * 
+ *
  * If the registers are currently cached, the first frame will be rubbish.
- * 
- * The memory is malloced but re-used on each call to `vm_getCallStack`, 
+ *
+ * The memory is malloced but re-used on each call to `mvm_readCallStack`,
  * so the caller should not free it.
  *
  * A zero programCounter indicates the end of the call stack, which can be
@@ -7647,8 +7685,8 @@ void vm_checkValue(mvm_VM* vm, mvm_Value value) {
  * If there are no frames, returns NULL.
  */
 #if MVM_DEBUG_UTILS
-vm_TsCallStackFrame* vm_getCallStack(VM* vm, int* out_frameCount) {
-  static vm_TsCallStackFrame* frames = 0;
+mvm_TsCallStackFrame* mvm_readCallStack(VM* vm, int* out_frameCount) {
+  static mvm_TsCallStackFrame* frames = 0;
   static int allocatedFramesCount = 0;
 
   vm_TsStack* stack = vm->stack;
@@ -7678,12 +7716,12 @@ vm_TsCallStackFrame* vm_getCallStack(VM* vm, int* out_frameCount) {
   if (allocatedFramesCount < frameCount + 1) {
     free(frames);
     allocatedFramesCount = frameCount + 1;
-    frames = (vm_TsCallStackFrame*)malloc(sizeof(vm_TsCallStackFrame) * allocatedFramesCount);
+    frames = (mvm_TsCallStackFrame*)malloc(sizeof(mvm_TsCallStackFrame) * allocatedFramesCount);
   }
 
-  memset(frames, 0, sizeof(vm_TsCallStackFrame) * allocatedFramesCount);
+  memset(frames, 0, sizeof(mvm_TsCallStackFrame) * allocatedFramesCount);
 
-  vm_TsCallStackFrame* pFrame = frames;
+  mvm_TsCallStackFrame* pFrame = frames;
   VM_ASSERT(vm, pFrame >= frames);
 
   Value* pStackPointer = reg->pStackPointer;
@@ -7730,5 +7768,118 @@ vm_TsCallStackFrame* vm_getCallStack(VM* vm, int* out_frameCount) {
   VM_ASSERT(vm, pFrame == frames + frameCount);
 
   return frames;
+}
+#endif // MVM_DEBUG_UTILS
+
+/**
+ * Counts the number of allocations in the heap
+ *
+ * WARNING: Expensive, since it walks the whole heap.
+ */
+#if MVM_DEBUG_UTILS
+int mvm_readHeapCount(VM* vm) {
+  TsBucket* firstBucket = vm->pLastBucket;
+  while (firstBucket && firstBucket->prev) {
+    firstBucket = firstBucket->prev;
+  }
+
+  TsBucket* bucket = firstBucket;
+  int count = 0;
+  while (bucket) {
+    uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
+    Value* p = (Value*)bucketBegin;
+    Value* bucketEnd = bucket->pEndOfUsedSpace;
+    uint16_t offsetStart = bucket->offsetStart;
+    while (p < bucketEnd) {
+      uint16_t header = *p++;
+      uint16_t offset = (uint16_t)((uint8_t*)p - bucketBegin) + offsetStart;
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      count++;
+
+      Value* next = p + ((size + 1) / 2);
+      if (next > bucketEnd) {
+        MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+        return 0;
+      }
+      p = next;
+    }
+    bucket = bucket->next;
+  }
+
+  return count;
+}
+#endif // MVM_DEBUG_UTILS
+
+/**
+ * Parse the whole heap. Will return a pointer to the heap allocation info
+ * array, which is malloced and re-used on each call to `mvm_readHeap`, so the
+ * caller should not free it.
+ *
+ * The `out_count` is optional. The number of returned heap allocations is N+1
+ * with the last one being a sentinel with all fields zeroed.
+ */
+#if MVM_DEBUG_UTILS
+mvm_TsHeapAllocationInfo* mvm_readHeap(VM* vm, int* out_count) {
+  static mvm_TsHeapAllocationInfo* heap = 0;
+  static int allocatedHeapCount = 0;
+
+  if (out_count) {
+    *out_count = -1; // Initial value. Will be overridden.
+  }
+
+  if (heap) {
+    free(heap);
+    heap = 0;
+    allocatedHeapCount = 0;
+  }
+
+  int count = mvm_readHeapCount(vm);
+  allocatedHeapCount = count + 1;
+  heap = (mvm_TsHeapAllocationInfo*)malloc(sizeof(mvm_TsHeapAllocationInfo) * allocatedHeapCount);
+  if (!heap) return heap;
+  memset(heap, 0, sizeof(mvm_TsHeapAllocationInfo) * allocatedHeapCount);
+
+  TsBucket* firstBucket = vm->pLastBucket;
+  while (firstBucket && firstBucket->prev) {
+    firstBucket = firstBucket->prev;
+  }
+
+  TsBucket* bucket = firstBucket;
+  int i = 0;
+  while (bucket) {
+    uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
+    Value* p = (Value*)bucketBegin;
+    Value* bucketEnd = bucket->pEndOfUsedSpace;
+    uint16_t offsetStart = bucket->offsetStart;
+    while (p < bucketEnd) {
+      uint16_t header = *p++;
+      uint16_t offset = (uint16_t)((uint8_t*)p - bucketBegin) + offsetStart;
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
+
+      VM_ASSERT(vm, i < allocatedHeapCount - 1);
+      heap[i++] = (mvm_TsHeapAllocationInfo){
+        .o = offset,
+        .a = (uint16_t)((intptr_t)p),
+        .t = tc,
+        .s = size,
+        .address = p,
+      };
+
+      Value* next = p + ((size + 1) / 2);
+      if (next > bucketEnd) {
+        MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+        return NULL;
+      }
+      p = next;
+    }
+    bucket = bucket->next;
+  }
+
+  if (out_count) {
+    *out_count = count;
+  }
+
+  return heap;
 }
 #endif // MVM_DEBUG_UTILS

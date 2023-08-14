@@ -88,3 +88,11 @@ It worked well at the beginning to have test output in the repo because it was k
 It stopped being useful because I never actually look at it anymore, even when debugging.
 
 It might be tolerable to have one or two files like this, but to do it automatically for all the end-to-end tests is a terrible idea.
+
+## Don't change: stable addresses in allocator
+
+Something that really worked well is having an allocator in the C++ project that produces deterministic addresses on each run. Among other things, it means that memory corruption issues are 100% reproducible. Data breakpoints remain valid. You can note down pointers from one run and they're still the same on another run.
+
+## Don't change: tombstone being type 0
+
+Having the tombstone as type zero and the type code in the high nibble of the header means that most random words are not valid headers, which makes catching corruption errors much easier.

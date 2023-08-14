@@ -181,7 +181,7 @@ async function runTest(anySkips: boolean, testArtifactDir: string, yamlText: str
     runGC: undefined,
     console: { log: print },
     Reflect: { ownKeys: (obj: any) => Reflect.ownKeys(obj).filter(k => typeof k === 'string') },
-    Promise: Promise,
+    Promise: undefined, // Will be set later
     hostAsyncFunction: async (x: number) => x + 1,
     Microvium: {
       newUint8Array: (count: number) => new Uint8Array(count),

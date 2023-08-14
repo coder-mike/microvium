@@ -668,6 +668,14 @@ class InstructionEmitter {
     );
   }
 
+  operationScopeSave(ctx: InstructionEmitContext, op: IL.Operation) {
+    return customInstruction(op,
+      vm_TeOpcode.VM_OP_EXTENDED_2,
+      vm_TeOpcodeEx2.VM_OP2_EXTENDED_4,
+      { type: 'UInt8', value: vm_TeOpcodeEx4.VM_OP4_SCOPE_SAVE }
+    );
+  }
+
   operationClassCreate(ctx: InstructionEmitContext, op: IL.Operation) {
     return instructionEx4(vm_TeOpcodeEx4.VM_OP4_CLASS_CREATE, op);
   }

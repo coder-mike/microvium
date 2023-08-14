@@ -179,10 +179,6 @@ export class VirtualMachineFriendly implements Microvium {
     this.vm.setArrayPrototype(hostValueToVM(this.vm, value));
   }
 
-  public setPromisePrototype(value: any) {
-    this.vm.setPromisePrototype(hostValueToVM(this.vm, value));
-  }
-
   public get globalThis(): any { return this._global; }
 }
 

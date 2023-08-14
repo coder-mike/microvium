@@ -16,8 +16,8 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-//const string runOnlyTest = "gc";
-const string runOnlyTest = "";
+const string runOnlyTest = "async-await-promise";
+//const string runOnlyTest = "";
 
 vector<string> skipTests = {
   "gc",

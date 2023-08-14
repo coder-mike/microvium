@@ -130,7 +130,7 @@ export class VirtualMachine {
 
     this.builtins = {
       arrayPrototype: IL.nullValue,
-      promisePrototype: IL.nullValue,
+      promisePrototype: this.createPromisePrototype(),
       asyncContinue:  this.createAsyncContinueFunction(),
       asyncCatchBlock: this.createAsyncCatchBlock(),
       asyncHostCallback: this.createAsyncHostCallbackFunction(),
@@ -389,10 +389,6 @@ export class VirtualMachine {
 
   public setArrayPrototype(value: IL.Value) {
     this.builtins.arrayPrototype = value;
-  }
-
-  public setPromisePrototype(value: IL.Value) {
-    this.builtins.promisePrototype = value;
   }
 
   public importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {
@@ -899,6 +895,7 @@ export class VirtualMachine {
       case 'ScopeNew'     : return this.operationScopeNew(operands[0]);
       case 'ScopePop'     : return this.operationScopePop();
       case 'ScopePush'    : return this.operationScopePush(operands[0]);
+      case 'ScopeSave'    : return this.operationScopeSave();
       case 'StartTry'     : return this.operationStartTry(operands[0]);
       case 'StoreGlobal'  : return this.operationStoreGlobal(operands[0]);
       case 'StoreScoped'  : return this.operationStoreScoped(operands[0]);
@@ -1450,8 +1447,36 @@ export class VirtualMachine {
     ) {
       prototype = IL.nullValue;
     }
+
+    // Get the internal slot count. This is only for the case where the
+    // prototype object is a special object such as the promise prototype, which
+    // is marked by finding the VM_PROTO_SLOT_MAGIC_KEY_VALUE in the first
+    // internal slot of the prototype object itself.
+    const internalSlots: IL.Value[] = [];
+    if (prototype.type === 'ReferenceValue') {
+      const prototypeAllocation = this.dereference(prototype);
+      if (prototypeAllocation.type === 'ObjectAllocation') {
+        if (prototypeAllocation.internalSlots.length >= 4 &&
+          prototypeAllocation.internalSlots[VM.VM_OIS_PROTO_SLOT_MAGIC_KEY] === VM.VM_PROTO_SLOT_MAGIC_KEY_VALUE
+        ) {
+          const internalSlotCount = prototypeAllocation.internalSlots[VM.VM_OIS_PROTO_SLOT_COUNT];
+          hardAssert(internalSlotCount.type === 'NumberValue');
+          const count = internalSlotCount.value;
+          for (const slot of prototypeAllocation.internalSlots.slice(4, 4 + count)) {
+            internalSlots.push(slot);
+          }
+        }
+      }
+    }
+
+    const newObject = this.newObject(prototype, internalSlots.length);
+    const newObjectAllocation = this.dereference(newObject);
+    for (let i = 0; i < internalSlots.length; i++) {
+      newObjectAllocation.internalSlots[i + 2] = internalSlots[i];
+    }
+
     // The first argument is the `this` value
-    args[0] = this.newObject(prototype, 0);
+    args[0] = newObject;
 
     const constructorFunc = class_.constructorFunc;
     if (constructorFunc.type !== 'FunctionValue' &&
@@ -1821,6 +1846,10 @@ export class VirtualMachine {
   private operationScopeNew(slotCount: number) {
     const { newScope } = this.createScope(slotCount);
     this.closure = newScope;
+  }
+
+  private operationScopeSave() {
+    this.push(this.closure);
   }
 
   private createScope(slotCount: number) {
@@ -2537,6 +2566,21 @@ export class VirtualMachine {
     });
   }
 
+  public newClass(constructorFunc: IL.Value, prototype: IL.Value): IL.ClassValue {
+    if (this.deepTypeOf(prototype) !== 'NullValue' && this.deepTypeOf(prototype) !== 'ObjectAllocation') {
+      return this.runtimeError(`Class prototype must be an object or null`);
+    }
+
+    const staticProps = this.newObject(prototype, 0);
+    const staticPropsAllocation = this.dereference(staticProps);
+    staticPropsAllocation.properties.prototype = prototype;
+    return {
+      type: 'ClassValue',
+      constructorFunc,
+      staticProps,
+    }
+  }
+
   public newArray(fixedLength = false, length = 0): IL.ReferenceValue<IL.ArrayAllocation> {
     const items: IL.Value[] = [];
     for (let i = 0; i < length; i++) items.push(IL.deletedValue);
@@ -2861,7 +2905,7 @@ export class VirtualMachine {
     // Note: VirtualMachineFriendly also adds its own globals. The globals here
     // are ones that require custom IL.
 
-    // Note: if we add more globals, then this needs refactoring
+    this.addGlobalPromiseClass();
 
     /* Reflect.ownKeys uses the custom IL instruction `ObjectKeys` which can't
     be generated syntactically. Hopefully there aren't too many cases like this
@@ -2927,6 +2971,104 @@ export class VirtualMachine {
 
     // For tests that need to differentiate whether they're being run on node vs Microvium
     this.setProperty(obj_Microvium, this.stringValue('isMicrovium'), IL.trueValue);
+  }
+
+  private addGlobalPromiseClass() {
+    // IL to use for the resolve closure
+    const promiseResolve = this.importCustomILFunction('promiseResolve', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // Synchronous return value
+            { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            // The result is the first arg
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 1, stackDepthAfter: 2 },
+            // Push `true` to indicate that the promise is resolved
+            { opcode: 'Literal', operands: [literalOperand(true)], stackDepthBefore: 2, stackDepthAfter: 3 },
+            // Async-complete will schedule the promise subscribers in the queue
+            // and change the promise state, as well as invalidating the current
+            // closure so if it's called again it will be a no-op.
+            { opcode: 'AsyncComplete', operands: [], stackDepthBefore: 3, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
+
+    // IL to use for the reject closure
+    const promiseReject = this.importCustomILFunction('promiseReject', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // Synchronous return value
+            { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            // The result is the first arg
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 1, stackDepthAfter: 2 },
+            // Push `false` to indicate that the promise is rejected
+            { opcode: 'Literal', operands: [literalOperand(false)], stackDepthBefore: 2, stackDepthAfter: 3 },
+            // Async-complete will schedule the promise subscribers in the queue
+            // and change the promise state, as well as invalidating the current
+            // closure so if it's called again it will be a no-op.
+            { opcode: 'AsyncComplete', operands: [], stackDepthBefore: 3, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
+
+    const promiseConstructor = this.importCustomILFunction('promiseConstructor', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // Push the function to the stack
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
+
+            // The first arg is the `this` value
+            { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 1, stackDepthAfter: 2 },
+
+            // Create a new closure for the resolve function
+            { opcode: 'ScopeNew', operands: [countOperand(2)], stackDepthBefore: 2, stackDepthAfter: 2 },
+            // Set the callback
+            { opcode: 'Literal', operands: [{ type: 'LiteralOperand', literal: promiseResolve }], stackDepthBefore: 2, stackDepthAfter: 3 },
+            { opcode: 'StoreScoped', operands: [indexOperand(0)], stackDepthBefore: 3, stackDepthAfter: 2 },
+            // Set the promise slot to the `this` value of the constructor
+            { opcode: 'LoadArg', operands: [indexOperand(0)], stackDepthBefore: 2, stackDepthAfter: 3 },
+            { opcode: 'StoreScoped', operands: [indexOperand(1)], stackDepthBefore: 3, stackDepthAfter: 2 },
+            // Take the new closure and put it on the stack
+            { opcode: 'ScopeSave', operands: [], stackDepthBefore: 2, stackDepthAfter: 3 },
+
+            // Create a new closure for the reject function
+            { opcode: 'ScopeNew', operands: [countOperand(2)], stackDepthBefore: 3, stackDepthAfter: 3 },
+            // Set the callback
+            { opcode: 'Literal', operands: [{ type: 'LiteralOperand', literal: promiseReject }], stackDepthBefore: 3, stackDepthAfter: 4 },
+            { opcode: 'StoreScoped', operands: [indexOperand(0)], stackDepthBefore: 4, stackDepthAfter: 3 },
+            // Set the promise slot to the `this` value of the constructor
+            { opcode: 'LoadArg', operands: [indexOperand(0)], stackDepthBefore: 3, stackDepthAfter: 4 },
+            { opcode: 'StoreScoped', operands: [indexOperand(1)], stackDepthBefore: 4, stackDepthAfter: 3 },
+            // Take the new closure and put it on the stack
+            { opcode: 'ScopeSave', operands: [], stackDepthBefore: 3, stackDepthAfter: 4 },
+
+            // Call the handler function (void call)
+            { opcode: 'Call', operands: [countOperand(3), flagOperand(true)], stackDepthBefore: 4, stackDepthAfter: 0 },
+
+            // Return this promise
+            { opcode: 'LoadArg', operands: [indexOperand(0)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
+
+    const promisePrototype = this.builtins.promisePrototype ?? unexpected();
+    const obj_Promise = this.newClass(promiseConstructor, promisePrototype);
+    this.globalSet('Promise', obj_Promise);
   }
 
   importCustomILFunction(nameHint: string, il: Pick<VM.Function, 'entryBlockID' | 'blocks'>): IL.FunctionValue {
@@ -3038,6 +3180,29 @@ export class VirtualMachine {
         }
       }
     })
+  }
+
+  createObjectPrototype(internalSlotInitialValues: IL.Value[]): IL.Value {
+    // Create with 2 internal slots. The one is the "magic key" that signals
+    // that the other slot is the number of internal slots for objects derived
+    // from this prototype. The `new` operator checks if the given prototype has
+    // this magic slot, and if so it uses the given slot count to create the new
+    // object, and the internal slots after that as the initial values.
+    const ref = this.newObject(IL.nullValue, 2 + internalSlotInitialValues.length);
+    const obj = this.dereference(ref);
+    obj.internalSlots[VM.VM_OIS_PROTO_SLOT_MAGIC_KEY] = VM.VM_PROTO_SLOT_MAGIC_KEY_VALUE;
+    obj.internalSlots[VM.VM_OIS_PROTO_SLOT_COUNT] = IL.numberValue(internalSlotInitialValues.length);
+    for (let i = 0; i < internalSlotInitialValues.length; i++) {
+      obj.internalSlots[i + 4] = internalSlotInitialValues[i];
+    }
+    return ref;
+  }
+
+  createPromisePrototype(): IL.Value {
+    return this.createObjectPrototype([
+      VM.VM_PROMISE_STATUS_PENDING, // Promise status
+      IL.undefinedValue, // No subscribers yet
+    ]);
   }
 
   createAsyncContinueFunction(): IL.Value {
