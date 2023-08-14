@@ -16,8 +16,8 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "async-await-promise";
-//const string runOnlyTest = "";
+//const string runOnlyTest = "async-await-promise";
+const string runOnlyTest = "";
 
 vector<string> skipTests = {
   "gc",
@@ -137,8 +137,8 @@ int main()
     //mvm_createSnapshot(vm, NULL);
 
     // Set breakpoints
+    mvm_dbg_setBreakpointCallback(vm, breakpointCallback);
     if (IS_ANY_BREAKPOINTS) {
-      mvm_dbg_setBreakpointCallback(vm, breakpointCallback);
       for (int i = 0; i < BREAKPOINT_COUNT; i++)
         if (breakpoints[i])
           mvm_dbg_setBreakpoint(vm, breakpoints[i]);

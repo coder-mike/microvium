@@ -872,11 +872,11 @@ typedef struct mvm_TsCallStackFrame {
 
 typedef struct mvm_TsHeapAllocationInfo {
   // Note: the short names are because they display better in the debugger
-  uint16_t o; // offset (what the address would be if serialized in a snapshot)
   uint16_t a; // Lower 16-bits of address
   TeTypeCode t; // type code
   uint16_t s; // size
-  mvm_Value* address; // address
+  uint16_t offset; // What the address would be if serialized in a snapshot
+  mvm_Value* address;
 } mvm_TsHeapAllocationInfo;
 
 #define TOMBSTONE_HEADER ((TC_REF_TOMBSTONE << 12) | 2)

@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality with promises
-assertionCount: 8
+assertionCount: 21
 isAsync: true
 testOnly: false
 skip: false
@@ -23,6 +23,11 @@ async function runAsync() {
     await test_promiseAwaitReject();
     await test_awaitMustBeAsynchronous();
     await test_promiseConstructor();
+    await test_unresolvedPromise1Subscriber();
+    await test_unresolvedPromise2Subscribers();
+    await test_unresolvedPromise3Subscribers();
+    await test_awaitBeforeAndAfterResolved();
+    await test_awaitUnrejected();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -101,10 +106,147 @@ async function test_promiseConstructor() {
   assertEqual(result, 42);
 }
 
-// TODO: Await unresolved promise with 1 existing subscriber
-// TODO: Await unresolved promise with 2 existing subscribers
+async function test_unresolvedPromise1Subscriber() {
+  let s = 'Start';
+  let resolve;
+  const promise = new Promise(r => resolve = r);
+  const p1 = subscriber1(promise);
 
-// TODO: Await unresolved promise which becomes resolved
+  assertEqual(s, 'Start; Subscriber 1 started');
+  resolve(42);
+  await p1;
+  assertEqual(s, 'Start; Subscriber 1 started; Subscriber 1 finished with 42');
+
+  async function subscriber1(promise) {
+    s += '; Subscriber 1 started';
+    const result = await promise;
+    s += '; Subscriber 1 finished with ' + result;
+  }
+}
+
+
+async function test_unresolvedPromise2Subscribers() {
+  // The second subscriber triggers a code path where the subscriber list is
+  // promoted from a closure to a list.
+
+  let s = 'Start';
+  let resolve;
+  const promise = new Promise(r => resolve = r);
+  const p1 = subscriber1(promise);
+  const p2 = subscriber2(promise);
+
+  assertEqual(s, 'Start; Subscriber 1 started; Subscriber 2 started');
+  resolve(42);
+  await p1;
+  await p2;
+  assertEqual(s, 'Start; Subscriber 1 started; Subscriber 2 started; Subscriber 1 finished with 42; Subscriber 2 finished with 42');
+
+  async function subscriber1(promise) {
+    s += '; Subscriber 1 started';
+    const result = await promise;
+    s += '; Subscriber 1 finished with ' + result;
+  }
+
+  async function subscriber2(promise) {
+    s += '; Subscriber 2 started';
+    const result = await promise;
+    s += '; Subscriber 2 finished with ' + result;
+  }
+}
+
+async function test_unresolvedPromise3Subscribers() {
+  // Same as previous test but the subscriber list is already a list when
+  // subscriber 3 is added.
+
+  let s = 'Start';
+  let resolve;
+  const promise = new Promise(r => resolve = r);
+  const p1 = subscriber1(promise);
+  const p2 = subscriber2(promise);
+  const p3 = subscriber3(promise);
+
+  assertEqual(s, 'Start; Subscriber 1 started; Subscriber 2 started; Subscriber 3 started');
+  resolve({ message: 'Hi' });
+  await p1;
+  await p2;
+  await p3;
+  assertEqual(s, 'Start; Subscriber 1 started; Subscriber 2 started; Subscriber 3 started; Subscriber 1 finished with Hi; Subscriber 2 finished with Hi; Subscriber 3 finished with Hi');
+
+  async function subscriber1(promise) {
+    s += '; Subscriber 1 started';
+    const result = await promise;
+    s += '; Subscriber 1 finished with ' + result.message;
+  }
+
+  async function subscriber2(promise) {
+    s += '; Subscriber 2 started';
+    const result = await promise;
+    s += '; Subscriber 2 finished with ' + result.message;
+  }
+
+  async function subscriber3(promise) {
+    s += '; Subscriber 3 started';
+    const result = await promise;
+    s += '; Subscriber 3 finished with ' + result.message;
+  }
+}
+
+async function test_awaitBeforeAndAfterResolved() {
+  // The second subscriber only subscribes after the first promise has already
+  // transitioned to resolved.
+
+  let s = 'Start';
+  let resolve;
+  const promise = new Promise(r => resolve = r);
+  const p1 = subscriber1(promise);
+
+  assertEqual(s, 'Start; Subscriber 1 started');
+  resolve([42]);
+  assertEqual(s, 'Start; Subscriber 1 started');
+
+  await p1;
+  assertEqual(s, 'Start; Subscriber 1 started; Subscriber 1 finished with 42');
+
+  const p2 = subscriber2(promise);
+  assertEqual(s, 'Start; Subscriber 1 started; Subscriber 1 finished with 42; Subscriber 2 started');
+  await p2;
+  assertEqual(s, 'Start; Subscriber 1 started; Subscriber 1 finished with 42; Subscriber 2 started; Subscriber 2 finished with 42');
+
+  async function subscriber1(promise) {
+    s += '; Subscriber 1 started';
+    const result = await promise;
+    s += '; Subscriber 1 finished with ' + result[0];
+  }
+
+  async function subscriber2(promise) {
+    s += '; Subscriber 2 started';
+    const result = await promise;
+    s += '; Subscriber 2 finished with ' + result[0];
+  }
+}
+
+async function test_awaitUnrejected() {
+  let s = 'Start';
+  let reject;
+  const promise = new Promise((_,r) => reject = r);
+  const p1 = subscriber1(promise);
+
+  assertEqual(s, 'Start; Subscriber 1 started');
+  reject(new Error('dummy error'));
+  await p1;
+  assertEqual(s, 'Start; Subscriber 1 started; Subscriber 1 rejected with dummy error');
+
+  async function subscriber1(promise) {
+    s += '; Subscriber 1 started';
+    try {
+      await promise;
+      s += '; should not get here';
+    } catch (e) {
+      s += `; Subscriber 1 rejected with ${e.message}`;
+    }
+  }
+}
+
 // TODO: Await unresolved promise which becomes rejected
 // TODO: Await immediately-rejected promise
 
@@ -139,4 +281,5 @@ async function test_promiseConstructor() {
 // TODO: documentation on how to use async-await
 
 // TODO: run tests without safe mode
+// WIP: run e2e tests with MVM_VERY_EXPENSIVE_MEMORY_CHECKS
 // WIP Bump the version numbers, since we have new builtins and operations
