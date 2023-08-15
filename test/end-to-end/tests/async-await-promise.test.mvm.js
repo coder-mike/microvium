@@ -247,6 +247,8 @@ async function test_awaitUnrejected() {
   }
 }
 
+// WIP: the extensive memory tests doesn't seem to shift the offset on every collection
+
 // TODO: Await unresolved promise which becomes rejected
 // TODO: Await immediately-rejected promise
 

@@ -4694,6 +4694,7 @@ SUB_EXIT:
   // arguments to the stack, so this also effectively pops the arguments off the
   // stack.
   registerValuesAtEntry.jobQueue = reg->jobQueue; // Except the job queue needs to be preserved
+  registerValuesAtEntry.closure = reg->closure; // And the closure may point to the GC so it may change physical value if there are garbage collections during the call.
   *reg = registerValuesAtEntry;
 
   // If the stack is empty, we can free it. It may not be empty if this is a
