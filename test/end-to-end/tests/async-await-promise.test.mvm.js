@@ -1,7 +1,7 @@
 /*---
 runExportedFunction: 0
 description: Tests async-await functionality with promises
-assertionCount: 21
+assertionCount: 31
 isAsync: true
 testOnly: false
 skip: false
@@ -28,6 +28,8 @@ async function runAsync() {
     await test_unresolvedPromise3Subscribers();
     await test_awaitBeforeAndAfterResolved();
     await test_awaitUnrejected();
+    await test_immediatelyRejectedPromise();
+    await test_augmentingPromisePrototype();
 
     asyncTestComplete(true, undefined);
   } catch (e) {
@@ -247,41 +249,63 @@ async function test_awaitUnrejected() {
   }
 }
 
-// WIP: the extensive memory tests doesn't seem to shift the offset on every collection
+async function test_immediatelyRejectedPromise() {
+  let s = 'Start';
+  const promise = new Promise((_, reject) => reject(new Error('dummy error')));
+  const p1 = subscriber1(promise);
 
-// TODO: Await unresolved promise which becomes rejected
-// TODO: Await immediately-rejected promise
+  assertEqual(s, 'Start; Subscriber 1 started');
+  await p1;
+  assertEqual(s, 'Start; Subscriber 1 started; Subscriber 1 rejected with dummy error');
 
-// TODO: multiple awaits on the same promise
-// TODO: awaiting an already-resolved promise
-// TODO: awaiting an already-rejected promise
-// TODO: augmenting promise prototype
-// TODO: expression-call of host async function (should synthesize a promise)
-// TODO: Test with object errors and return values to make sure GC stuff is right for those
+  async function subscriber1(promise) {
+    s += '; Subscriber 1 started';
+    try {
+      await promise;
+      s += '; should not get here';
+    } catch (e) {
+      s += `; Subscriber 1 rejected with ${e.message}`;
+    }
+  }
+}
 
-// TODO: new Promise immediately resolved
-// TODO: new Promise immediately rejected
-// TODO: new Promise later resolved
-// TODO: new Promise later rejected
-// TODO: Promise.then
-// TODO: Promise.catch
+async function test_augmentingPromisePrototype() {
+  Promise.prototype.x = 5;
+  Promise.prototype.f = function() { return this.x; }
+  const promise = new Promise((_, reject) => reject(new Error('dummy error')));
+  const p1 = myAsync();
 
-// TODO: Update documentation with promise design and AsyncComplete
+  assertEqual(promise.x, 5);
+  assertEqual(promise.f(), 5);
+  assertEqual(p1.x, 5);
+  assertEqual(p1.f(), 5);
+  await p1;
+  assertEqual(p1.x, 5);
+  assertEqual(p1.f(), 5);
+  p1.x = 10;
+  assertEqual(promise.x, 5);
+  assertEqual(p1.f(), 10);
 
-// TODO: Export async function?
+  async function myAsync() {
+  }
+}
 
-// TODO: await over snapshot (requires promise support because CTVM doesn't have `vm.startAsync`)
+// TODO: Top-level await -- what happens?
 
-// TODO: test encoding and decoding of an async function where the entry point
+// TODO: Export async function - I think it should just work but return a promise.
+
+// TODO: Await over snapshot
+
+// TODO: Test encoding and decoding of an async function where the entry point
 // is only reachable through the continuation (i.e. a partially executed async
 // function where the original function is not reachable anymore but the
 // continuation is). This can probably be achieved by using `vmExport` on the
 // result of `mvm_asyncStart`.
 
-// TODO: Top-level await -- what happens?
+// TODO: Run tests without safe mode
 
-// TODO: documentation on how to use async-await
+// TODO: Update documentation with promise design and AsyncComplete
 
-// TODO: run tests without safe mode
-// WIP: run e2e tests with MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-// WIP Bump the version numbers, since we have new builtins and operations
+// TODO: Documentation on how to use async-await
+
+// TODO: Bump the version numbers, since we have new builtins and operations
