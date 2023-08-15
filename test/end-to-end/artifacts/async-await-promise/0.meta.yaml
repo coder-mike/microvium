@@ -1,6 +1,6 @@
 runExportedFunction: 0
 description: Tests async-await functionality with promises
-assertionCount: 21
+assertionCount: 31
 isAsync: true
 testOnly: false
 skip: false

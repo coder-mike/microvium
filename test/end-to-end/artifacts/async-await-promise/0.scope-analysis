@@ -22,6 +22,8 @@
 [global slot] 'test_unresolvedPromise3Subscribers'
 [global slot] 'test_awaitBeforeAndAfterResolved'
 [global slot] 'test_awaitUnrejected'
+[global slot] 'test_immediatelyRejectedPromise'
+[global slot] 'test_augmentingPromisePrototype'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
@@ -42,7 +44,9 @@ module with entry 'moduleEntry' {
     function 'test_unresolvedPromise2Subscribers' # binding_13 @ global['test_unresolvedPromise2Subscribers'];
     function 'test_unresolvedPromise3Subscribers' # binding_14 @ global['test_unresolvedPromise3Subscribers'];
     function 'test_awaitBeforeAndAfterResolved' # binding_15 @ global['test_awaitBeforeAndAfterResolved'];
-    function 'test_awaitUnrejected' # binding_16 @ global['test_awaitUnrejected']
+    function 'test_awaitUnrejected' # binding_16 @ global['test_awaitUnrejected'];
+    function 'test_immediatelyRejectedPromise' # binding_17 @ global['test_immediatelyRejectedPromise'];
+    function 'test_augmentingPromisePrototype' # binding_18 @ global['test_augmentingPromisePrototype']
   }
 
   references { vmExport @ free vmExport; run @ binding_2 }
@@ -63,6 +67,8 @@ module with entry 'moduleEntry' {
     func 'test_unresolvedPromise3Subscribers' -> global['test_unresolvedPromise3Subscribers']
     func 'test_awaitBeforeAndAfterResolved' -> global['test_awaitBeforeAndAfterResolved']
     func 'test_awaitUnrejected' -> global['test_awaitUnrejected']
+    func 'test_immediatelyRejectedPromise' -> global['test_immediatelyRejectedPromise']
+    func 'test_augmentingPromisePrototype' -> global['test_augmentingPromisePrototype']
   }
 
   class Error with {
@@ -77,7 +83,7 @@ module with entry 'moduleEntry' {
     block {
       sameInstanceCountAsParent: true; [no closure scope]
 
-      bindings { this '#this' # binding_17 @ arg[0] }
+      bindings { this '#this' # binding_19 @ arg[0] }
 
       prologue {  }
 
@@ -89,7 +95,7 @@ module with entry 'moduleEntry' {
     function Error as 'Error' {
       [no closure scope]; [0 var declarations]
 
-      bindings { this '#this' # binding_18 @ arg[0] }
+      bindings { this '#this' # binding_20 @ arg[0] }
 
       No references
 
@@ -98,7 +104,7 @@ module with entry 'moduleEntry' {
       block {
         sameInstanceCountAsParent: true; [no closure scope]
 
-        bindings { param 'message' # binding_19 @ arg[1] }
+        bindings { param 'message' # binding_21 @ arg[1] }
 
         prologue {  }
 
@@ -117,7 +123,7 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            '#this' @ binding_18; message @ binding_19
+            '#this' @ binding_20; message @ binding_21
           }
         }
       }
@@ -127,7 +133,7 @@ module with entry 'moduleEntry' {
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_20 @ arg[0] }
+    bindings { this '#this' # binding_22 @ arg[0] }
 
     No references
 
@@ -150,7 +156,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_21 @ arg[0] }
+    bindings { this '#this' # binding_23 @ arg[0] }
 
     No references
 
@@ -188,6 +194,8 @@ module with entry 'moduleEntry' {
           test_unresolvedPromise3Subscribers @ binding_14
           test_awaitBeforeAndAfterResolved @ binding_15
           test_awaitUnrejected @ binding_16
+          test_immediatelyRejectedPromise @ binding_17
+          test_augmentingPromisePrototype @ binding_18
           asyncTestComplete @ free asyncTestComplete
           undefined @ free undefined
         }
@@ -196,7 +204,7 @@ module with entry 'moduleEntry' {
       block {
         sameInstanceCountAsParent: true; [no closure scope]
 
-        bindings { catch-param 'e' # binding_22 @ local[3] }
+        bindings { catch-param 'e' # binding_24 @ local[3] }
 
         prologue { Stack has exception }
 
@@ -204,7 +212,7 @@ module with entry 'moduleEntry' {
 
         references {
           asyncTestComplete @ free asyncTestComplete
-          e @ binding_22
+          e @ binding_24
         }
       }
     }
@@ -213,7 +221,7 @@ module with entry 'moduleEntry' {
   function test_asyncReturnsPromise as 'test_asyncReturnsPromise' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_23 @ arg[0] }
+    bindings { this '#this' # binding_25 @ arg[0] }
 
     No references
 
@@ -223,7 +231,7 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'promise' # binding_24 @ local[0]
+        readonly const 'promise' # binding_26 @ local[0]
       }
 
       prologue { new let -> local[0] }
@@ -233,7 +241,7 @@ module with entry 'moduleEntry' {
       references {
         myAsyncFunc @ binding_5
         assert @ free assert
-        promise @ binding_24
+        promise @ binding_26
         Promise @ free Promise
       }
     }
@@ -243,7 +251,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_25 @ arg[0] }
+    bindings { this '#this' # binding_27 @ arg[0] }
 
     No references
 
@@ -266,7 +274,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_26 @ arg[0] }
+    bindings { this '#this' # binding_28 @ arg[0] }
 
     No references
 
@@ -276,9 +284,9 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'promise' # binding_27 @ local[3];
-        readonly const 'keys' # binding_28 @ local[4];
-        readonly const 'keys2' # binding_29 @ local[5]
+        readonly const 'promise' # binding_29 @ local[3];
+        readonly const 'keys' # binding_30 @ local[4];
+        readonly const 'keys2' # binding_31 @ local[5]
       }
 
       prologue {
@@ -292,16 +300,16 @@ module with entry 'moduleEntry' {
       references {
         myAsyncFunc @ binding_5
         Reflect @ free Reflect
-        promise @ binding_27
+        promise @ binding_29
         assertEqual @ free assertEqual
-        keys @ binding_28
-        promise @ binding_27
+        keys @ binding_30
+        promise @ binding_29
         Reflect @ free Reflect
-        promise @ binding_27
+        promise @ binding_29
         assertEqual @ free assertEqual
-        keys2 @ binding_29
+        keys2 @ binding_31
         assertEqual @ free assertEqual
-        keys2 @ binding_29
+        keys2 @ binding_31
       }
     }
   }
@@ -310,7 +318,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_30 @ arg[0] }
+    bindings { this '#this' # binding_32 @ arg[0] }
 
     No references
 
@@ -320,8 +328,8 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'promise' # binding_31 @ local[3];
-        readonly const 'result' # binding_32 @ local[4]
+        readonly const 'promise' # binding_33 @ local[3];
+        readonly const 'result' # binding_34 @ local[4]
       }
 
       prologue { new let -> local[3]; new let -> local[4] }
@@ -330,9 +338,9 @@ module with entry 'moduleEntry' {
 
       references {
         myAsyncFunc @ binding_5
-        promise @ binding_31
+        promise @ binding_33
         assertEqual @ free assertEqual
-        result @ binding_32
+        result @ binding_34
       }
     }
   }
@@ -341,7 +349,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_33 @ arg[0] }
+    bindings { this '#this' # binding_35 @ arg[0] }
 
     No references
 
@@ -351,7 +359,7 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'promise' # binding_34 @ local[3]
+        readonly const 'promise' # binding_36 @ local[3]
       }
 
       prologue { new let -> local[3] }
@@ -370,21 +378,21 @@ module with entry 'moduleEntry' {
         epilogue { !EndTry }
 
         references {
-          promise @ binding_34; assert @ free assert
+          promise @ binding_36; assert @ free assert
         }
       }
 
       block {
         sameInstanceCountAsParent: true; [no closure scope]
 
-        bindings { catch-param 'e' # binding_35 @ local[4] }
+        bindings { catch-param 'e' # binding_37 @ local[4] }
 
         prologue { Stack has exception }
 
         epilogue { Pop(1) }
 
         references {
-          assertEqual @ free assertEqual; e @ binding_35
+          assertEqual @ free assertEqual; e @ binding_37
         }
       }
     }
@@ -394,7 +402,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_36 @ arg[0] }
+    bindings { this '#this' # binding_38 @ arg[0] }
 
     No references
 
@@ -417,7 +425,7 @@ module with entry 'moduleEntry' {
     [closure scope with 3 slots: async-continuation, async-callback, s]
     [0 var declarations]
 
-    bindings { this '#this' # binding_37 @ arg[0] }
+    bindings { this '#this' # binding_39 @ arg[0] }
 
     No references
 
@@ -427,9 +435,9 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 's' # binding_38 @ scoped[!2];
-        readonly const 'promise' # binding_39 @ local[4];
-        function 'inner' # binding_40 @ local[3]
+        writable let 's' # binding_40 @ scoped[!2];
+        readonly const 'promise' # binding_41 @ local[4];
+        function 'inner' # binding_42 @ local[3]
       }
 
       prologue {
@@ -440,18 +448,18 @@ module with entry 'moduleEntry' {
       epilogue { Pop(2) }
 
       references {
-        inner @ binding_40
-        s @ binding_38 using relative slot index 2
-        promise @ binding_39
+        inner @ binding_42
+        s @ binding_40 using relative slot index 2
+        promise @ binding_41
         assertEqual @ free assertEqual
-        s @ binding_38 using relative slot index 2
+        s @ binding_40 using relative slot index 2
       }
 
       closure function inner as 'inner' {
         [closure scope with 3 slots: async-continuation, async-callback, parent-reference]
         [0 var declarations]
 
-        bindings { this '#this' # binding_41 @ arg[0] }
+        bindings { this '#this' # binding_43 @ arg[0] }
 
         No references
 
@@ -462,7 +470,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            readonly const 'promise' # binding_42 @ local[3]
+            readonly const 'promise' # binding_44 @ local[3]
           }
 
           prologue { new let -> local[3] }
@@ -471,9 +479,9 @@ module with entry 'moduleEntry' {
 
           references {
             myAsyncFunc @ binding_5
-            s @ binding_38 using relative slot index 7
-            promise @ binding_42
-            s @ binding_38 using relative slot index 7
+            s @ binding_40 using relative slot index 7
+            promise @ binding_44
+            s @ binding_40 using relative slot index 7
           }
         }
       }
@@ -484,7 +492,7 @@ module with entry 'moduleEntry' {
     [closure scope with 2 slots: async-continuation, async-callback]
     [0 var declarations]
 
-    bindings { this '#this' # binding_43 @ arg[0] }
+    bindings { this '#this' # binding_45 @ arg[0] }
 
     No references
 
@@ -494,8 +502,8 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        readonly const 'promise' # binding_44 @ local[3];
-        readonly const 'result' # binding_45 @ local[4]
+        readonly const 'promise' # binding_46 @ local[3];
+        readonly const 'result' # binding_47 @ local[4]
       }
 
       prologue { new let -> local[3]; new let -> local[4] }
@@ -504,17 +512,17 @@ module with entry 'moduleEntry' {
 
       references {
         Promise @ free Promise
-        promise @ binding_44
+        promise @ binding_46
         assertEqual @ free assertEqual
-        result @ binding_45
+        result @ binding_47
       }
 
       function '<anonymous>' as 'anonymous' {
         [no closure scope]; [0 var declarations]
 
         bindings {
-          param 'resolve' # binding_46 @ arg[1];
-          param 'reject' # binding_47 @ arg[2]
+          param 'resolve' # binding_48 @ arg[1];
+          param 'reject' # binding_49 @ arg[2]
         }
 
         No references
@@ -531,7 +539,7 @@ module with entry 'moduleEntry' {
 
           epilogue {  }
 
-          references { resolve @ binding_46 }
+          references { resolve @ binding_48 }
         }
       }
     }
@@ -541,7 +549,7 @@ module with entry 'moduleEntry' {
     [closure scope with 4 slots: async-continuation, async-callback, s, resolve]
     [0 var declarations]
 
-    bindings { this '#this' # binding_48 @ arg[0] }
+    bindings { this '#this' # binding_50 @ arg[0] }
 
     No references
 
@@ -551,11 +559,11 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 's' # binding_49 @ scoped[!2];
-        writable let 'resolve' # binding_50 @ scoped[!3];
-        readonly const 'promise' # binding_51 @ local[4];
-        readonly const 'p1' # binding_52 @ local[5];
-        function 'subscriber1' # binding_53 @ local[3]
+        writable let 's' # binding_51 @ scoped[!2];
+        writable let 'resolve' # binding_52 @ scoped[!3];
+        readonly const 'promise' # binding_53 @ local[4];
+        readonly const 'p1' # binding_54 @ local[5];
+        function 'subscriber1' # binding_55 @ local[3]
       }
 
       prologue {
@@ -568,24 +576,24 @@ module with entry 'moduleEntry' {
 
       references {
         Promise @ free Promise
-        subscriber1 @ binding_53
-        promise @ binding_51
+        subscriber1 @ binding_55
+        promise @ binding_53
         assertEqual @ free assertEqual
-        s @ binding_49 using relative slot index 2
-        resolve @ binding_50 using relative slot index 3
-        p1 @ binding_52
+        s @ binding_51 using relative slot index 2
+        resolve @ binding_52 using relative slot index 3
+        p1 @ binding_54
         assertEqual @ free assertEqual
-        s @ binding_49 using relative slot index 2
+        s @ binding_51 using relative slot index 2
       }
 
       closure function '<anonymous>' as 'anonymous1' {
         [no closure scope]; [0 var declarations]
 
-        bindings { param 'r' # binding_54 @ arg[1] }
+        bindings { param 'r' # binding_56 @ arg[1] }
 
         references {
-          resolve @ binding_50 using relative slot index 5
-          r @ binding_54
+          resolve @ binding_52 using relative slot index 5
+          r @ binding_56
         }
 
         prologue {  }
@@ -599,8 +607,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_55 @ arg[0];
-          param 'promise' # binding_56 @ scoped[!2]
+          this '#this' # binding_57 @ arg[0];
+          param 'promise' # binding_58 @ scoped[!2]
         }
 
         No references
@@ -614,7 +622,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            readonly const 'result' # binding_57 @ local[3]
+            readonly const 'result' # binding_59 @ local[3]
           }
 
           prologue { new let -> local[3] }
@@ -622,10 +630,10 @@ module with entry 'moduleEntry' {
           epilogue { Pop(1) }
 
           references {
-            s @ binding_49 using relative slot index 8
-            promise @ binding_56 using relative slot index 2
-            s @ binding_49 using relative slot index 8
-            result @ binding_57
+            s @ binding_51 using relative slot index 8
+            promise @ binding_58 using relative slot index 2
+            s @ binding_51 using relative slot index 8
+            result @ binding_59
           }
         }
       }
@@ -636,7 +644,7 @@ module with entry 'moduleEntry' {
     [closure scope with 4 slots: async-continuation, async-callback, s, resolve]
     [0 var declarations]
 
-    bindings { this '#this' # binding_58 @ arg[0] }
+    bindings { this '#this' # binding_60 @ arg[0] }
 
     No references
 
@@ -646,13 +654,13 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 's' # binding_59 @ scoped[!2];
-        writable let 'resolve' # binding_60 @ scoped[!3];
-        readonly const 'promise' # binding_61 @ local[5];
-        readonly const 'p1' # binding_62 @ local[6];
-        readonly const 'p2' # binding_63 @ local[7];
-        function 'subscriber1' # binding_64 @ local[3];
-        function 'subscriber2' # binding_65 @ local[4]
+        writable let 's' # binding_61 @ scoped[!2];
+        writable let 'resolve' # binding_62 @ scoped[!3];
+        readonly const 'promise' # binding_63 @ local[5];
+        readonly const 'p1' # binding_64 @ local[6];
+        readonly const 'p2' # binding_65 @ local[7];
+        function 'subscriber1' # binding_66 @ local[3];
+        function 'subscriber2' # binding_67 @ local[4]
       }
 
       prologue {
@@ -667,27 +675,27 @@ module with entry 'moduleEntry' {
 
       references {
         Promise @ free Promise
-        subscriber1 @ binding_64
-        promise @ binding_61
-        subscriber2 @ binding_65
-        promise @ binding_61
+        subscriber1 @ binding_66
+        promise @ binding_63
+        subscriber2 @ binding_67
+        promise @ binding_63
         assertEqual @ free assertEqual
-        s @ binding_59 using relative slot index 2
-        resolve @ binding_60 using relative slot index 3
-        p1 @ binding_62
-        p2 @ binding_63
+        s @ binding_61 using relative slot index 2
+        resolve @ binding_62 using relative slot index 3
+        p1 @ binding_64
+        p2 @ binding_65
         assertEqual @ free assertEqual
-        s @ binding_59 using relative slot index 2
+        s @ binding_61 using relative slot index 2
       }
 
       closure function '<anonymous>' as 'anonymous2' {
         [no closure scope]; [0 var declarations]
 
-        bindings { param 'r' # binding_66 @ arg[1] }
+        bindings { param 'r' # binding_68 @ arg[1] }
 
         references {
-          resolve @ binding_60 using relative slot index 5
-          r @ binding_66
+          resolve @ binding_62 using relative slot index 5
+          r @ binding_68
         }
 
         prologue {  }
@@ -701,8 +709,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_67 @ arg[0];
-          param 'promise' # binding_68 @ scoped[!2]
+          this '#this' # binding_69 @ arg[0];
+          param 'promise' # binding_70 @ scoped[!2]
         }
 
         No references
@@ -716,7 +724,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            readonly const 'result' # binding_69 @ local[3]
+            readonly const 'result' # binding_71 @ local[3]
           }
 
           prologue { new let -> local[3] }
@@ -724,10 +732,10 @@ module with entry 'moduleEntry' {
           epilogue { Pop(1) }
 
           references {
-            s @ binding_59 using relative slot index 8
-            promise @ binding_68 using relative slot index 2
-            s @ binding_59 using relative slot index 8
-            result @ binding_69
+            s @ binding_61 using relative slot index 8
+            promise @ binding_70 using relative slot index 2
+            s @ binding_61 using relative slot index 8
+            result @ binding_71
           }
         }
       }
@@ -740,8 +748,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_70 @ arg[0];
-          param 'promise' # binding_71 @ scoped[!2]
+          this '#this' # binding_72 @ arg[0];
+          param 'promise' # binding_73 @ scoped[!2]
         }
 
         No references
@@ -755,7 +763,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            readonly const 'result' # binding_72 @ local[3]
+            readonly const 'result' # binding_74 @ local[3]
           }
 
           prologue { new let -> local[3] }
@@ -763,10 +771,10 @@ module with entry 'moduleEntry' {
           epilogue { Pop(1) }
 
           references {
-            s @ binding_59 using relative slot index 8
-            promise @ binding_71 using relative slot index 2
-            s @ binding_59 using relative slot index 8
-            result @ binding_72
+            s @ binding_61 using relative slot index 8
+            promise @ binding_73 using relative slot index 2
+            s @ binding_61 using relative slot index 8
+            result @ binding_74
           }
         }
       }
@@ -777,7 +785,7 @@ module with entry 'moduleEntry' {
     [closure scope with 4 slots: async-continuation, async-callback, s, resolve]
     [0 var declarations]
 
-    bindings { this '#this' # binding_73 @ arg[0] }
+    bindings { this '#this' # binding_75 @ arg[0] }
 
     No references
 
@@ -787,15 +795,15 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 's' # binding_74 @ scoped[!2];
-        writable let 'resolve' # binding_75 @ scoped[!3];
-        readonly const 'promise' # binding_76 @ local[6];
-        readonly const 'p1' # binding_77 @ local[7];
-        readonly const 'p2' # binding_78 @ local[8];
-        readonly const 'p3' # binding_79 @ local[9];
-        function 'subscriber1' # binding_80 @ local[3];
-        function 'subscriber2' # binding_81 @ local[4];
-        function 'subscriber3' # binding_82 @ local[5]
+        writable let 's' # binding_76 @ scoped[!2];
+        writable let 'resolve' # binding_77 @ scoped[!3];
+        readonly const 'promise' # binding_78 @ local[6];
+        readonly const 'p1' # binding_79 @ local[7];
+        readonly const 'p2' # binding_80 @ local[8];
+        readonly const 'p3' # binding_81 @ local[9];
+        function 'subscriber1' # binding_82 @ local[3];
+        function 'subscriber2' # binding_83 @ local[4];
+        function 'subscriber3' # binding_84 @ local[5]
       }
 
       prologue {
@@ -812,30 +820,30 @@ module with entry 'moduleEntry' {
 
       references {
         Promise @ free Promise
-        subscriber1 @ binding_80
-        promise @ binding_76
-        subscriber2 @ binding_81
-        promise @ binding_76
-        subscriber3 @ binding_82
-        promise @ binding_76
+        subscriber1 @ binding_82
+        promise @ binding_78
+        subscriber2 @ binding_83
+        promise @ binding_78
+        subscriber3 @ binding_84
+        promise @ binding_78
         assertEqual @ free assertEqual
-        s @ binding_74 using relative slot index 2
-        resolve @ binding_75 using relative slot index 3
-        p1 @ binding_77
-        p2 @ binding_78
-        p3 @ binding_79
+        s @ binding_76 using relative slot index 2
+        resolve @ binding_77 using relative slot index 3
+        p1 @ binding_79
+        p2 @ binding_80
+        p3 @ binding_81
         assertEqual @ free assertEqual
-        s @ binding_74 using relative slot index 2
+        s @ binding_76 using relative slot index 2
       }
 
       closure function '<anonymous>' as 'anonymous3' {
         [no closure scope]; [0 var declarations]
 
-        bindings { param 'r' # binding_83 @ arg[1] }
+        bindings { param 'r' # binding_85 @ arg[1] }
 
         references {
-          resolve @ binding_75 using relative slot index 5
-          r @ binding_83
+          resolve @ binding_77 using relative slot index 5
+          r @ binding_85
         }
 
         prologue {  }
@@ -849,8 +857,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_84 @ arg[0];
-          param 'promise' # binding_85 @ scoped[!2]
+          this '#this' # binding_86 @ arg[0];
+          param 'promise' # binding_87 @ scoped[!2]
         }
 
         No references
@@ -864,7 +872,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            readonly const 'result' # binding_86 @ local[3]
+            readonly const 'result' # binding_88 @ local[3]
           }
 
           prologue { new let -> local[3] }
@@ -872,10 +880,10 @@ module with entry 'moduleEntry' {
           epilogue { Pop(1) }
 
           references {
-            s @ binding_74 using relative slot index 8
-            promise @ binding_85 using relative slot index 2
-            s @ binding_74 using relative slot index 8
-            result @ binding_86
+            s @ binding_76 using relative slot index 8
+            promise @ binding_87 using relative slot index 2
+            s @ binding_76 using relative slot index 8
+            result @ binding_88
           }
         }
       }
@@ -888,8 +896,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_87 @ arg[0];
-          param 'promise' # binding_88 @ scoped[!2]
+          this '#this' # binding_89 @ arg[0];
+          param 'promise' # binding_90 @ scoped[!2]
         }
 
         No references
@@ -903,7 +911,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            readonly const 'result' # binding_89 @ local[3]
+            readonly const 'result' # binding_91 @ local[3]
           }
 
           prologue { new let -> local[3] }
@@ -911,10 +919,10 @@ module with entry 'moduleEntry' {
           epilogue { Pop(1) }
 
           references {
-            s @ binding_74 using relative slot index 8
-            promise @ binding_88 using relative slot index 2
-            s @ binding_74 using relative slot index 8
-            result @ binding_89
+            s @ binding_76 using relative slot index 8
+            promise @ binding_90 using relative slot index 2
+            s @ binding_76 using relative slot index 8
+            result @ binding_91
           }
         }
       }
@@ -927,8 +935,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_90 @ arg[0];
-          param 'promise' # binding_91 @ scoped[!2]
+          this '#this' # binding_92 @ arg[0];
+          param 'promise' # binding_93 @ scoped[!2]
         }
 
         No references
@@ -942,7 +950,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            readonly const 'result' # binding_92 @ local[3]
+            readonly const 'result' # binding_94 @ local[3]
           }
 
           prologue { new let -> local[3] }
@@ -950,10 +958,10 @@ module with entry 'moduleEntry' {
           epilogue { Pop(1) }
 
           references {
-            s @ binding_74 using relative slot index 8
-            promise @ binding_91 using relative slot index 2
-            s @ binding_74 using relative slot index 8
-            result @ binding_92
+            s @ binding_76 using relative slot index 8
+            promise @ binding_93 using relative slot index 2
+            s @ binding_76 using relative slot index 8
+            result @ binding_94
           }
         }
       }
@@ -964,7 +972,7 @@ module with entry 'moduleEntry' {
     [closure scope with 4 slots: async-continuation, async-callback, s, resolve]
     [0 var declarations]
 
-    bindings { this '#this' # binding_93 @ arg[0] }
+    bindings { this '#this' # binding_95 @ arg[0] }
 
     No references
 
@@ -974,13 +982,13 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 's' # binding_94 @ scoped[!2];
-        writable let 'resolve' # binding_95 @ scoped[!3];
-        readonly const 'promise' # binding_96 @ local[5];
-        readonly const 'p1' # binding_97 @ local[6];
-        readonly const 'p2' # binding_98 @ local[7];
-        function 'subscriber1' # binding_99 @ local[3];
-        function 'subscriber2' # binding_100 @ local[4]
+        writable let 's' # binding_96 @ scoped[!2];
+        writable let 'resolve' # binding_97 @ scoped[!3];
+        readonly const 'promise' # binding_98 @ local[5];
+        readonly const 'p1' # binding_99 @ local[6];
+        readonly const 'p2' # binding_100 @ local[7];
+        function 'subscriber1' # binding_101 @ local[3];
+        function 'subscriber2' # binding_102 @ local[4]
       }
 
       prologue {
@@ -995,33 +1003,33 @@ module with entry 'moduleEntry' {
 
       references {
         Promise @ free Promise
-        subscriber1 @ binding_99
-        promise @ binding_96
+        subscriber1 @ binding_101
+        promise @ binding_98
         assertEqual @ free assertEqual
-        s @ binding_94 using relative slot index 2
-        resolve @ binding_95 using relative slot index 3
+        s @ binding_96 using relative slot index 2
+        resolve @ binding_97 using relative slot index 3
         assertEqual @ free assertEqual
-        s @ binding_94 using relative slot index 2
-        p1 @ binding_97
+        s @ binding_96 using relative slot index 2
+        p1 @ binding_99
         assertEqual @ free assertEqual
-        s @ binding_94 using relative slot index 2
-        subscriber2 @ binding_100
-        promise @ binding_96
+        s @ binding_96 using relative slot index 2
+        subscriber2 @ binding_102
+        promise @ binding_98
         assertEqual @ free assertEqual
-        s @ binding_94 using relative slot index 2
-        p2 @ binding_98
+        s @ binding_96 using relative slot index 2
+        p2 @ binding_100
         assertEqual @ free assertEqual
-        s @ binding_94 using relative slot index 2
+        s @ binding_96 using relative slot index 2
       }
 
       closure function '<anonymous>' as 'anonymous4' {
         [no closure scope]; [0 var declarations]
 
-        bindings { param 'r' # binding_101 @ arg[1] }
+        bindings { param 'r' # binding_103 @ arg[1] }
 
         references {
-          resolve @ binding_95 using relative slot index 5
-          r @ binding_101
+          resolve @ binding_97 using relative slot index 5
+          r @ binding_103
         }
 
         prologue {  }
@@ -1035,8 +1043,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_102 @ arg[0];
-          param 'promise' # binding_103 @ scoped[!2]
+          this '#this' # binding_104 @ arg[0];
+          param 'promise' # binding_105 @ scoped[!2]
         }
 
         No references
@@ -1050,7 +1058,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            readonly const 'result' # binding_104 @ local[3]
+            readonly const 'result' # binding_106 @ local[3]
           }
 
           prologue { new let -> local[3] }
@@ -1058,10 +1066,10 @@ module with entry 'moduleEntry' {
           epilogue { Pop(1) }
 
           references {
-            s @ binding_94 using relative slot index 8
-            promise @ binding_103 using relative slot index 2
-            s @ binding_94 using relative slot index 8
-            result @ binding_104
+            s @ binding_96 using relative slot index 8
+            promise @ binding_105 using relative slot index 2
+            s @ binding_96 using relative slot index 8
+            result @ binding_106
           }
         }
       }
@@ -1074,8 +1082,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_105 @ arg[0];
-          param 'promise' # binding_106 @ scoped[!2]
+          this '#this' # binding_107 @ arg[0];
+          param 'promise' # binding_108 @ scoped[!2]
         }
 
         No references
@@ -1089,7 +1097,7 @@ module with entry 'moduleEntry' {
           [no closure scope]
 
           bindings {
-            readonly const 'result' # binding_107 @ local[3]
+            readonly const 'result' # binding_109 @ local[3]
           }
 
           prologue { new let -> local[3] }
@@ -1097,10 +1105,10 @@ module with entry 'moduleEntry' {
           epilogue { Pop(1) }
 
           references {
-            s @ binding_94 using relative slot index 8
-            promise @ binding_106 using relative slot index 2
-            s @ binding_94 using relative slot index 8
-            result @ binding_107
+            s @ binding_96 using relative slot index 8
+            promise @ binding_108 using relative slot index 2
+            s @ binding_96 using relative slot index 8
+            result @ binding_109
           }
         }
       }
@@ -1111,7 +1119,7 @@ module with entry 'moduleEntry' {
     [closure scope with 4 slots: async-continuation, async-callback, s, reject]
     [0 var declarations]
 
-    bindings { this '#this' # binding_108 @ arg[0] }
+    bindings { this '#this' # binding_110 @ arg[0] }
 
     No references
 
@@ -1121,11 +1129,11 @@ module with entry 'moduleEntry' {
       sameInstanceCountAsParent: true; [no closure scope]
 
       bindings {
-        writable let 's' # binding_109 @ scoped[!2];
-        writable let 'reject' # binding_110 @ scoped[!3];
-        readonly const 'promise' # binding_111 @ local[4];
-        readonly const 'p1' # binding_112 @ local[5];
-        function 'subscriber1' # binding_113 @ local[3]
+        writable let 's' # binding_111 @ scoped[!2];
+        writable let 'reject' # binding_112 @ scoped[!3];
+        readonly const 'promise' # binding_113 @ local[4];
+        readonly const 'p1' # binding_114 @ local[5];
+        function 'subscriber1' # binding_115 @ local[3]
       }
 
       prologue {
@@ -1138,28 +1146,28 @@ module with entry 'moduleEntry' {
 
       references {
         Promise @ free Promise
-        subscriber1 @ binding_113
-        promise @ binding_111
+        subscriber1 @ binding_115
+        promise @ binding_113
         assertEqual @ free assertEqual
-        s @ binding_109 using relative slot index 2
-        reject @ binding_110 using relative slot index 3
+        s @ binding_111 using relative slot index 2
+        reject @ binding_112 using relative slot index 3
         Error @ binding_1
-        p1 @ binding_112
+        p1 @ binding_114
         assertEqual @ free assertEqual
-        s @ binding_109 using relative slot index 2
+        s @ binding_111 using relative slot index 2
       }
 
       closure function '<anonymous>' as 'anonymous5' {
         [no closure scope]; [0 var declarations]
 
         bindings {
-          param '_' # binding_114 @ arg[1];
-          param 'r' # binding_115 @ arg[2]
+          param '_' # binding_116 @ arg[1];
+          param 'r' # binding_117 @ arg[2]
         }
 
         references {
-          reject @ binding_110 using relative slot index 5
-          r @ binding_115
+          reject @ binding_112 using relative slot index 5
+          r @ binding_117
         }
 
         prologue {  }
@@ -1173,8 +1181,8 @@ module with entry 'moduleEntry' {
         [0 var declarations]
 
         bindings {
-          this '#this' # binding_116 @ arg[0];
-          param 'promise' # binding_117 @ scoped[!2]
+          this '#this' # binding_118 @ arg[0];
+          param 'promise' # binding_119 @ scoped[!2]
         }
 
         No references
@@ -1194,7 +1202,7 @@ module with entry 'moduleEntry' {
           epilogue {  }
 
           references {
-            s @ binding_109 using relative slot index 8
+            s @ binding_111 using relative slot index 8
           }
 
           block {
@@ -1208,8 +1216,8 @@ module with entry 'moduleEntry' {
             epilogue { !EndTry }
 
             references {
-              promise @ binding_117 using relative slot index 2
-              s @ binding_109 using relative slot index 8
+              promise @ binding_119 using relative slot index 2
+              s @ binding_111 using relative slot index 8
             }
           }
 
@@ -1218,7 +1226,7 @@ module with entry 'moduleEntry' {
             [no closure scope]
 
             bindings {
-              catch-param 'e' # binding_118 @ local[3]
+              catch-param 'e' # binding_120 @ local[3]
             }
 
             prologue { Stack has exception }
@@ -1226,10 +1234,250 @@ module with entry 'moduleEntry' {
             epilogue { Pop(1) }
 
             references {
-              s @ binding_109 using relative slot index 8
-              e @ binding_118
+              s @ binding_111 using relative slot index 8
+              e @ binding_120
             }
           }
+        }
+      }
+    }
+  }
+
+  function test_immediatelyRejectedPromise as 'test_immediatelyRejectedPromise' {
+    [closure scope with 3 slots: async-continuation, async-callback, s]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_121 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(3, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 's' # binding_122 @ scoped[!2];
+        readonly const 'promise' # binding_123 @ local[4];
+        readonly const 'p1' # binding_124 @ local[5];
+        function 'subscriber1' # binding_125 @ local[3]
+      }
+
+      prologue {
+        func 'subscriber10' -> local[3] [non-embedded closure]
+        new let -> local[4]
+        new let -> local[5]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        Promise @ free Promise
+        subscriber1 @ binding_125
+        promise @ binding_123
+        assertEqual @ free assertEqual
+        s @ binding_122 using relative slot index 2
+        p1 @ binding_124
+        assertEqual @ free assertEqual
+        s @ binding_122 using relative slot index 2
+      }
+
+      function '<anonymous>' as 'anonymous6' {
+        [no closure scope]; [0 var declarations]
+
+        bindings {
+          param '_' # binding_126 @ arg[1];
+          param 'reject' # binding_127 @ arg[2]
+        }
+
+        references {
+          reject @ binding_127; Error @ binding_1
+        }
+
+        prologue {  }
+      }
+
+      closure function subscriber1 as 'subscriber10' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_128 @ arg[0];
+          param 'promise' # binding_129 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            s @ binding_122 using relative slot index 8
+          }
+
+          block {
+            sameInstanceCountAsParent: true
+            [no closure scope]
+
+            bindings {  }
+
+            prologue { StartTry }
+
+            epilogue { !EndTry }
+
+            references {
+              promise @ binding_129 using relative slot index 2
+              s @ binding_122 using relative slot index 8
+            }
+          }
+
+          block {
+            sameInstanceCountAsParent: true
+            [no closure scope]
+
+            bindings {
+              catch-param 'e' # binding_130 @ local[3]
+            }
+
+            prologue { Stack has exception }
+
+            epilogue { Pop(1) }
+
+            references {
+              s @ binding_122 using relative slot index 8
+              e @ binding_130
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function test_augmentingPromisePrototype as 'test_augmentingPromisePrototype' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_131 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'promise' # binding_132 @ local[4];
+        readonly const 'p1' # binding_133 @ local[5];
+        function 'myAsync' # binding_134 @ local[3]
+      }
+
+      prologue {
+        func 'myAsync' -> local[3]
+        new let -> local[4]
+        new let -> local[5]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        Promise @ free Promise
+        Promise @ free Promise
+        Promise @ free Promise
+        myAsync @ binding_134
+        assertEqual @ free assertEqual
+        promise @ binding_132
+        assertEqual @ free assertEqual
+        promise @ binding_132
+        assertEqual @ free assertEqual
+        p1 @ binding_133
+        assertEqual @ free assertEqual
+        p1 @ binding_133
+        p1 @ binding_133
+        assertEqual @ free assertEqual
+        p1 @ binding_133
+        assertEqual @ free assertEqual
+        p1 @ binding_133
+        p1 @ binding_133
+        assertEqual @ free assertEqual
+        promise @ binding_132
+        assertEqual @ free assertEqual
+        p1 @ binding_133
+      }
+
+      function '<anonymous>' as 'anonymous7' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { this '#this' # binding_135 @ arg[0] }
+
+        No references
+
+        prologue {  }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references { '#this' @ binding_135 }
+        }
+      }
+
+      function '<anonymous>' as 'anonymous8' {
+        [no closure scope]; [0 var declarations]
+
+        bindings {
+          param '_' # binding_136 @ arg[1];
+          param 'reject' # binding_137 @ arg[2]
+        }
+
+        references {
+          reject @ binding_137; Error @ binding_1
+        }
+
+        prologue {  }
+      }
+
+      function myAsync as 'myAsync' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_138 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
         }
       }
     }

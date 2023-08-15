@@ -10,9 +10,11 @@ slot myAsyncFunc = &function myAsyncFunc;
 slot myAsyncFuncReject = &function myAsyncFuncReject;
 slot runAsync = &function runAsync;
 slot test_asyncReturnsPromise = &function test_asyncReturnsPromise;
+slot test_augmentingPromisePrototype = &function test_augmentingPromisePrototype;
 slot test_awaitBeforeAndAfterResolved = &function test_awaitBeforeAndAfterResolved;
 slot test_awaitMustBeAsynchronous = &function test_awaitMustBeAsynchronous;
 slot test_awaitUnrejected = &function test_awaitUnrejected;
+slot test_immediatelyRejectedPromise = &function test_immediatelyRejectedPromise;
 slot test_promiseAwait = &function test_promiseAwait;
 slot test_promiseAwaitReject = &function test_promiseAwaitReject;
 slot test_promiseConstructor = &function test_promiseConstructor;
@@ -104,6 +106,38 @@ function anonymous5() {
     Return();
 }
 
+function anonymous6() {
+  entry:
+    LoadArg(index 2);
+    Literal(lit undefined);
+    LoadGlobal(name 'Error');
+    Literal(lit undefined);
+    Literal(lit 'dummy error');
+    New(count 2);
+    Call(count 2, flag false);
+    Return();
+}
+
+function anonymous7() {
+  entry:
+    LoadArg(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    Return();
+}
+
+function anonymous8() {
+  entry:
+    LoadArg(index 2);
+    Literal(lit undefined);
+    LoadGlobal(name 'Error');
+    Literal(lit undefined);
+    Literal(lit 'dummy error');
+    New(count 2);
+    Call(count 2, flag false);
+    Return();
+}
+
 function asyncCatchBlock() {
   entry:
     Literal(lit false);
@@ -153,6 +187,13 @@ function inner() {
     StoreScoped(index 10);
     Pop(count 1);
     Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function myAsync() {
+  entry:
+    AsyncStart(count 2, flag false);
     Literal(lit undefined);
     AsyncReturn();
 }
@@ -285,6 +326,18 @@ function runAsync() {
     Await();
     AsyncResume(count 2, count 2);
     Pop(count 1);
+    LoadGlobal(name 'test_immediatelyRejectedPromise');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_augmentingPromisePrototype');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
     LoadGlobal(name 'global:asyncTestComplete');
     Literal(lit undefined);
     Literal(lit true);
@@ -330,6 +383,48 @@ function subscriber1() {
     StoreScoped(index 12);
     Pop(count 1);
     Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber10() {
+  entry:
+    AsyncStart(count 6, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 4);
+    LoadScoped(index 13);
+    Literal(lit '; Subscriber 1 started');
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 13);
+    Pop(count 1);
+    StartTry(@block7);
+    LoadScoped(index 4);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadScoped(index 13);
+    Literal(lit '; should not get here');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 13);
+    Pop(count 1);
+    EndTry();
+    Jump(@block8);
+  block7:
+    LoadScoped(index 13);
+    Literal(lit '; Subscriber 1 rejected with ');
+    LoadVar(index 3);
+    Literal(lit 'message');
+    ObjectGet();
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 13);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block8);
+  block8:
     Literal(lit undefined);
     AsyncReturn();
 }
@@ -611,6 +706,124 @@ function test_asyncReturnsPromise() {
     Return();
 }
 
+function test_augmentingPromisePrototype() {
+  entry:
+    AsyncStart(count 5, flag false);
+    Literal(lit &function myAsync);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 5);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit 'prototype');
+    ObjectGet();
+    Literal(lit 'x');
+    LoadVar(index 6);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit &function anonymous7);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit 'prototype');
+    ObjectGet();
+    Literal(lit 'f');
+    LoadVar(index 6);
+    ObjectSet();
+    Pop(count 1);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous8);
+    New(count 2);
+    StoreVar(index 4);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 5);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 4);
+    LoadVar(index 9);
+    Literal(lit 'f');
+    ObjectGet();
+    StoreVar(index 8);
+    Call(count 1, flag false);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    LoadVar(index 9);
+    Literal(lit 'f');
+    ObjectGet();
+    StoreVar(index 8);
+    Call(count 1, flag false);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadVar(index 5);
+    Await();
+    AsyncResume(count 3, count 5);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    LoadVar(index 9);
+    Literal(lit 'f');
+    ObjectGet();
+    StoreVar(index 8);
+    Call(count 1, flag false);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    Literal(lit 10);
+    LoadVar(index 5);
+    Literal(lit 'x');
+    LoadVar(index 6);
+    ObjectSet();
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    LoadVar(index 9);
+    Literal(lit 'f');
+    ObjectGet();
+    StoreVar(index 8);
+    Call(count 1, flag false);
+    Literal(lit 10);
+    Call(count 3, flag true);
+    Pop(count 3);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
 function test_awaitBeforeAndAfterResolved() {
   entry:
     AsyncStart(count 9, flag false);
@@ -759,6 +972,44 @@ function test_awaitUnrejected() {
     Literal(lit 'dummy error');
     New(count 2);
     Call(count 2, flag true);
+    LoadVar(index 5);
+    Await();
+    AsyncResume(count 3, count 5);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 1 rejected with dummy error');
+    Call(count 3, flag true);
+    Pop(count 3);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_immediatelyRejectedPromise() {
+  entry:
+    AsyncStart(count 6, flag false);
+    Literal(lit &function subscriber10);
+    ClosureNew();
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 'Start');
+    StoreScoped(index 5);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous6);
+    New(count 2);
+    StoreVar(index 4);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Call(count 2, flag false);
+    StoreVar(index 5);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 'Start; Subscriber 1 started');
+    Call(count 3, flag true);
     LoadVar(index 5);
     Await();
     AsyncResume(count 3, count 5);

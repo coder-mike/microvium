@@ -6184,7 +6184,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   uint16_t estimatedSize = vm->heapSizeUsedAfterLastGC;
 
   #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-    // Move the heap address space by 2 bytes on each cycle.
+    // Move the heap address space by 2 bytes on each cycle (overflows at 256).
     vm->gc_heap_shift += 2;
     if (vm->gc_heap_shift == 0) {
       // Minimum of 2 bytes just so we have consistency when it overflows
