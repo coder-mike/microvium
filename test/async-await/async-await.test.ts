@@ -2,9 +2,10 @@ import { NativeVMFriendly } from "../../lib/native-vm-friendly";
 import { compileJs } from "../common"
 import { assert } from 'chai'
 import fs from 'fs'
-import { decodeSnapshot } from "../../lib";
+import { addDefaultGlobals, decodeSnapshot } from "../../lib";
+import { VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 
-suite('async-host-func', function () {
+suite('async-await', function () {
   /*
   An asynchronous host function can be called in one of 3 ways:
 
@@ -69,7 +70,7 @@ suite('async-host-func', function () {
         print('After await');
       }
     `
-    fs.writeFileSync('test/async-host-func/output.await-call.disassembly', decodeSnapshot(snapshot).disassembly);
+    fs.writeFileSync('test/async-await/output.await-call.disassembly', decodeSnapshot(snapshot).disassembly);
 
     let callback: any;
     const printout: string[] = [];
@@ -109,7 +110,7 @@ suite('async-host-func', function () {
         }
       }
     `
-    fs.writeFileSync('test/async-host-func/output.async-result.disassembly', decodeSnapshot(snapshot).disassembly);
+    fs.writeFileSync('test/async-await/output.async-result.disassembly', decodeSnapshot(snapshot).disassembly);
 
     let callback: any;
     const printout: string[] = [];
@@ -154,7 +155,7 @@ suite('async-host-func', function () {
         print('After await');
       }
     `
-    fs.writeFileSync('test/async-host-func/output.immediate-callback.disassembly', decodeSnapshot(snapshot).disassembly);
+    fs.writeFileSync('test/async-await/output.immediate-callback.disassembly', decodeSnapshot(snapshot).disassembly);
 
     const printout: string[] = [];
 
@@ -207,7 +208,7 @@ suite('async-host-func', function () {
         }
       }
     `
-    fs.writeFileSync('test/async-host-func/output.fail-callback.disassembly', decodeSnapshot(snapshot).disassembly);
+    fs.writeFileSync('test/async-await/output.fail-callback.disassembly', decodeSnapshot(snapshot).disassembly);
 
     const printout: string[] = [];
 
@@ -254,7 +255,7 @@ suite('async-host-func', function () {
       async function dummy() {
       }
     `
-    fs.writeFileSync('test/async-host-func/output.host-async-returning-promise.disassembly', decodeSnapshot(snapshot).disassembly);
+    fs.writeFileSync('test/async-await/output.host-async-returning-promise.disassembly', decodeSnapshot(snapshot).disassembly);
 
     function asyncHostFunc() {
       const callback = vm.asyncStart();
@@ -311,7 +312,7 @@ suite('async-host-func', function () {
         }
       }
     `
-    fs.writeFileSync('test/async-host-func/resolving-host-promise.disassembly', decodeSnapshot(snapshot).disassembly);
+    fs.writeFileSync('test/async-await/resolving-host-promise.disassembly', decodeSnapshot(snapshot).disassembly);
 
     let callback: any;
     let mode: 'immediate-resolve' | 'immediate-reject' | 'later-resolve' | 'later-reject';
@@ -446,7 +447,7 @@ suite('async-host-func', function () {
         return x.__proto__ === Promise.prototype;
       }
     `
-    fs.writeFileSync('test/async-host-func/output.host-async-returning-promise.disassembly', decodeSnapshot(snapshot).disassembly);
+    fs.writeFileSync('test/async-await/output.host-async-returning-promise.disassembly', decodeSnapshot(snapshot).disassembly);
 
     let callback: any;
     function asyncHostFunc() {
