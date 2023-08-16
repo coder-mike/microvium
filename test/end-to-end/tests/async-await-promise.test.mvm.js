@@ -290,10 +290,6 @@ async function test_augmentingPromisePrototype() {
   }
 }
 
-// TODO: Top-level await -- what happens?
-
-// TODO: Export async function - I think it should just work but return a promise.
-
 // TODO: Await over snapshot
 
 // TODO: Test encoding and decoding of an async function where the entry point
@@ -308,4 +304,10 @@ async function test_augmentingPromisePrototype() {
 
 // TODO: Documentation on how to use async-await
 
+// TODO: Merge branches
+
 // TODO: Bump the version numbers, since we have new builtins and operations
+
+// TODO: Update wasm library
+
+// TODO: Update the "Microvium is small" blog-post

@@ -1556,6 +1556,9 @@ export function compileAwaitExpression(cur: Cursor, expression: B.AwaitExpressio
   // Look for the closest catch block in the same function
   let scope = cur.scopeStack;
   while (scope && !scope.catchTarget && scope.parent && scope.parent.scope.type !== 'FunctionScope') {
+    if (scope.scope.type === 'ModuleScope') {
+      compileError(cur, 'Await expression not allowed at module scope', expression);
+    }
     scope = scope.parent;
   }
   if (!scope?.catchTarget) scope = undefined; // No catch block found in the same function

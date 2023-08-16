@@ -414,4 +414,66 @@ suite('async-host-func', function () {
       ]);
     });
   });
+
+  test('top-level-await-not-supported', () => {
+    assert.throws(() => {
+      compileJs`
+        await myAsyncFunc();
+
+        async function myAsyncFunc() {
+        }
+      `
+    }, 'Await expressions are not supported at the top level')
+  });
+
+  test('export-async-function', () => {
+    // This function tests that if the VM calls a host async function then the
+    // return value is a promise that resolves when the host calls the callback.
+
+    const snapshot = compileJs`
+      const asyncHostFunc = vmImport(0);
+      const print = vmImport(1);
+      vmExport(0, run);
+      vmExport(1, isPromise);
+
+      async function run() {
+        print('before await');
+        await asyncHostFunc();
+        print('after await');
+      }
+
+      function isPromise(x) {
+        return x.__proto__ === Promise.prototype;
+      }
+    `
+    fs.writeFileSync('test/async-host-func/output.host-async-returning-promise.disassembly', decodeSnapshot(snapshot).disassembly);
+
+    let callback: any;
+    function asyncHostFunc() {
+      callback = vm.asyncStart();
+    }
+
+    let printout: string[] = [];
+
+    function print(s: string) {
+      printout.push(s);
+    }
+
+    const vm = new NativeVMFriendly(snapshot, { 0: asyncHostFunc, 1: print });
+
+    const run = vm.resolveExport(0);
+    const isPromise = vm.resolveExport(1);
+
+    const result = run();
+
+    assert(isPromise(result));
+    assert.deepEqual(printout, ['before await']);
+
+    callback(true, undefined);
+
+    assert.deepEqual(printout, ['before await', 'after await']);
+
+    // We can't actually await the promise. There is no way to do this in
+    // Microvium from the host at present.
+  });
 })

@@ -333,6 +333,9 @@ export function pass1_findScopesAndBindings({
     function handleAwaitExpression(node: B.AwaitExpression) {
       traverseChildren(cur, node, traverse);
       const currentFunction = containingFunction(currentScope()) ?? unexpected();
+      if (currentFunction.type === 'ModuleScope') {
+        return compileError(cur, 'Await expressions are not supported at the top level');
+      }
       currentFunction.awaitExpressions.push(node);
     }
 
@@ -464,9 +467,9 @@ export function pass1_findScopesAndBindings({
     // Returns the innermost function containing or equal to the given scope,
     // or undefined if the given scope is not within a function (e.g. it's at
     // the model level)
-    function containingFunction(scope: Scope): FunctionScope | undefined {
+    function containingFunction(scope: Scope): FunctionScope | ModuleScope | undefined {
       let current: Scope | undefined = scope;
-      while (current !== undefined && current.type !== 'FunctionScope')
+      while (current !== undefined && current.type !== 'FunctionScope' && current.type !== 'ModuleScope')
         current = current.parent;
       return current;
     }

@@ -74,5 +74,7 @@
     "async-host-func fail-callback",
     "end-to-end async-await-promise",
     "async-host-func host-async-returning-promise",
-    "async-host-func resolving-host-promise"
+    "async-host-func resolving-host-promise",
+    "async-host-func top-level-await-not-supported",
+    "async-host-func export-async-function"
 ]

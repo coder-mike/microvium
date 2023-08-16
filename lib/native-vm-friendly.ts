@@ -64,7 +64,9 @@ function vmValueToHost(vm: NativeVM.NativeVM, value: NativeVM.Value): any {
     case mvm_TeType.VM_T_FUNCTION: {
       return new Proxy<any>(dummyFunctionTarget, new ValueWrapper(vm, value));
     }
-    case mvm_TeType.VM_T_OBJECT: return notImplemented();
+    case mvm_TeType.VM_T_OBJECT: {
+      return new Proxy<any>(dummyObject, new ValueWrapper(vm, value));
+    }
     case mvm_TeType.VM_T_ARRAY: return notImplemented();
     case mvm_TeType.VM_T_UINT8_ARRAY: return notImplemented();
     case mvm_TeType.VM_T_CLASS: return notImplemented();
@@ -106,6 +108,7 @@ function hostValueToVM(vm: NativeVM.NativeVM, value: any): NativeVM.Value {
 
 // Used as a target for function proxies, so that `typeof` and `call` work as expected
 const dummyFunctionTarget = () => {};
+const dummyObject = {};
 
 const vmValueSymbol = Symbol('vmValue');
 const vmSymbol = Symbol('vm');
