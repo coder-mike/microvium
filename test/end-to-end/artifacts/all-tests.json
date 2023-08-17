@@ -77,14 +77,5 @@
     "async-await resolving-host-promise",
     "async-await top-level-await-not-supported",
     "async-await export-async-function",
-    "async-host-func void-call",
-    "async-host-func await-call",
-    "async-host-func async-result",
-    "async-host-func immediate-callback",
-    "async-host-func fail-callback",
-    "async-host-func host-async-returning-promise",
-    "async-host-func resolving-host-promise",
-    "async-host-func top-level-await-not-supported",
-    "async-host-func export-async-function",
     "async-await await-over-snapshot"
 ]

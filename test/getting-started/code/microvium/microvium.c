@@ -7186,12 +7186,12 @@ static Value* vm_getHandleTargetOrNull(VM* vm, Value value) {
 
   // Check low bits
   if (!Value_isBytecodeMappedPtrOrWellKnown(value)) {
-    CODE_COVERAGE_UNTESTED(528); // Hit
+    CODE_COVERAGE(528); // Hit
     return NULL;
   }
 
   if (value < VM_VALUE_WELLKNOWN_END) {
-    CODE_COVERAGE_UNTESTED(529); // Hit
+    CODE_COVERAGE(529); // Hit
     return NULL;
   }
 
@@ -7220,13 +7220,13 @@ static Value* vm_getHandleTargetOrNull(VM* vm, Value value) {
  * See also `vm_getHandleTargetOrNull` if you want to write to the value.
  */
 static Value vm_resolveIndirections(VM* vm, Value value) {
-  CODE_COVERAGE_UNTESTED(729); // Not hit
+  CODE_COVERAGE(729); // Hit
   Value* target = vm_getHandleTargetOrNull(vm, value);
   if (!target) {
-    CODE_COVERAGE_UNTESTED(730); // Not hit
+    CODE_COVERAGE(730); // Hit
     return value;
   }
-  CODE_COVERAGE_UNTESTED(731); // Not hit
+  CODE_COVERAGE(731); // Hit
   return *target;
 }
 

@@ -487,9 +487,13 @@ suite('async-await', function () {
       const print = vmImport(0);
 
       async function setup() {
+        let i = 1;
         print('Compile time');
         await untilRuntime;
         print('Runtime');
+        // Make sure that the continuation closure is mutable
+        i++;
+        print(i);
       }
     `;
 
@@ -515,6 +519,6 @@ suite('async-await', function () {
     const runtimeResolve = rtvm.resolveExport(1);
     runtimeResolve();
 
-    assert.deepEqual(printout, ['Compile time', 'Runtime'])
+    assert.deepEqual(printout, ['Compile time', 'Runtime', 2])
   });
 })

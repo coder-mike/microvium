@@ -290,10 +290,7 @@ async function test_augmentingPromisePrototype() {
   }
 }
 
-// TODO: Await over snapshot
 // TODO: Await over snapshot with catch block
-
-// TODO: test writable async function and writable closure export
 
 // TODO: Test encoding and decoding of an async function where the entry point
 // is only reachable through the continuation (i.e. a partially executed async
