@@ -1,9 +1,10 @@
 {
-  "files.exclude": {
-    "dist": true,
+  "search.exclude": {
+    "**/node_modules": true,
     "build": true,
+    "dist": true,
     "dist-c": true,
-    "node_modules": true,
+    "prebuilds": true,
     "test/getting-started/code/build": true,
     "test/getting-started/code/microvium": true
   },
@@ -77,14 +78,6 @@
     "xtree": "cpp",
     "microvium_port_example.h": "c"
   },
-  "search.exclude": {
-    "**/node_modules": true,
-    "dist": true,
-    "dist-c": true,
-    "prebuilds": true,
-    "test/getting-started/code/build": true,
-    "test/getting-started/code/microvium": true
-  },
   "cSpell.words": [
     "builtins",
     "Bytecode",
@@ -122,6 +115,7 @@
     "proto",
     "quasis",
     "Referenceable",
+    "rtvm",
     "semispace",
     "stdint",
     "stdlib",

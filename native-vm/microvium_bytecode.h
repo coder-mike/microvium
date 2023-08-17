@@ -110,6 +110,10 @@ typedef enum mvm_TeBytecodeSection {
    *
    * The handles appear as the *last* global slots, and will generally not be
    * referenced by `LOAD_GLOBAL` instructions.
+   *
+   * WARNING: the globals section is the last section before the heap, so no ROM
+   * pointer should point after the globals section. Some functions (e.g.
+   * vm_getHandleTargetOrNull) assume this to be true.
    */
   BCS_GLOBALS,
 

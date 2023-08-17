@@ -362,9 +362,26 @@ export class VirtualMachine {
     this.exports.set(exportID, value);
   }
 
-  public vmImport(hostFunctionID: IL.HostFunctionID, hostImplementation?: VM.HostFunctionHandler): IL.HostFunctionValue {
-    if (!this.hostFunctions.has(hostFunctionID)) {
-      hostImplementation = hostImplementation || {
+  public vmImport(hostFunctionID: IL.HostFunctionID, defaultImplementation?: VM.HostFunctionHandler): IL.HostFunctionValue {
+    if (this.hostFunctions.has(hostFunctionID)) {
+      return {
+        type: 'HostFunctionValue',
+        value: hostFunctionID
+      };
+    }
+
+    // Ask the import map
+    let hostImplementation = this.resolveFFIImport(hostFunctionID);
+
+    // Otherwise use the default implementation
+    if (!hostImplementation) {
+      hostImplementation = defaultImplementation;
+    }
+
+    // Otherwise, just import a stub that throws. The runtime host will resolve
+    // a different implementation for the same ID, so this is just a placeholder.
+    if (!hostImplementation) {
+      hostImplementation = {
         call(args: IL.Value[]): IL.Value | void {
           throw new Error(`Host implementation not provided for imported ID ${hostFunctionID}`);
         },
@@ -372,8 +389,10 @@ export class VirtualMachine {
           return undefined;
         }
       }
-      this.hostFunctions.set(hostFunctionID, hostImplementation);
     }
+
+    this.hostFunctions.set(hostFunctionID, hostImplementation);
+
     return {
       type: 'HostFunctionValue',
       value: hostFunctionID
@@ -389,18 +408,6 @@ export class VirtualMachine {
 
   public setArrayPrototype(value: IL.Value) {
     this.builtins.arrayPrototype = value;
-  }
-
-  public importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {
-    let hostFunc = this.hostFunctions.get(hostFunctionID);
-    if (!hostFunc) {
-      hostFunc = this.resolveFFIImport(hostFunctionID);
-      this.hostFunctions.set(hostFunctionID, hostFunc);
-    }
-    return {
-      type: 'HostFunctionValue',
-      value: hostFunctionID
-    };
   }
 
   /**
@@ -3451,7 +3458,15 @@ function garbageCollect({
         builtinIsReachable('arrayPrototype');
         return allocation.items.forEach(markValueIsReachable);
       }
-      case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(markValueIsReachable);
+      case 'ObjectAllocation': {
+        for (const propValue of Object.values(allocation.properties)) {
+          markValueIsReachable(propValue);
+        }
+        for (const internalSlotValue of Object.values(allocation.internalSlots)) {
+          markValueIsReachable(internalSlotValue);
+        }
+        return;
+      }
       case 'Uint8ArrayAllocation': return; // Entries are POD bytes
       case 'ClosureAllocation': return allocation.slots.forEach(markValueIsReachable);
       default: return assertUnreachable(allocation);

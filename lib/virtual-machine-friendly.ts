@@ -24,8 +24,6 @@ export class VirtualMachineFriendly implements Microvium {
   private _global: any;
   private moduleCache = new WeakMap<ModuleSource, VM.ModuleSource>();
 
-  // TODO This constructor is changed to public for Microvium-debug to use
-  // (temporarily)
   public constructor(
     resumeFromSnapshot: SnapshotIL | undefined,
     hostImportMap: HostImportFunction | HostImportTable = {},
@@ -38,16 +36,17 @@ export class VirtualMachineFriendly implements Microvium {
       }
       const importTable = hostImportMap;
 
-      innerResolve = (hostFunctionID): VM.HostFunctionHandler => {
+      innerResolve = (hostFunctionID): VM.HostFunctionHandler | undefined => {
         if (!importTable.hasOwnProperty(hostFunctionID)) {
-          return invalidOperation('Unresolved import: ' + hostFunctionID);
+          return undefined;
         }
         return hostFunctionToVMHandler(this.vm, importTable[hostFunctionID]);
       }
     } else {
       const resolve = hostImportMap;
       innerResolve = (hostFunctionID): VM.HostFunctionHandler => {
-        return hostFunctionToVMHandler(this.vm, resolve(hostFunctionID));
+        const f = resolve(hostFunctionID);
+        return f && hostFunctionToVMHandler(this.vm, f);
       }
     }
     const debugServer = undefined;
@@ -75,11 +74,6 @@ export class VirtualMachineFriendly implements Microvium {
     opts: VM.VirtualMachineOptions = {}
   ): VirtualMachineFriendly {
     return new VirtualMachineFriendly(undefined, hostImportMap, opts);
-  }
-
-  public importHostFunction(hostFunctionID: IL.HostFunctionID): Function {
-    const result = this.vm.importHostFunction(hostFunctionID);
-    return vmValueToHost(this.vm, result, `<host function ${hostFunctionID}>`);
   }
 
   public evaluateModule(moduleSource: ModuleSource): ModuleObject {
@@ -148,15 +142,15 @@ export class VirtualMachineFriendly implements Microvium {
     this.vm.vmExport(exportID, vmValue);
   }
 
-  public vmImport = (...args: [IL.HostFunctionID, Function]) => {
-    if (args.length < 1) throw new Error('vmImport expects 1 argument');
-    const [id, compileTimeHostFunction] = args;
+  public vmImport = (...args: [id: IL.HostFunctionID, defaultImplementation?: Function]) => {
+    if (args.length < 1) throw new Error('vmImport expects at least 1 argument');
+    const [id, defaultImplementation] = args;
     if (typeof id !== 'number' || (id | 0) !== id || id < 0 || id > 65535)
       throw new Error(`ID for \`vmImport\` must be an integer in the range 0 to 65535. Received ${id}`);
 
-    const hostImplementation = hostFunctionToVMHandler(this.vm, compileTimeHostFunction);
+    const hostImplementation = defaultImplementation && hostFunctionToVMHandler(this.vm, defaultImplementation);
     const result = this.vm.vmImport(id, hostImplementation);
-    return vmValueToHost(this.vm, result, undefined);
+    return vmValueToHost(this.vm, result, `<host function ${id}>`);
   }
 
   public resolveExport(exportID: IL.ExportID): any {
@@ -185,6 +179,9 @@ export class VirtualMachineFriendly implements Microvium {
 function hostFunctionToVMHandler(vm: VM.VirtualMachine, func: Function): VM.HostFunctionHandler {
   return {
     call(args) {
+      if (!func) {
+        return invalidOperation('The given host function does not have a compile-time implementation.');
+      }
       const [object, ...innerArgs] = args.map(a => vmValueToHost(vm, a, undefined));
       const result = func.apply(object, innerArgs);
       return hostValueToVM(vm, result);

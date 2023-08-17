@@ -404,6 +404,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               size: finalizeResult.offset - component.offset,
               content: { type: 'RegionOverflow' }
             });
+            console.error(`!! WARNING: Region overflow at 0x${finalizeResult.offset.toString(16).padStart(4, '0')} by ${component.offset - finalizeResult.offset} bytes`);
           }
           if (component.size === undefined) {
             component.size = finalizeResult.size;
@@ -413,6 +414,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
               size: component.size - finalizeResult.size,
               content: { type: 'RegionOverflow' }
             });
+            console.error(`!! WARNING: Region overflow at 0x${(component.offset + component.size).toString(16).padStart(4, '0')} by ${component.offset - finalizeResult.offset} bytes`);
           } else if (component.size > finalizeResult.size) {
             component.content.value.push({
               offset: component.offset + component.size,
@@ -450,6 +452,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
           size: - (cursor - component.offset), // Negative size
           content: { type: 'OverlapWarning', offsetStart: component.offset, offsetEnd: cursor }
         });
+        console.error(`!! WARNING: Entry overlap at 0x${component.offset} by ${cursor - component.offset} bytes`);
       }
 
       region.push(component);
@@ -641,8 +644,10 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
     const value = decodeAllocationContent(offset, section);
     // The decode is supposed to insert the value. It needs to do this itself
-    // because it needs to happen before nested allocations are pursued
-    hardAssert(processedAllocationsByOffset.get(offset) === value);
+    // because it needs to happen before nested allocations are pursued. The
+    // exception is resume points which look like allocations at first but are
+    // actually value types that reference into a function allocation.
+    hardAssert(value.type === 'ResumePoint' || processedAllocationsByOffset.get(offset) === value);
     return value;
   }
 
@@ -749,10 +754,18 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
   }
 
   function decodeResumePoint(region: Region, offset: number, sizeBits: number): IL.Value {
-    const resumeAddress = buffer.readOffset;
+    // Hack: a resume point is the only thing that looks like an allocation but
+    // actually points into an existing allocation. So even though there is a
+    // header, we don't want this shown in the disassembly because it will show
+    // up again when we decode the main function.
+    const allocationHeader = region.pop();
+    hardAssert(allocationHeader?.content.type === 'AllocationHeaderAttribute');
+
+    const resumeAddress = offset;
+    sizeBits = sizeBits & ~0x800;
     hardAssert((resumeAddress & 0xFFFC) == resumeAddress);
     // Read function header that precedes the instruction
-    hardAssert(((TeTypeCode.TC_REF_FUNCTION << 4) | 0x0800 | sizeBits) === buffer.readUInt16LE(resumeAddress - 2));
+    hardAssert(((TeTypeCode.TC_REF_FUNCTION << 12) | 0x0800 | sizeBits) === buffer.readUInt16LE(resumeAddress - 2));
     // The back-pointer reuses the bits that are normally used for the allocation size
     const backPointer = sizeBits << 2;
     const mainFunctionAddress = resumeAddress - backPointer;

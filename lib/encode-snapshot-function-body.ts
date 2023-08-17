@@ -311,9 +311,10 @@ export function writeFunctionBody(
             offset: Future.create(physicalAddress),
             debugName: `Resume point (${ilAddress.funcId}, ${ilAddress.blockId}, ${ilAddress.operationIndex})`,
             getPointer(sourceRegion, debugName) {
-              hardAssert(sourceRegion === 'bytecode');
+              // Should be 4-byte aligned
               hardAssert((physicalAddress & 0xFFFC) === physicalAddress);
-              // Bytecode pointer encoding
+              // Bytecode pointer encoding. Note that this is independent of the
+              // sourceRegion because bytecode pointers always look the same.
               const value = physicalAddress | 1;
               return Future.create(value)
             },

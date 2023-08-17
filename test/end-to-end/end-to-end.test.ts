@@ -286,14 +286,14 @@ async function runTest(anySkips: boolean, testArtifactDir: string, yamlText: str
     overflowChecks: NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS
   });
   const vmGlobal = vm.globalThis;
-  vmGlobal.print = vm.importHostFunction(HOST_FUNCTION_PRINT_ID);
-  vmGlobal.assert = vm.importHostFunction(HOST_FUNCTION_ASSERT_ID);
-  vmGlobal.assertEqual = vm.importHostFunction(HOST_FUNCTION_ASSERT_EQUAL_ID);
-  vmGlobal.getHeapUsed = vm.importHostFunction(HOST_FUNCTION_GET_HEAP_USED_ID);
-  vmGlobal.runGC = vm.importHostFunction(HOST_FUNCTION_RUN_GC_ID);
+  vmGlobal.print = vm.vmImport(HOST_FUNCTION_PRINT_ID);
+  vmGlobal.assert = vm.vmImport(HOST_FUNCTION_ASSERT_ID);
+  vmGlobal.assertEqual = vm.vmImport(HOST_FUNCTION_ASSERT_EQUAL_ID);
+  vmGlobal.getHeapUsed = vm.vmImport(HOST_FUNCTION_GET_HEAP_USED_ID);
+  vmGlobal.runGC = vm.vmImport(HOST_FUNCTION_RUN_GC_ID);
   vmGlobal.vmExport = vmExport;
   vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
-  vmGlobal.asyncTestComplete = vm.importHostFunction(HOST_FUNCTION_ASYNC_TEST_COMPLETE);
+  vmGlobal.asyncTestComplete = vm.vmImport(HOST_FUNCTION_ASYNC_TEST_COMPLETE);
   const vmConsole = vmGlobal.console = vm.newObject();
   vmConsole.log = vmGlobal.print; // Alternative way of accessing the print function
 

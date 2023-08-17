@@ -2,7 +2,7 @@ import { NativeVMFriendly } from "../../lib/native-vm-friendly";
 import { compileJs } from "../common"
 import { assert } from 'chai'
 import fs from 'fs'
-import { addDefaultGlobals, decodeSnapshot } from "../../lib";
+import { HostImportTable, addDefaultGlobals, decodeSnapshot } from "../../lib";
 import { VirtualMachineFriendly } from "../../lib/virtual-machine-friendly";
 
 suite('async-await', function () {
@@ -476,5 +476,45 @@ suite('async-await', function () {
 
     // We can't actually await the promise. There is no way to do this in
     // Microvium from the host at present.
+  });
+
+  test('await-over-snapshot', () => {
+    const sourceText = `
+      let runtimeResolve;
+      const untilRuntime = new Promise(resolve => runtimeResolve = resolve);
+      vmExport(0, setup);
+      vmExport(1, runtimeResolve);
+      const print = vmImport(0);
+
+      async function setup() {
+        print('Compile time');
+        await untilRuntime;
+        print('Runtime');
+      }
+    `;
+
+    let printout: string[] = [];
+    function print(s: string) {
+      printout.push(s);
+    }
+
+    const importMap: HostImportTable = { 0: print };
+
+    const ctvm = VirtualMachineFriendly.create(importMap);
+    addDefaultGlobals(ctvm);
+    ctvm.evaluateModule({ sourceText });
+    const setup = ctvm.resolveExport(0);
+    setup();
+
+    assert.deepEqual(printout, ['Compile time'])
+
+    const snapshot = ctvm.createSnapshot();
+    fs.writeFileSync('test/async-await/output.await-over-snapshot.disassembly', decodeSnapshot(snapshot).disassembly);
+
+    const rtvm = new NativeVMFriendly(snapshot, importMap);
+    const runtimeResolve = rtvm.resolveExport(1);
+    runtimeResolve();
+
+    assert.deepEqual(printout, ['Compile time', 'Runtime'])
   });
 })

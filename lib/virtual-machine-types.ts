@@ -16,7 +16,7 @@ export type GlobalSlotID = string;
 export type PropertyKey = string;
 export type Index = number;
 
-export type ResolveFFIImport = (hostFunctionID: IL.HostFunctionID) => HostFunctionHandler;
+export type ResolveFFIImport = (hostFunctionID: IL.HostFunctionID) => HostFunctionHandler | undefined;
 
 export type ModuleResolver = (moduleSource: ModuleRelativeSource) => ModuleObject;
 
