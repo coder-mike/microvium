@@ -85,5 +85,6 @@
     "async-host-func host-async-returning-promise",
     "async-host-func resolving-host-promise",
     "async-host-func top-level-await-not-supported",
-    "async-host-func export-async-function"
+    "async-host-func export-async-function",
+    "async-await await-over-snapshot"
 ]

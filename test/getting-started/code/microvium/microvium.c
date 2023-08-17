@@ -159,6 +159,10 @@ typedef enum mvm_TeBytecodeSection {
    *
    * The handles appear as the *last* global slots, and will generally not be
    * referenced by `LOAD_GLOBAL` instructions.
+   *
+   * WARNING: the globals section is the last section before the heap, so no ROM
+   * pointer should point after the globals section. Some functions (e.g.
+   * vm_getHandleTargetOrNull) assume this to be true.
    */
   BCS_GLOBALS,
 
@@ -1524,7 +1528,8 @@ static TeError vm_newError(VM* vm, TeError err);
 static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
-static inline Value* getHandleTargetOrNull(VM* vm, Value value);
+static Value* vm_getHandleTargetOrNull(VM* vm, Value value);
+static Value vm_resolveIndirections(VM* vm, Value value);
 static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
@@ -1896,7 +1901,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   // ---------------------------- Call target function ------------------------
 
   reg1 /* argCountAndFlags */ = (argCount + 1) | AF_CALLED_FROM_HOST; // +1 for the `this` value
-  reg2 /* target */ = targetFunc;
+  reg2 /* target */ = vm_resolveIndirections(vm, targetFunc);
   reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
   goto SUB_CALL;
 
@@ -7160,7 +7165,7 @@ static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
   Value value = LongPtr_read2_aligned(lpBuiltin);
 
   // Check if the builtin accesses a RAM value via a handle
-  Value* target = getHandleTargetOrNull(vm, value);
+  Value* target = vm_getHandleTargetOrNull(vm, value);
   if (target) {
     CODE_COVERAGE(212); // Hit
     return *target;
@@ -7173,25 +7178,56 @@ static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
 /**
  * If the value is a handle, this returns a pointer to the global variable
  * referenced by the handle. Otherwise, this returns NULL.
+ *
+ * See also vm_resolveIndirections if you're only reading the value.
  */
-static inline Value* getHandleTargetOrNull(VM* vm, Value value) {
+static Value* vm_getHandleTargetOrNull(VM* vm, Value value) {
   CODE_COVERAGE(527); // Hit
+
+  // Check low bits
   if (!Value_isBytecodeMappedPtrOrWellKnown(value)) {
-    CODE_COVERAGE_UNTESTED(528); // Not hit
+    CODE_COVERAGE_UNTESTED(528); // Hit
     return NULL;
-  } else {
-    CODE_COVERAGE(529); // Hit
   }
+
+  if (value < VM_VALUE_WELLKNOWN_END) {
+    CODE_COVERAGE_UNTESTED(529); // Hit
+    return NULL;
+  }
+
+  // See if it points earlier than the globals section, then it's pointing to a
+  // ROM allocation, which is not a handle.
   uint16_t globalsOffset = getSectionOffset(vm->lpBytecode, BCS_GLOBALS);
-  uint16_t globalsEndOffset = getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_GLOBALS));
-  if ((value < globalsOffset) || (value >= globalsEndOffset)) {
+  if (value < globalsOffset) {
     CODE_COVERAGE(530); // Hit
+    VM_ASSERT(vm, value >= getSectionOffset(vm->lpBytecode, BCS_ROM));
     return NULL;
-  } else {
-    CODE_COVERAGE(531); // Hit
   }
+
+  CODE_COVERAGE(531); // Hit
+
+  // The globals section should be the last addressable section in the ROM, so a
+  // pointer should not pointer later than the end of the globals section.
+  VM_ASSERT(vm, value < getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_GLOBALS)));
+
   uint16_t globalIndex = (value - globalsOffset) / 2;
   return &vm->globals[globalIndex];
+}
+
+/**
+ * If `value` points to a handle, this returns the value in the handle.
+ *
+ * See also `vm_getHandleTargetOrNull` if you want to write to the value.
+ */
+static Value vm_resolveIndirections(VM* vm, Value value) {
+  CODE_COVERAGE_UNTESTED(729); // Not hit
+  Value* target = vm_getHandleTargetOrNull(vm, value);
+  if (!target) {
+    CODE_COVERAGE_UNTESTED(730); // Not hit
+    return value;
+  }
+  CODE_COVERAGE_UNTESTED(731); // Not hit
+  return *target;
 }
 
 
@@ -7214,7 +7250,7 @@ static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
   CODE_COVERAGE(532); // Hit
   Value slotContents = LongPtr_read2_aligned(lpSlot);
   // Work out if the target slot is actually a handle.
-  Value* handleTarget = getHandleTargetOrNull(vm, slotContents);
+  Value* handleTarget = vm_getHandleTargetOrNull(vm, slotContents);
   if (handleTarget) {
     CODE_COVERAGE(533); // Hit
     // Set the corresponding global variable
