@@ -3512,9 +3512,6 @@ function garbageCollect({
           builtinIsReachable('asyncCatchBlock');
           builtinIsReachable('asyncContinue');
           builtinIsReachable('promisePrototype');
-          // WIP: Think through edge cases if the host uses mvm_asyncStart when
-          // there are no async functions in the program and so
-          // `asyncHostCallback` isn't in the bytecode.
           builtinIsReachable('asyncHostCallback');
         } else if (op.opcode === 'AsyncReturn') {
           builtinIsReachable('asyncContinue');

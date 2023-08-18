@@ -78,5 +78,6 @@
     "async-await top-level-await-not-supported",
     "async-await export-async-function",
     "async-await await-over-snapshot",
-    "async-await await-over-snapshot-throw"
+    "async-await await-over-snapshot-throw",
+    "async-await host-async-no-await"
 ]

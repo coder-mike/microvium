@@ -199,8 +199,6 @@ export function pass2_computeSlots({
             if (maxStackDepthAtAwait === undefined || depthAtAwait > maxStackDepthAtAwait) {
               maxStackDepthAtAwait = depthAtAwait;
             }
-            // WIP the static analysis output can actually save this stack depth
-            // so we can confirm during the emit stage that it's correct.
           }
           // It's possible that there are no await points
           if (maxStackDepthAtAwait !== undefined) {

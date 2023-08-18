@@ -9012,6 +9012,9 @@ static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
 
   VM_ASSERT(vm, cpsCallback == VM_VALUE_UNDEFINED);
   Value promiseProto = getBuiltin(vm, BIN_PROMISE_PROTOTYPE);
+  if (promiseProto == VM_VALUE_UNDEFINED) {
+    MVM_FATAL_ERROR(vm, MVM_E_ASYNC_WITHOUT_AWAIT);
+  }
   VM_ASSERT(vm, deepTypeOf(vm, promiseProto) == TC_REF_PROPERTY_LIST);
   Value promise = vm_objectCreate(vm, promiseProto, 2);
   Value* pPromise = (Value*)ShortPtr_decode(vm, promise);

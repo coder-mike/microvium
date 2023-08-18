@@ -1,7 +1,9 @@
 #include <map>
 #include <napi.h>
+#include <stdexcept>
 #include "NativeVM.hh"
 #include "misc.hh"
+#include "error_descriptions.hh"
 
 using namespace VM;
 
@@ -40,7 +42,8 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
   constructor.SuppressDestruct();
 }
 
-NativeVM::NativeVM(const Napi::CallbackInfo& info) : ObjectWrap(info), vm(nullptr), pResult(nullptr)
+NativeVM::NativeVM(const Napi::CallbackInfo& info) :
+  ObjectWrap(info), vm(nullptr), pResult(nullptr), env(info.Env())
 {
   Napi::Env env = info.Env();
   if (info.Length() < 2) {
@@ -399,6 +402,23 @@ void NativeVM::setCoverageCallback(const Napi::CallbackInfo& info) {
   coverageCallback.Reset(func, 1);
 }
 
+void NativeVM::fatalError(int error) {
+  std::string errorMessage = "Microvium error code " + std::to_string(error);
+  // Find the error description from the map
+  mvm_TeError errCode = static_cast<mvm_TeError>(error);
+  auto it = errorDescriptions.find(errCode);
+  if (it != errorDescriptions.end()) {
+    // Create the error message
+    errorMessage = errorMessage + ": " + it->second;
+  }
+
+  // At one point I tried to throw this as a JavaScript exception, but there are
+  // issues with reentrancy and having the VM in a consistent state, so now we
+  // just terminate the host process by throwing a C++ exception.
+  throw std::runtime_error(errorMessage);
+  // Napi::Error::New(env, errorMessage).ThrowAsJavaScriptException();
+}
+
 // Called by VM
 extern "C" void codeCoverage(int id, int mode, int indexInTable, int tableSize, int line) {
   if (!NativeVM::coverageCallback) return;
@@ -417,5 +437,17 @@ extern "C" void codeCoverage(int id, int mode, int indexInTable, int tableSize, 
   catch (...) {
     MVM_FATAL_ERROR(nullptr, 1);
   }
+}
+
+extern "C" void fatalError(void* vm_, int error) {
+  mvm_VM* vm = (mvm_VM*)vm_;
+  // If there's no VM then we don't know how to throw the error
+  if (!vm) {
+    assert(false);
+    exit(error);
+  }
+
+  NativeVM* self = (NativeVM*)mvm_getContext(vm);
+  self->fatalError(error);
 }
 

@@ -27,6 +27,8 @@ public:
   Napi::Value getMemoryStats(const Napi::CallbackInfo&);
   Napi::Value asyncStart(const Napi::CallbackInfo&);
 
+  void NativeVM::fatalError(int error);
+
   static void setCoverageCallback(const Napi::CallbackInfo&);
   static Napi::FunctionReference coverageCallback;
 
@@ -42,6 +44,7 @@ private:
   std::map<mvm_HostFunctionID, Napi::FunctionReference> importTable;
   // Pointer to result slot for currently-running host function (if any, otherwise NULL)
   mvm_Value* pResult;
+  Napi::Env env;
 };
 
 } // namespace VM

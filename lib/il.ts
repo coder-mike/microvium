@@ -492,7 +492,6 @@ export interface ObjectAllocation extends AllocationBase {
   prototype: Value; // NullValue or a a reference to another object
   // Set to true if the set of property names will never change
   keysAreFixed?: boolean;
-  // WIP: Need to encode this in the snapshot.
   internalSlots: Value[]; // Note: first two internal slots are always missing, to match runtime engine behavior where the first 2 slots represent dpNext and dpProto
   properties: ObjectProperties;
 }

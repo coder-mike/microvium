@@ -290,8 +290,7 @@ async function test_augmentingPromisePrototype() {
   }
 }
 
-// TODO: Await over snapshot with catch block
-// TODO: 4-byte alignment of catch target
+// Clear out WIP
 
 // TODO: Merge branches
 

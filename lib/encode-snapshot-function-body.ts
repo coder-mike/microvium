@@ -226,10 +226,6 @@ export function writeFunctionBody(
         const pass2Output = opMeta.emitPass2(ctx);
         opMeta.emitPass3 = pass2Output.emitPass3;
         opMeta.size = pass2Output.size;
-        if (opMeta.size > opMeta.sizeEstimate) { // WIP
-          debugger;
-          opMeta.emitPass2(ctx);
-        }
         hardAssert(opMeta.size <= opMeta.sizeEstimate);
         opMeta.address = address;
         address += pass2Output.size;
