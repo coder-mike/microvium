@@ -899,9 +899,13 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
       while (!iterResult.done) {
         const [instructionOffset, [instruction, disassembly, instructionSize]] = iterResult.value;
 
+        const isStartOfBlock = block.operations.length === 0;
+
         // Resume points are special because they're addressable, so we need to
-        // register them globally.
-        if (instruction.opcode === 'AsyncResume') {
+        // register them globally. Catch blocks are also special because they're
+        // addressable. We don't know which blocks are catch blocks, so we just
+        // map all the blocks (the start of every block).
+        if (instruction.opcode === 'AsyncResume' || isStartOfBlock) {
           resumePointByPhysicalAddress.set(instructionOffset, {
             type: 'ResumePoint',
             address: {

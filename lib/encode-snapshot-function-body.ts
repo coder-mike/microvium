@@ -71,7 +71,7 @@ export function writeFunctionBody(
   output: BinaryRegion,
   func: IL.Function,
   ctx: InstructionEmitContext,
-  resumeReferences: Map<string, Future<Referenceable>>
+  addressableReferences: Map<string, Future<Referenceable>>,
 ): void {
 
   const emitter = new InstructionEmitter();
@@ -82,23 +82,7 @@ export function writeFunctionBody(
   const metaByOperation = new Map<IL.Operation, OperationMeta>();
   const metaByBlock = new Map<IL.BlockID, BlockMeta>();
   const blockOutputOrder: string[] = []; // Will be filled in the first pass
-  const requireBlockAlignment = new Map<IL.BlockID, '2-byte' | '4-minus-2-byte'>();
-
-  ctx.requireBlockToBeAligned = (blockId, alignment) => {
-    alignment === '2-byte' || '4-minus-2-byte' || unexpected();
-
-    // This is a bit of a hack. So far, we're only using the required alignment
-    // for the case of try-catch, where catch blocks need to be 2-byte aligned
-    // in order for us to safely store a reference on the stack. Try-catch
-    // blocks also have the property that the catch comes *later* than the
-    // *try*, so we will encounter the first pass of the `StartTry` before
-    // getting the address estimate of the catch block. This just saves us doing
-    // an extra pass, but would break if we every required alignment on
-    // backreferences.
-    !metaByBlock.get(blockId) || unexpected();
-
-    requireBlockAlignment.set(blockId, alignment);
-  };
+  const addressableBlocks = findAddressableBlocks(func, addressableReferences);
 
   pass1();
 
@@ -132,8 +116,6 @@ export function writeFunctionBody(
   // Output pass to generate bytecode
   outputPass();
 
-  ctx.requireBlockToBeAligned = undefined; // Outside the function, this doesn't make sense
-
   function pass1() {
     const blockQueue = Object.keys(func.blocks);
     ctx.preferBlockToBeNext = nextBlockID => {
@@ -161,13 +143,9 @@ export function writeFunctionBody(
       const block = func.blocks[blockId];
       blockOutputOrder.push(blockId); // The same order will be used for subsequent passes
 
-      switch (requireBlockAlignment.get(blockId)) {
-        case undefined: break;
-        // We don't know how much padding will be required, but it could be up to 1 byte.
-        case '2-byte': addressEstimate += 1; break;
-        // 4-minus-2-byte means 2 bytes ahead of a 4 byte boundary. Up to 3 bytes of padding could be required.
-        case '4-minus-2-byte': addressEstimate += 3; break;
-        default: unexpected();
+      // Addressable blocks have 0-3 bytes padding + 2 byte header
+      if (addressableBlocks.has(blockId)) {
+        addressEstimate += 3 + 2;
       }
 
       // Within the context of this block, operations can request that certain other blocks should be next
@@ -222,42 +200,22 @@ export function writeFunctionBody(
     for (const blockId of blockOutputOrder) {
       const block = func.blocks[blockId];
       const blockMeta = notUndefined(metaByBlock.get(blockId));
-      blockMeta.paddingBeforeBlock = 0;
+      blockMeta.paddingBeforeBlock = undefined;
 
-      switch (requireBlockAlignment.get(blockId)) {
-        case undefined: break;
-        // In the second run of pass2, we know exactly how much padding to add
-        case '2-byte': {
-          if (isFinal) {
-            if ((address & 1) === 1) {
-              address += 1;
-              blockMeta.paddingBeforeBlock = 1;
-            }
-          } else {
-            // Assume padding because we don't know whether there will be or not
-            // until the address is final
-            address += 1;
-            blockMeta.paddingBeforeBlock = 1; // Don't know whether to pad or not
-          }
-          break;
+      // Addressable blocks have 0-3 bytes padding + 2 byte header
+      if (addressableBlocks.has(blockId)) {
+        if (isFinal) {
+          // Padding to 2 less than a 4 byte boundary.
+          const paddingAmount = (4 - ((address + 2) % 4)) % 4;
+          address += paddingAmount + 2;
+          hardAssert(address % 4 === 0);
+          blockMeta.paddingBeforeBlock = paddingAmount;
+        } else {
+          // Assume maximum padding because we don't know whether there will
+          // be or not until the address is final
+          address += 3 + 2;
+          blockMeta.paddingBeforeBlock = 3;
         }
-        case '4-minus-2-byte': {
-          if (isFinal) {
-            // Padding to 2 less than a 4 byte boundary.
-            const paddingAmount = (4 - ((address + 2) % 4)) % 4;
-            if (paddingAmount) {
-              address += paddingAmount;
-              blockMeta.paddingBeforeBlock = paddingAmount;
-            }
-          } else {
-            // Assume maximum padding because we don't know whether there will
-            // be or not until the address is final
-            address += 3;
-            blockMeta.paddingBeforeBlock = 3; // Don't know whether to pad or not
-          }
-          break;
-        }
-        default: unexpected();
       }
 
       blockMeta.address = address;
@@ -302,14 +260,14 @@ export function writeFunctionBody(
         return functionBodyStart.map(functionBodyStart => functionBodyStart + blockAddress);
       },
 
-      declareResumePoint(ilAddress: IL.ProgramAddressValue, physicalAddress: Future<number>) {
+      declareAddressablePoint(ilAddress: IL.ProgramAddressValue, physicalAddress: Future<number>, debugType: string) {
         // This code seems a little crazy. So many layers of futures and
         // wrappers. Is it really all necessary?
-        const ref = resumeReferences.get(programAddressToKey(ilAddress)) ?? unexpected();
+        const ref = addressableReferences.get(programAddressToKey(ilAddress)) ?? unexpected();
         const referenceable: Future<Referenceable> = physicalAddress.map<Referenceable>(physicalAddress => {
           const ref: Referenceable = {
             offset: Future.create(physicalAddress),
-            debugName: `Resume point (${ilAddress.funcId}, ${ilAddress.blockId}, ${ilAddress.operationIndex})`,
+            debugName: `${debugType} (${ilAddress.funcId}, ${ilAddress.blockId}, ${ilAddress.operationIndex})`,
             getPointer(sourceRegion, debugName) {
               // Should be 4-byte aligned
               hardAssert((physicalAddress & 0xFFFC) === physicalAddress);
@@ -322,33 +280,50 @@ export function writeFunctionBody(
           return ref;
         })
         ref.assign(referenceable);
-      }
+      },
     };
 
     for (const blockId of blockOutputOrder) {
       const block = func.blocks[blockId];
       const blockMeta = metaByBlock.get(blockId) ?? unexpected();
 
-      const alignment = requireBlockAlignment.get(blockId);
-      switch (alignment) {
-        case undefined: break;
-        case '2-byte': {
-          if (blockMeta.paddingBeforeBlock) {
-            output.append(1, 'pad-to-even', formats.paddingRow);
-          }
-          output.currentOffset.map(o => hardAssert(o % 2 === 0));
-          break;
-        }
-        case '4-minus-2-byte': {
-          if (blockMeta.paddingBeforeBlock) {
-            output.append(blockMeta.paddingBeforeBlock, 'pad-to-(4n-2)', formats.paddingRow);
-          }
-          output.currentOffset.map(o => hardAssert((4 - ((o + 2) % 4)) % 4 === 0));
-          break;
-        }
-        default: assertUnreachable(alignment);
-      }
+      // Addressable blocks have 0-3 bytes padding + 2 byte header
+      if (addressableBlocks.has(blockId)) {
+        const ilAddress = addressableBlocks.get(blockId) ?? unexpected();
 
+        // Padding to 2 less than a 4 byte boundary.
+        const paddingAmount = blockMeta.paddingBeforeBlock ?? unexpected();;
+        if (blockMeta.paddingBeforeBlock) {
+          output.append(paddingAmount, 'pad-to-(4n-2)', formats.paddingRow);
+        }
+
+        // Header, so that block is a valid addressable. This is the same header
+        // used by an async resume point. The header is mainly required by the
+        // bytecode decoder which traces any addresses to figure out what they
+        // are. In particular, this code is required to support the preservation
+        // of async stack variables in closures which may be encoded in the
+        // snapshot, which may include async catch blocks, but for simplicity
+        // I've applied it to all catch blocks.
+        const currentAddress: Future<number> = innerCtx.absoluteAddress;
+        const containingFunctionOffset = ctx.offsetOfFunction(ilAddress.funcId);
+        const functionHeaderWord = containingFunctionOffset.bind(containingFunctionOffset =>
+          currentAddress.map(currentAddress => {
+            const backDistance = currentAddress + 2 - containingFunctionOffset;
+            hardAssert(backDistance > 0 && backDistance % 4 === 0);
+            hardAssert((backDistance & 0x1FFC) === backDistance)
+            const functionHeaderWord = 0
+              | TeTypeCode.TC_REF_FUNCTION << 12 // TypeCode
+              | 1 << 11 // Flag to indicate continuation function
+              | backDistance >> 2 // Encodes number of quad-words to go back to find the original function
+            return functionHeaderWord;
+          })
+        );
+        innerCtx.region.append(functionHeaderWord, 'Block header', formats.uHex16LERow);
+
+        // Addressable addresses are 4-byte aligned. The above padding should have ensured that
+        output.currentOffset.map(o => hardAssert(o % 4 === 0));
+        innerCtx.declareAddressablePoint(ilAddress, output.currentOffset, 'Block address');
+      }
 
       // Assert that the address we're actually putting the block at matches what we calculated
       output.currentOffset.map(o => functionBodyStart.map(s => o - s === blockMeta.address))
@@ -411,7 +386,6 @@ export interface InstructionEmitContext {
   encodeValue: (value: IL.Value) => FutureLike<mvm_Value>;
   preferBlockToBeNext?: (blockId: IL.BlockID) => void;
   addName(offset: Future, type: string, name: string): void;
-  requireBlockToBeAligned?: (blockId: IL.BlockID, alignment: '2-byte') => void;
   sourceMapAdd?(mapping: FutureInstructionSourceMapping): void;
 }
 
@@ -617,7 +591,6 @@ class InstructionEmitter {
   }
 
   operationStartTry(ctx: InstructionEmitContext, op: IL.Operation, catchBlockId: string): InstructionWriter {
-    ctx.requireBlockToBeAligned!(catchBlockId, '2-byte'); // WIP: this will need to change to 4n-2-byte alignment
     // The StartTry instruction is always 4 bytes
     const size = 4;
     return {
@@ -720,7 +693,9 @@ class InstructionEmitter {
         return {
           size,
           emitPass3: ctx => {
-            ctx.region.append(padding, 'Padding before function header', formats.paddingRow);
+            if (padding) {
+              ctx.region.append(padding, 'Padding before function header', formats.paddingRow);
+            }
             const currentAddress: Future<number> = ctx.absoluteAddress;
             const functionHeaderWord = containingFunctionOffset.bind(containingFunctionOffset =>
               currentAddress.map(currentAddress => {
@@ -738,7 +713,7 @@ class InstructionEmitter {
             // function header, which is also the address of the resume
             // instruction itself. We need to associate the logical IL address
             // with the absolute bytecode address that satisfies it.
-            ctx.declareResumePoint(ilAddress, ctx.absoluteAddress);
+            ctx.declareAddressablePoint(ilAddress, ctx.absoluteAddress, 'Resume point');
             const html = escapeHTML(stringifyOperation(op));
             const binary = [
               UInt4(vm_TeOpcodeEx3.VM_OP3_ASYNC_RESUME) |
@@ -1024,7 +999,7 @@ interface Pass3Context {
   addressOfBlock(blockId: string): Future<number>;
   // Associate an IL address with the corresponding physical address. At the
   // moment this is only to resolve resume points
-  declareResumePoint(ilAddress: IL.ProgramAddressValue, physicalAddress: Future<number>): void;
+  declareAddressablePoint(ilAddress: IL.ProgramAddressValue, physicalAddress: Future<number>, debugType: string): void;
 }
 
 function instructionPrimary(opcode: vm_TeOpcode, param: UInt4, op: IL.Operation): InstructionWriter {
@@ -1328,4 +1303,25 @@ function dumpInstructionEmitData(
   }
 
   fs.writeFileSync(filename, result.join('\n'))
+}
+
+// Find blocks that need to be addressable. Blocks that need to be addressable
+// will be in the addressableReferences map. This will be the case when the
+// block is the target of a StartTry, since try-catch works by pushing a
+// reference to the catch block onto the stack as a value.
+function findAddressableBlocks(
+  func: IL.Function,
+  addressableReferences: Map<string, Future<Referenceable>>
+): Map<IL.BlockID, IL.ProgramAddressValue> {
+  const funcId = func.id;
+  const result = new Map<IL.BlockID, IL.ProgramAddressValue>();
+  for (const [blockId, block] of Object.entries(func.blocks)) {
+    const address: IL.ProgramAddressValue = { type: 'ProgramAddressValue', funcId, blockId, operationIndex: 0 };
+    const key = programAddressToKey(address);
+    const ref = addressableReferences.get(key);
+    if (ref) {
+      result.set(blockId, address);
+    }
+  }
+  return result;
 }

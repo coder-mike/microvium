@@ -489,8 +489,9 @@ suite('async-await', function () {
       async function setup() {
         let i = 1;
         print('Compile time');
-        await untilRuntime;
+        const result = await untilRuntime;
         print('Runtime');
+        print(result);
         // Make sure that the continuation closure is mutable
         i++;
         print(i);
@@ -517,8 +518,56 @@ suite('async-await', function () {
 
     const rtvm = new NativeVMFriendly(snapshot, importMap);
     const runtimeResolve = rtvm.resolveExport(1);
-    runtimeResolve();
+    runtimeResolve(42);
 
-    assert.deepEqual(printout, ['Compile time', 'Runtime', 2])
+    assert.deepEqual(printout, ['Compile time', 'Runtime', 42, 2])
+  });
+
+  test('await-over-snapshot-throw', () => {
+    const sourceText = `
+      let runtimeReject;
+      const untilRuntime = new Promise((resolve, reject) => runtimeReject = reject);
+      vmExport(0, setup);
+      vmExport(1, runtimeReject);
+      const print = vmImport(0);
+
+      async function setup() {
+        let i = 1;
+        print('Compile time');
+        try {
+          await untilRuntime;
+        } catch (e) {
+          print('Runtime');
+          print(e);
+          // Make sure that the continuation closure is mutable
+          i++;
+          print(i);
+        }
+      }
+    `;
+
+    let printout: string[] = [];
+    function print(s: string) {
+      printout.push(s);
+    }
+
+    const importMap: HostImportTable = { 0: print };
+
+    const ctvm = VirtualMachineFriendly.create(importMap);
+    addDefaultGlobals(ctvm);
+    ctvm.evaluateModule({ sourceText });
+    const setup = ctvm.resolveExport(0);
+    setup();
+
+    assert.deepEqual(printout, ['Compile time'])
+
+    const snapshot = ctvm.createSnapshot();
+    fs.writeFileSync('test/async-await/output.await-over-snapshot-throw.disassembly', decodeSnapshot(snapshot).disassembly);
+
+    const rtvm = new NativeVMFriendly(snapshot, importMap);
+    const runtimeReject = rtvm.resolveExport(1);
+    runtimeReject(42);
+
+    assert.deepEqual(printout, ['Compile time', 'Runtime', 42, 2])
   });
 })

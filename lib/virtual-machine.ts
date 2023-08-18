@@ -1058,7 +1058,7 @@ export class VirtualMachine {
     const stackDepth = this.stackPointer;
     hardAssert(this.catchTarget.type === 'UndefinedValue');
     this.push(IL.numberValue(0));
-    this.push(this.addressOfFunctionEntry(this.builtins.asyncCatchBlock));
+    this.push(this.builtins.asyncCatchBlock);
     this.catchTarget = stackDepth;
 
     // Restore state of local temporaries
@@ -1315,7 +1315,7 @@ export class VirtualMachine {
     this.push(synchronousResult);
 
     // The root catch target
-    this.pushCatchTarget(this.addressOfFunctionEntry(this.builtins.asyncCatchBlock));
+    this.pushCatchTarget(this.builtins.asyncCatchBlock);
 
     // slot[1] in the closure is used for the callback. Note: slot[0] is used
     // for the continuation, but this is only set when the async function is
@@ -1728,10 +1728,10 @@ export class VirtualMachine {
   }
 
   private operationStartTry(catchBlockId: string) {
-    // WIP: We probably need to add a function header (or dummy header) to the
-    // catch block and call it a "continuation" so that the bytecode decoder can
-    // figure out what it is.
-    this.pushCatchTarget(this.addressOfBlock(catchBlockId));
+    this.pushCatchTarget({
+      type: 'ResumePoint',
+      address: this.addressOfBlock(catchBlockId)
+    });
   }
 
   private addressOfBlock(blockId: string): IL.ProgramAddressValue {
@@ -1759,7 +1759,7 @@ export class VirtualMachine {
     this.popCatchTarget();
   }
 
-  private pushCatchTarget(handler: IL.ProgramAddressValue) {
+  private pushCatchTarget(handler: IL.Value) {
     // Note: With the introduction of async-await, we can encounter a situation
     // where an async function at compile time is suspended until runtime. The
     // stack is not preserved for general functions, but for async functions the
@@ -1786,9 +1786,13 @@ export class VirtualMachine {
   private popCatchTarget() {
     const programAddress = this.pop();
     const previousCatchDelta = this.pop();
-    hardAssert(programAddress.type === 'ProgramAddressValue');
+    hardAssert(programAddress.type === 'ResumePoint' || programAddress.type === 'FunctionValue');
     hardAssert(previousCatchDelta.type === 'NumberValue');
     hardAssert(previousCatchDelta.value <= 0); // Delta relative to stack pointer so always negative
+
+    const address = programAddress.type === 'FunctionValue'
+      ? this.addressOfFunctionEntry(programAddress)
+      : programAddress.address;
 
     const currentStackDepth = this.stackDepthToSlotIndex(this.stackPointer);
     const previousCatch =
@@ -1798,7 +1802,7 @@ export class VirtualMachine {
 
     this.catchTarget = previousCatch;
 
-    return programAddress;
+    return address;
   }
 
   private operationEnqueueJob() {

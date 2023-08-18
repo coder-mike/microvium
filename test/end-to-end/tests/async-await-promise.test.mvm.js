@@ -291,20 +291,14 @@ async function test_augmentingPromisePrototype() {
 }
 
 // TODO: Await over snapshot with catch block
-
-// TODO: Test encoding and decoding of an async function where the entry point
-// is only reachable through the continuation (i.e. a partially executed async
-// function where the original function is not reachable anymore but the
-// continuation is). This can probably be achieved by using `vmExport` on the
-// result of `mvm_asyncStart`.
-
-// TODO: Run tests without safe mode
-
-// TODO: Update documentation with promise design and AsyncComplete
-
-// TODO: Documentation on how to use async-await
+// TODO: 4-byte alignment of catch target
 
 // TODO: Merge branches
+
+// TODO: Documentation on how to use async-await
+// TODO: Update documentation with promise design and AsyncComplete
+
+// TODO: Run tests without safe mode
 
 // TODO: Bump the version numbers, since we have new builtins and operations
 

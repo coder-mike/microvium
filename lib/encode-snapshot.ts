@@ -119,7 +119,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean,
   // This isn't the most elegant, but it echos what we're doing with function
   // references, where we build up the map of futures and the populate them
   // later.
-  const resumeReferences = new Map([...enumerateResumeAddresses(snapshot)]
+  const addressableReferences = new Map([...enumerateAddressableReferences(snapshot)]
     .map(address => [programAddressToKey(address), new Future<Referenceable>()] as const));
 
   const functionOffsets = new Map([...snapshot.functions.keys()]
@@ -362,10 +362,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean,
         return resolveReferenceable(ref, slotRegion, `FunctionValue(${value.value})`);
       }
       case 'ResumePoint': {
-        const { funcId, blockId, operationIndex } = value.address;
-        const key = programAddressToKey(value.address);
-        const ref = resumeReferences.get(key) ?? unexpected();
-        return resolveReferenceable(ref, slotRegion, `ResumePoint(${funcId}, ${blockId}, ${operationIndex})`);
+        return encodeProgramAddress(value.address, slotRegion, 'ResumePoint');
       }
       case 'ClassValue': {
         // Note: closure values are not interned because their final bytecode
@@ -401,13 +398,22 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean,
         const referenceable = getDetachedEphemeralObject(value, debugName);
         return resolveReferenceable(referenceable, slotRegion, debugName);
       }
-      // These value are used on for exceptions and only on the stack. But since
-      // the encoding doesn't encode a call stack, we don't need to know how to
-      // encode these.
-      case 'ProgramAddressValue':
-        return unexpected();
+      case 'ProgramAddressValue': {
+        // ProgramAddressValue is only used for exceptions when we push the
+        // catch target to the stack. These can land up encoded in the case of
+        // async functions which preserve the stack to the closure when they
+        // suspend.
+        return encodeProgramAddress(value, slotRegion, 'ProgramAddress');
+      }
       default: return assertUnreachable(value);
     }
+  }
+
+  function encodeProgramAddress(address: IL.ProgramAddressValue, slotRegion: MemoryRegionID, debugType: string): Future<mvm_Value> {
+    const { funcId, blockId, operationIndex } = address;
+    const key = programAddressToKey(address);
+    const ref = addressableReferences.get(key) ?? unexpected();
+    return resolveReferenceable(ref, slotRegion, `${debugType}(${funcId}, ${blockId}, ${operationIndex})`);
   }
 
   function getDetachedEphemeralFunction(sourceSlotRegion: MemoryRegionID): Future<mvm_Value> {
@@ -933,7 +939,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean,
     };
 
     for (const [name, func] of snapshot.functions.entries()) {
-      const { functionOffset } = writeFunction(output, func, ctx, resumeReferences);
+      const { functionOffset } = writeFunction(output, func, ctx, addressableReferences);
       const offset = notUndefined(functionOffsets.get(name));
       offset.assign(functionOffset);
       const ref = notUndefined(functionReferences.get(name));
@@ -963,12 +969,12 @@ function writeFunction(
   output: BinaryRegion,
   func: IL.Function,
   ctx: InstructionEmitContext,
-  resumeReferences: Map<string, Future<Referenceable>>
+  addressableReferences: Map<string, Future<Referenceable>>
 ) {
   writeFunctionHeader(output, func.maxStackDepth, func.id);
   const functionOffset = output.currentOffset;
   ctx.addName(functionOffset, 'allocation', func.id);
-  writeFunctionBody(output, func, ctx, resumeReferences);
+  writeFunctionBody(output, func, ctx, addressableReferences);
   return { functionOffset };
 }
 
@@ -994,12 +1000,21 @@ export type Referenceable = {
 }
 
 
-function* enumerateResumeAddresses(snapshot: SnapshotIL): IterableIterator<IL.ProgramAddressValue> {
+function* enumerateAddressableReferences(snapshot: SnapshotIL): IterableIterator<IL.ProgramAddressValue> {
   for (const [funcId, func] of snapshot.functions.entries()) {
     for (const [blockId, block] of Object.entries(func.blocks)) {
       for (const [operationIndex, op] of block.operations.entries()) {
         if (op.opcode === 'AsyncResume') {
           yield { type: 'ProgramAddressValue', funcId, blockId, operationIndex }
+        }
+        if (op.opcode === 'StartTry') {
+          const target = op.operands[0] as IL.LabelOperand;
+          yield {
+            type: 'ProgramAddressValue',
+            funcId,
+            blockId: target.targetBlockId,
+            operationIndex: 0
+          }
         }
       }
     }
