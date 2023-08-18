@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 7
 0003       1     reserved: 0
 0004       2     bytecodeSize: 292
-0006       2     expectedCRC: 27de
+0006       2     expectedCRC: 13fd
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -16,7 +16,7 @@ Addr    Size
 0012       2     BCS_BUILTINS: 0024
 0014       2     BCS_STRING_TABLE: 0032
 0016       2     BCS_ROM: 003c
-0018       2     BCS_GLOBALS: 0108
+0018       2     BCS_GLOBALS: 010a
 001a       2     BCS_HEAP: 0116
 001c    4  - # Import Table
 001c       2     [0]: 0
@@ -38,7 +38,7 @@ Addr    Size
 0038       2     [3]: &0078
 003a       2     [4]: &004c
 003c       2 <unused>
-003e   ca  - # ROM allocations
+003e   cc  - # ROM allocations
 003e       2     Header [Size: 10, Type: TC_REF_INTERNED_STRING]
 0040       a     Value: 'Begin run'
 004a       2     Header [Size: 8, Type: TC_REF_INTERNED_STRING]
@@ -106,7 +106,7 @@ Addr    Size
 00c8       1             Literal(lit undefined)
 00c9       1             Return()
 00ca       2     Header [Size: 8, Type: TC_REF_FUNCTION]
-00cc   3c  -     # Function asyncFunc
+00cc   3e  -     # Function asyncFunc
 00cc       0         maxStackDepth: 8
 00cc       0         isContinuation: 0
 00cc   2b  -         # Block entry
@@ -115,7 +115,7 @@ Addr    Size
 00d2       1             Literal(lit undefined)
 00d3       3             Literal(&0058)
 00d6       2             Call(count 2, flag true)
-00d8       4             StartTry(&00fa)
+00d8       4             StartTry(&00fc)
 00dc       3             LoadGlobal [0]
 00df       1             Literal(lit undefined)
 00e0       2             AwaitCall(1)
@@ -131,20 +131,20 @@ Addr    Size
 00f7    3  -         # Block block2
 00f7       1             Literal(lit undefined)
 00f8       2             AsyncReturn
-00fa    e  -         # Block block1
-00fa       3             LoadGlobal [1]
-00fd       1             Literal(lit undefined)
-00fe       3             Literal(&0078)
-0101       1             LoadVar(index 3)
-0102       1             BinOp(op '+')
-0103       2             Call(count 2, flag true)
-0105       1             Pop(count 1)
-0106       2             Jump &00f7
-0108    e  - # Globals
-0108       2     [0]: &008c
-010a       2     [1]: &0090
-010c       2     [2]: &00cc
-010e       2     [3]: deleted
+00fa       2         <unused>
+00fc    e  -         # Block block1
+00fc       3             LoadGlobal [1]
+00ff       1             Literal(lit undefined)
+0100       3             Literal(&0078)
+0103       1             LoadVar(index 3)
+0104       1             BinOp(op '+')
+0105       2             Call(count 2, flag true)
+0107       1             Pop(count 1)
+0108       2             Jump &00f7
+010a    c  - # Globals
+010a       2     [0]: &008c
+010c       2     [1]: &0090
+010e       2     [2]: &00cc
 0110       2     Handle: &0118
 0112       2     Handle: deleted
 0114       2     Handle: undefined

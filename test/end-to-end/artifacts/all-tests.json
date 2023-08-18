@@ -77,5 +77,6 @@
     "async-await resolving-host-promise",
     "async-await top-level-await-not-supported",
     "async-await export-async-function",
-    "async-await await-over-snapshot"
+    "async-await await-over-snapshot",
+    "async-await await-over-snapshot-throw"
 ]
