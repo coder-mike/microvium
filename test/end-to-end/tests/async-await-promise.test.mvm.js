@@ -290,12 +290,7 @@ async function test_augmentingPromisePrototype() {
   }
 }
 
-// Clear out WIP
-
 // TODO: Merge branches
-
-// TODO: Documentation on how to use async-await
-// TODO: Update documentation with promise design and AsyncComplete
 
 // TODO: Run tests without safe mode
 

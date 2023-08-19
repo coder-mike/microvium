@@ -1147,8 +1147,8 @@ SUB_THROW: {
 
   // Jump to the catch block
   reg2 = pStackPointer[1];
-  // WIP: These values are not deserializable by the snapshot decoder, so this will need to change
-  VM_ASSERT(vm, (reg2 & 1) == 1); // The high bit will be set to avoid conflict with GC
+
+  VM_ASSERT(vm, Value_isBytecodeMappedPtrOrWellKnown(reg2));
   lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
 
   // Push the exception to the stack for the catch block to use
@@ -7393,17 +7393,17 @@ static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount) {
 mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
   mvm_Value callbackOrPromise = vm_asyncStartUnsafe(vm, out_result);
 
+  if (callbackOrPromise == VM_VALUE_NO_OP_FUNC) {
+    CODE_COVERAGE(702); // Hit
+    return VM_VALUE_NO_OP_FUNC;
+  }
+
   // Pointer to registers
   vm_TsRegisters* reg = &vm->stack->reg;
 
   mvm_Value asyncHostCallback = getBuiltin(vm, BIN_ASYNC_HOST_CALLBACK);
   CODE_COVERAGE(695); // Hit
   if (asyncHostCallback == VM_VALUE_UNDEFINED) {
-    CODE_COVERAGE(696); // Hit
-    if (callbackOrPromise == VM_VALUE_NO_OP_FUNC) {
-      CODE_COVERAGE(702); // Hit
-      return VM_VALUE_NO_OP_FUNC;
-    }
     CODE_COVERAGE_UNTESTED(703); // Not hit
 
     // If the builtin is missing, it means the compiler found no await points
