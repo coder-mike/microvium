@@ -289,13 +289,3 @@ async function test_augmentingPromisePrototype() {
   async function myAsync() {
   }
 }
-
-// TODO: Merge branches
-
-// TODO: Run tests without safe mode
-
-// TODO: Bump the version numbers, since we have new builtins and operations
-
-// TODO: Update wasm library
-
-// TODO: Update the "Microvium is small" blog-post

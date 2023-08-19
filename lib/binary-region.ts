@@ -187,7 +187,7 @@ export class Future<T = number> extends EventEmitter {
 
   constructor(assignable: boolean = true) {
     super();
-    this.setMaxListeners(100);
+    this.setMaxListeners(5000);
     // this.log('Created');
     this._assignable = assignable;
   }

@@ -1,5 +1,17 @@
 # To do
 
+  - WIP: Merge branches
+  - WIP: Run tests without safe mode
+  - WIP: Bump the version numbers, since we have new builtins and operations
+  - WIP: Update wasm library
+  - WIP: Update the "Microvium is small" blog-post
+  - WIP: Release
+
+  - Finish refactoring of version numbers to major and minor.
+  - String comparison with `<` and `>`. https://github.com/coder-mike/microvium/issues/67
+  - Support for string prototype methods. https://github.com/coder-mike/microvium/issues/65
+  - Duplicate `var` declaration in a function aren't coalesced. https://github.com/coder-mike/microvium/issues/66
+
   - Modules don't seem to work with `.mjs`
   - I'm not sure why I can't do `import fs from 'fs'`
   - JS access to Microvium C code and port file

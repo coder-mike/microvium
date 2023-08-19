@@ -1,7 +1,7 @@
 /*---
 description: Tests of Uint8Array
 runExportedFunction: 0
-assertionCount: 8
+assertionCount: 10
 ---*/
 vmExport(0, run);
 
@@ -13,12 +13,14 @@ for (let i = 0; i < buf1.length; i++)
 assertEqual(buf1.length, 5)
 assertEqual(buf1[0], 1)
 assertEqual(buf1[4], 5)
+assertEqual(buf1[5], undefined)
 
 function run() {
   // Reading from compile-time Uint8Array at runtime
   assertEqual(buf1.length, 5)
   assertEqual(buf1[0], 1)
   assertEqual(buf1[4], 5)
+  assertEqual(buf1[5], undefined)
 
   // Mutating compile-time Uint8Array at runtime
   buf1[2] = 42;
@@ -32,5 +34,6 @@ function run() {
   assertEqual(buf2[0], 100)
   assertEqual(buf2[1], 101)
   assertEqual(buf2[2], 102)
+  assertEqual(buf2[3], undefined)
 }
 

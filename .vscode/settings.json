@@ -76,7 +76,9 @@
     "xstddef": "cpp",
     "xtr1common": "cpp",
     "xtree": "cpp",
-    "microvium_port_example.h": "c"
+    "microvium_port_example.h": "c",
+    "microvium_internals.h": "c",
+    "microvium_port.h": "c"
   },
   "cSpell.words": [
     "builtins",
@@ -90,8 +92,11 @@
     "Decr",
     "DIDs",
     "DONT",
+    "embedder",
+    "Emscripten",
     "fastpriorityqueue",
     "fclose",
+    "fmod",
     "fopen",
     "fread",
     "fromspace",
@@ -99,6 +104,7 @@
     "ftell",
     "intptr",
     "js's",
+    "libc",
     "malloc'd",
     "memcmp",
     "memcpy",
@@ -127,7 +133,9 @@
     "UNIQUED",
     "UNOP",
     "Unresolve",
-    "virtuals"
+    "virtuals",
+    "wasi",
+    "Wunused"
   ],
   "todo-tree.filtering.excludeGlobs": [
     "**/contribute.md",

@@ -34,10 +34,14 @@
 
 #include <ctype.h>
 #include <stdlib.h>
+#include <inttypes.h>
+#include <stdio.h> // Note: only uses snprintf from stdio.h
 
-#include "math.h"
 #include "microvium_internals.h"
 
+#if MVM_IMPORT_MATH
+#include "math.h"
+#endif
 
 /**
  * Public API to call into the VM to run the given function with the given
@@ -231,8 +235,22 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     CODE_COVERAGE(15); // Hit
   }
 
-  vm_requireStackSpace(vm, pStackPointer, argCount + 1);
-  PUSH(VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
+  err = vm_requireStackSpace(vm, pStackPointer, argCount + 2); // +1 for `this`, +1 for class if needed
+  if (err != MVM_E_SUCCESS) goto SUB_EXIT;
+
+  PUSH(targetFunc); // class or function
+  if (reg->argCountAndFlags & AF_OVERRIDE_THIS) {
+    CODE_COVERAGE_UNTESTED(662); // Not hit
+    // This is a bit of a hack. If mvm_call is called from mvm_callEx, then
+    // mvm_callEx will have already set the `this` value on the stack in this
+    // position.
+    pStackPointer++;
+    reg->argCountAndFlags &= ~AF_OVERRIDE_THIS;
+  } else {
+    CODE_COVERAGE(663); // Hit
+    PUSH(VM_VALUE_UNDEFINED); // Push `this` pointer of undefined
+  }
+
   TABLE_COVERAGE(argCount ? 1 : 0, 2, 513); // Hit 2/2
   reg1 = argCount;
   while (reg1--) {
@@ -241,9 +259,20 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   // ---------------------------- Call target function ------------------------
 
-  reg1 /* argCountAndFlags */ = (argCount + 1) | AF_CALLED_FROM_HOST; // +1 for the `this` value
+  reg1 /* argCountAndFlags */ = (argCount + 1) | AF_PUSHED_FUNCTION | AF_CALLED_FROM_HOST; // +1 for the `this` value
   reg2 /* target */ = vm_resolveIndirections(vm, targetFunc);
   reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
+
+  // When calling mvm_call from C, if the target is a class then we implicitly
+  // `new` the class. This doesn't violate anything from the spec because it
+  // doesn't affect JS calls, but it makes interacting with classes from C much
+  // easier.
+  if (deepTypeOf(vm, targetFunc) == TC_REF_CLASS) {
+    goto SUB_NEW;
+  } else {
+    goto SUB_CALL;
+  }
+
   goto SUB_CALL;
 
   // --------------------------------- Run Loop ------------------------------
@@ -282,6 +311,20 @@ SUB_DO_NEXT_INSTRUCTION:
   CODE_COVERAGE(59); // Hit
 
   VM_ASSERT(vm, reg->usingCachedRegisters);
+
+  #ifdef MVM_GAS_COUNTER
+  if (vm->stopAfterNInstructions >= 0) {
+    CODE_COVERAGE(650); // Hit
+    if (vm->stopAfterNInstructions == 0) {
+      CODE_COVERAGE(651); // Hit
+      err = MVM_E_INSTRUCTION_COUNT_REACHED;
+      goto SUB_EXIT;
+    } else {
+      CODE_COVERAGE(652); // Hit
+      vm->stopAfterNInstructions--;
+    }
+  }
+  #endif
 
   // Check we're within range
   #if MVM_DONT_TRUST_BYTECODE
@@ -779,91 +822,8 @@ SUB_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_NEW): {
       CODE_COVERAGE(347); // Hit
       READ_PGM_1(reg1); // arg count
-
-      regP1 = &pStackPointer[-reg1 - 1]; // Pointer to class
-      reg2 /*class*/ = regP1[0];
-
-      // Can only `new` classes in Microvium
-      if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
-        err = MVM_E_USING_NEW_ON_NON_CLASS;
-        goto SUB_EXIT;
-      }
-
-      // We've already checked that the target of the `new` operation is a
-      // class. A class cannot existed without a `prototype` property. If the
-      // class was created at compile time, the "prototype" string will be
-      // embedded in the bytecode because the class definition uses it. If the
-      // class was created at runtime, the "prototype" string will *also* be
-      // embedded in the bytecode because classes at runtime are only created by
-      // sequences of instructions that also includes reference to the
-      // "prototype" string. So either way, the fact that we're at this point in
-      // the code means that the "prototype" string must exist as a builtin.
-      VM_ASSERT(vm, getBuiltin(vm, BIN_STR_PROTOTYPE) != VM_VALUE_UNDEFINED);
-
-      regLP1 = DynamicPtr_decode_long(vm, reg2);
-      regP1[0] /*func*/ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
-      // Note: this trashes the `this` slot, but it's ok because we set it later to the new object
-      regP1[1] /*props*/ = READ_FIELD_2(regLP1, TsClass, staticProps);
-
-      PUSH(getBuiltin(vm, BIN_STR_PROTOTYPE)); // "prototype" string
-
-      // Get the prototype property of the class. Now regP1[1] is the prototype.
-      FLUSH_REGISTER_CACHE();
-      getProperty(vm, &regP1[1], &reg->pStackPointer[-1], &regP1[1]);
-
-      vm_pop(vm); // "prototype" string
-
-      TeTypeCode tc = deepTypeOf(vm, regP1[1] /* prototype */);
-      reg2 /* internalSlotCount */ = 0;
-      if (tc == TC_REF_PROPERTY_LIST) {
-        CODE_COVERAGE(723); // Hit
-        regP2 /* pPrototype */ = (Value*)ShortPtr_decode(vm, regP1[1]);
-        // Look for the magic value that tells us how many prototype slots there
-        // are.
-        if ((vm_getAllocationSize(regP2) >= 4) &&
-          (regP2[VM_OIS_PROTO_SLOT_MAGIC_KEY] == VM_PROTO_SLOT_MAGIC_KEY_VALUE)
-        ) {
-          reg2 /* internalSlotCount */ = VirtualInt14_decode(vm, regP2[VM_OIS_PROTO_SLOT_COUNT]);
-        }
-      } else if (tc == TC_VAL_NULL) {
-        CODE_COVERAGE_UNTESTED(724); // Not hit
-      } else {
-        CODE_COVERAGE_ERROR_PATH(725); // Not hit
-        err = MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT;
-        goto SUB_EXIT;
-      }
-
-      Value* pObject = gc_allocate(vm, sizeof(TsPropertyList) + reg2 * sizeof(Value), TC_REF_PROPERTY_LIST);
-      Value* p = pObject;
-      *p++ = VM_VALUE_NULL; // dpNext
-      *p++ = regP1[1]; // dpProto
-
-      // Internal slots
-      if (reg2) {
-        CODE_COVERAGE(726); // Hit
-        regP2 /* pPrototype */ = ShortPtr_decode(vm, regP1[1] /* dpProto */);
-        // Make sure the prototype actually has the slots we want to read
-        VM_ASSERT(vm, vm_getAllocationSize(regP2) >= 4 + reg2);
-        regP2 = &regP2[4]; // Skip header and the magic number and slot count
-        while (reg2--) {
-          *p++ = *regP2++;
-        }
-      } else {
-        CODE_COVERAGE(727); // Hit
-      }
-
-      regP1[1] /* this */ = ShortPtr_encode(vm, pObject);
-
-      CACHE_REGISTERS();
-
-      if (err != MVM_E_SUCCESS) goto SUB_EXIT;
-
-      // The slot that was used for the class is now used for the function reference
       reg1 /*argCountAndFlags*/ |= AF_PUSHED_FUNCTION;
-      reg2 = regP1[0];
-      reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
-
-      goto SUB_CALL;
+      goto SUB_NEW;
     }
 
 /* ------------------------------------------------------------------------- */
@@ -1078,7 +1038,7 @@ SUB_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_OBJECT_SET_1): {
       CODE_COVERAGE(124); // Hit
       FLUSH_REGISTER_CACHE();
-      err = setProperty(vm, reg->pStackPointer - 3);
+      err = setProperty(vm, pStackPointer - 3, pStackPointer - 2, pStackPointer - 1);
       CACHE_REGISTERS();
       if (err != MVM_E_SUCCESS) {
         CODE_COVERAGE_UNTESTED(265); // Not hit
@@ -1599,6 +1559,65 @@ SUB_OP_EXTENDED_2: {
 
 } // End of SUB_OP_EXTENDED_2
 
+
+/* ------------------------------------------------------------------------- */
+/*                             SUB_THROW                                     */
+/*   Expects:                                                                */
+/*     reg1: The exception value                                             */
+/* ------------------------------------------------------------------------- */
+
+SUB_THROW: {
+  // Find the closest catch block
+  reg2 = reg->pCatchTarget;
+
+  // If none, it's an uncaught exception
+  if (reg2 == VM_VALUE_UNDEFINED) {
+    CODE_COVERAGE(208); // Hit
+
+    if (out_result) {
+      *out_result = reg1;
+    }
+    err = MVM_E_UNCAUGHT_EXCEPTION;
+    goto SUB_EXIT;
+  } else {
+    CODE_COVERAGE(209); // Hit
+  }
+
+  VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
+
+  // Unwind the stack. regP1 is the stack pointer address we want to land up at
+  regP1 = (uint16_t*)(((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2) & ~1);
+  VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
+  VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
+
+  while (pFrameBase > regP1) {
+    CODE_COVERAGE(211); // Hit
+
+    // Near the beginning of mvm_call, we set `catchTarget` to undefined
+    // (and then restore at the end), which should direct exceptions through
+    // the path of "uncaught exception" above, so no frame here should ever
+    // be a host frame.
+    VM_ASSERT(vm, !(reg->argCountAndFlags & AF_CALLED_FROM_HOST));
+
+    // In the current frame structure, the size of the preceding frame is
+    // saved 4 words ahead of the frame base
+    pStackPointer = pFrameBase;
+    POP_REGISTERS();
+  }
+
+  pStackPointer = regP1;
+
+  // The next catch target is the outer one
+  reg->pCatchTarget = pStackPointer[0];
+
+  // Jump to the catch block
+  reg2 = pStackPointer[1];
+  VM_ASSERT(vm, (reg2 & 1) == 1);
+  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
+
+  // Push the exception to the stack for the catch block to use
+  goto SUB_TAIL_POP_0_PUSH_REG1;
+}
 
 /* ------------------------------------------------------------------------- */
 /*                             SUB_FIXED_ARRAY_NEW                           */
@@ -2584,7 +2603,7 @@ SUB_POP_ARGS: {
     CODE_COVERAGE(108); // Hit
     (void)POP();
   } else {
-    CODE_COVERAGE(109); // Hit
+    CODE_COVERAGE_UNTESTED(109); // Not hit
   }
 
   // We don't preserve this register across function calls, so when we return
@@ -2665,6 +2684,105 @@ SUB_CALL_DYNAMIC: {
   goto SUB_CALL;
 }
 
+/* ------------------------------------------------------------------------- */
+/*                                                                           */
+/*                                    SUB_NEW                                */
+/*                                                                           */
+/*   Performs a dynamic call to a given function value                       */
+/*                                                                           */
+/*   Expects:                                                                */
+/*     reg1: argCountAndFlags including AF_PUSHED_FUNCTION                   */
+/*     The stack should have the class, this (undefined), and args           */
+/* ------------------------------------------------------------------------- */
+SUB_NEW: {
+  regP1 = &pStackPointer[-(uint8_t)reg1 - 1]; // Pointer to class
+  reg2 /*class*/ = regP1[0];
+
+  // The class instance must be on the stack in the position where the function would normally go
+  VM_ASSERT(vm, reg1 /*argCountAndFlags*/ & AF_PUSHED_FUNCTION);
+
+  // Can only `new` classes in Microvium
+  if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
+    err = MVM_E_USING_NEW_ON_NON_CLASS;
+    goto SUB_EXIT;
+  }
+
+  // We've already checked that the target of the `new` operation is a
+  // class. A class cannot existed without a `prototype` property. If the
+  // class was created at compile time, the "prototype" string will be
+  // embedded in the bytecode because the class definition uses it. If the
+  // class was created at runtime, the "prototype" string will *also* be
+  // embedded in the bytecode because classes at runtime are only created by
+  // sequences of instructions that also includes reference to the
+  // "prototype" string. So either way, the fact that we're at this point in
+  // the code means that the "prototype" string must exist as a builtin.
+  VM_ASSERT(vm, getBuiltin(vm, BIN_STR_PROTOTYPE) != VM_VALUE_UNDEFINED);
+
+  regLP1 = DynamicPtr_decode_long(vm, reg2);
+  regP1[0] /*func*/ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
+  // Note: this trashes the `this` slot, but it's ok because we set it later to the new object
+  regP1[1] /*props*/ = READ_FIELD_2(regLP1, TsClass, staticProps);
+
+  PUSH(getBuiltin(vm, BIN_STR_PROTOTYPE)); // "prototype" string
+
+  // Get the prototype property of the class. Now regP1[1] is the prototype.
+  FLUSH_REGISTER_CACHE();
+  getProperty(vm, &regP1[1], &reg->pStackPointer[-1], &regP1[1]);
+
+  vm_pop(vm); // "prototype" string
+
+  TeTypeCode tc = deepTypeOf(vm, regP1[1] /* prototype */);
+  reg2 /* internalSlotCount */ = 0;
+  if (tc == TC_REF_PROPERTY_LIST) {
+    CODE_COVERAGE(723); // Hit
+    regP2 /* pPrototype */ = (Value*)ShortPtr_decode(vm, regP1[1]);
+    // Look for the magic value that tells us how many prototype slots there
+    // are.
+    if ((vm_getAllocationSize(regP2) >= 4) &&
+      (regP2[VM_OIS_PROTO_SLOT_MAGIC_KEY] == VM_PROTO_SLOT_MAGIC_KEY_VALUE)
+    ) {
+      reg2 /* internalSlotCount */ = VirtualInt14_decode(vm, regP2[VM_OIS_PROTO_SLOT_COUNT]);
+    }
+  } else if (tc == TC_VAL_NULL) {
+    CODE_COVERAGE_UNTESTED(724); // Not hit
+  } else {
+    CODE_COVERAGE_ERROR_PATH(725); // Not hit
+    err = MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT;
+    goto SUB_EXIT;
+  }
+
+  Value* pObject = gc_allocate(vm, sizeof(TsPropertyList) + reg2 * sizeof(Value), TC_REF_PROPERTY_LIST);
+  Value* p = pObject;
+  *p++ = VM_VALUE_NULL; // dpNext
+  *p++ = regP1[1]; // dpProto
+
+  // Internal slots
+  if (reg2) {
+    CODE_COVERAGE(726); // Hit
+    regP2 /* pPrototype */ = ShortPtr_decode(vm, regP1[1] /* dpProto */);
+    // Make sure the prototype actually has the slots we want to read
+    VM_ASSERT(vm, vm_getAllocationSize(regP2) >= 4 + reg2);
+    regP2 = &regP2[4]; // Skip header and the magic number and slot count
+    while (reg2--) {
+      *p++ = *regP2++;
+    }
+  } else {
+    CODE_COVERAGE(727); // Hit
+  }
+
+  regP1[1] /* this */ = ShortPtr_encode(vm, pObject);
+
+  CACHE_REGISTERS();
+
+  if (err != MVM_E_SUCCESS) goto SUB_EXIT;
+
+  // The slot that was used for the class is now used for the function reference
+  reg1 /*argCountAndFlags*/ |= AF_PUSHED_FUNCTION;
+  reg2 = regP1[0];
+  reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
+
+  goto SUB_CALL;
+}
 /* ------------------------------------------------------------------------- */
 /*                                                                           */
 /*                                    SUB_CALL                               */
@@ -2778,10 +2896,11 @@ SUB_CALL_HOST_COMMON: {
   // Call the host function
   err = hostFunction(vm, hostFunctionID, pResult, regP1, (uint8_t)reg3);
 
-  if (err != MVM_E_SUCCESS) {
-    CACHE_REGISTERS();
-    goto SUB_EXIT;
-  }
+  // The host function should not have left the stack unbalanced. A failure here
+  // is not really a problem with the host since the Microvium C API doesn't
+  // give the host access to the stack anyway.
+  VM_ASSERT(vm, pStackPointer == reg->pStackPointer);
+  VM_ASSERT(vm, pFrameBase == reg->pFrameBase);
 
   #if (MVM_SAFE_MODE)
     VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
@@ -2815,6 +2934,22 @@ SUB_CALL_HOST_COMMON: {
 
   // Restore caller argCountAndFlags
   reg->argCountAndFlags = saveArgCountAndFlags;
+
+  // Represents an exception thrown by the host function that wasn't caught by
+  // the host. The pResult should reference the exception object.
+  if (err == MVM_E_UNCAUGHT_EXCEPTION) {
+    CODE_COVERAGE_UNTESTED(664); // Not hit
+    reg1 = *pResult;
+    err = MVM_E_SUCCESS;
+    // The throw will unwind the stack to the closest catch block, so we don't
+    // need to worry about unwinding the arguments off the stack.
+    goto SUB_THROW;
+  } else if (err != MVM_E_SUCCESS) {
+    CODE_COVERAGE_ERROR_PATH(665); // Not hit
+    goto SUB_EXIT;
+  } else {
+    CODE_COVERAGE(666); // Hit
+  }
 
   reg3 = reg1; // Callee argCountAndFlags
   reg1 = *pResult;
@@ -3171,8 +3306,47 @@ static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent) {
   return newScope;
 }
 
+/**
+ * Same as mvm_call but takes a `thisValue`. I expect this to be the less common
+ * case, so I've separated it out to avoid the interface complexity of passing a
+ * `thisValue` when it's not needed.
+ */
+TeError mvm_callEx(VM* vm, Value targetFunc, Value thisValue, Value* out_result, Value* args, uint8_t argCount) {
+  mvm_TeError err;
+
+  CODE_COVERAGE_UNTESTED(659); // Not hit
+
+  if (!vm->stack) {
+    CODE_COVERAGE_UNTESTED(660); // Not hit
+    err = vm_createStackAndRegisters(vm);
+    if (err != MVM_E_SUCCESS) {
+      return err;
+    }
+  } else {
+    CODE_COVERAGE_UNTESTED(661); // Not hit
+  }
+
+  err = vm_requireStackSpace(vm, vm->stack->reg.pStackPointer, argCount + 2);
+  if (err) return err;
+
+  // Put the this value on the stack without bumping the stack pointer. I do it
+  // this way because mvm_call has checks on the stack balance so we can't just
+  // push it here and expect mvm_call to pop it later. The first position on the
+  // stack is reserved for the target function, and the second value will be the
+  // `this` value.
+  vm->stack->reg.pStackPointer[1] = thisValue;
+  // This is a little bit of a hack to tell mvm_call that `this` is already on
+  // the stack. I didn't want to play with the arguments to mvm_call because
+  // it's a public interface, and I didn't want to pass the `this` value through
+  // a register because that's less space efficient when this feature is not
+  // used.
+  vm->stack->reg.argCountAndFlags |= AF_OVERRIDE_THIS;
+
+  return mvm_call(vm, targetFunc, out_result, args, argCount);
+}
+
 const Value mvm_undefined = VM_VALUE_UNDEFINED;
-const Value vm_null = VM_VALUE_NULL;
+const Value mvm_null = VM_VALUE_NULL;
 
 static inline uint16_t vm_getAllocationSize(void* pAllocation) {
   CODE_COVERAGE(12); // Hit
@@ -3347,12 +3521,12 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     return MVM_E_INVALID_BYTECODE;
   }
 
-  if (header.bytecodeVersion != MVM_BYTECODE_VERSION) {
+  if (header.bytecodeVersion != MVM_ENGINE_MAJOR_VERSION) {
     CODE_COVERAGE_ERROR_PATH(430); // Not hit
     return MVM_E_WRONG_BYTECODE_VERSION;
   }
 
-  if (MVM_ENGINE_VERSION < header.requiredEngineVersion) {
+  if (MVM_ENGINE_MINOR_VERSION < header.requiredEngineVersion) {
     CODE_COVERAGE_ERROR_PATH(247); // Not hit
     return MVM_E_REQUIRES_LATER_ENGINE;
   }
@@ -3363,7 +3537,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     return MVM_E_BYTECODE_REQUIRES_FLOAT_SUPPORT;
   }
 
-  err = vm_validatePortFileMacros(lpBytecode, &header);
+  err = vm_validatePortFileMacros(lpBytecode, &header, context);
   if (err) return err;
 
   uint16_t importTableSize = header.sectionOffsets[vm_sectionAfter(vm, BCS_IMPORT_TABLE)] - header.sectionOffsets[BCS_IMPORT_TABLE];
@@ -3374,7 +3548,7 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
   size_t allocationSize = sizeof(mvm_VM) +
     sizeof(mvm_TfHostFunction) * importCount +  // Import table
     globalsSize; // Globals
-  vm = (VM*)vm_malloc(vm, allocationSize);
+  vm = (VM*)MVM_CONTEXTUAL_MALLOC(allocationSize, context);
   if (!vm) {
     CODE_COVERAGE_ERROR_PATH(139); // Not hit
     err = MVM_E_MALLOC_FAIL;
@@ -3388,6 +3562,9 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
   vm->context = context;
   vm->lpBytecode = lpBytecode;
   vm->globals = (void*)(resolvedImports + importCount);
+  #ifdef MVM_GAS_COUNTER
+  vm->stopAfterNInstructions = -1;
+  #endif
 
   importTableOffset = header.sectionOffsets[BCS_IMPORT_TABLE];
   lpImportTableStart = LongPtr_add(lpBytecode, importTableOffset);
@@ -3429,6 +3606,9 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
 
   if (initialHeapSize) {
     CODE_COVERAGE(435); // Hit
+    if (initialHeapSize > MVM_MAX_HEAP_SIZE) {
+      MVM_FATAL_ERROR(vm, MVM_E_OUT_OF_MEMORY);
+    }
     // The initial heap needs to be 2-byte aligned because we start appending
     // new allocations to the end of it directly.
     VM_ASSERT(vm, initialHeapSize % 2 == 0);
@@ -3605,7 +3785,7 @@ void mvm_free(VM* vm) {
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
  */
-static void* gc_allocate(VM* vm, uint16_t sizeBytes, TeTypeCode typeCode) {
+static void* gc_allocate(VM* vm, uint16_t sizeBytes,  uint8_t /*TeTypeCode*/ typeCode) {
   uint16_t* p;
   uint16_t* end;
 
@@ -3648,7 +3828,7 @@ RETRY:
   pBucket->pEndOfUsedSpace = end;
 
   // Write header
-  *p++ = vm_makeHeaderWord(vm, typeCode, sizeBytes);
+  *p++ = vm_makeHeaderWord(vm, (TeTypeCode)typeCode, sizeBytes);
 
   return p;
 
@@ -3868,7 +4048,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 
   // If this tips us over the top of the heap, then we run a collection
   if (heapSize + bucketSize > MVM_MAX_HEAP_SIZE) {
-    CODE_COVERAGE(197); // Hit
+    CODE_COVERAGE_UNTESTED(197); // Not hit
     mvm_runGC(vm, false);
     heapSize = getHeapSize(vm);
   }
@@ -4919,6 +5099,54 @@ TeError mvm_releaseHandle(VM* vm, mvm_Handle* handle) {
   return vm_newError(vm, MVM_E_INVALID_HANDLE);
 }
 
+#if MVM_SUPPORT_FLOAT
+static Value vm_float64ToStr(VM* vm, Value value) {
+  CODE_COVERAGE(619); // Hit
+
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm); // Because we allocate a new string
+
+  // I don't think this is 100% compliant, but it's probably fine for most use
+  // cases, and most importantly it's small.
+
+  double x = mvm_toFloat64(vm, value);
+
+  char buf[64];
+  char* p = buf;
+
+  // NaN should be represented as VM_VALUE_NAN not a float with NaN
+  VM_ASSERT(vm, !isnan(x));
+
+  if (isinf(x)) {
+    CODE_COVERAGE(621); // Hit
+    if (x < 0) {
+      CODE_COVERAGE(622); // Hit
+      *p++ = '-';
+    }
+    memcpy(p, "Infinity", 9);
+    p += 8;
+  } else {
+    CODE_COVERAGE(657); // Hit
+    p += MVM_SNPRINTF(p, sizeof buf, "%.15g", x);
+    VM_ASSERT(vm, p < buf + sizeof buf);
+  }
+
+  return mvm_newString(vm, buf, p - buf);
+}
+#endif //  MVM_SUPPORT_FLOAT
+
+static Value vm_intToStr(VM* vm, int32_t i) {
+  CODE_COVERAGE(618); // Hit
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  char buf[32];
+  size_t size;
+
+  size = MVM_SNPRINTF(buf, sizeof buf, "%" PRId32, i);
+  VM_ASSERT(vm, size < sizeof buf);
+
+  return mvm_newString(vm, buf, size);
+}
+
 static Value vm_convertToString(VM* vm, Value value) {
   CODE_COVERAGE(23); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
@@ -4934,8 +5162,13 @@ static Value vm_convertToString(VM* vm, Value value) {
       return vm_intToStr(vm, i);
     }
     case TC_REF_FLOAT64: {
-      CODE_COVERAGE_UNTESTED(248); // Not hit
-      return 0xFFFF;
+      CODE_COVERAGE(248); // Hit
+      #if MVM_SUPPORT_FLOAT
+      return vm_float64ToStr(vm, value);
+      #else
+      constStr = "";
+      #endif
+      break;
     }
     case TC_REF_STRING: {
       CODE_COVERAGE(249); // Hit
@@ -5012,7 +5245,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       break;
     }
     case TC_VAL_NAN: {
-      CODE_COVERAGE_UNTESTED(262); // Not hit
+      CODE_COVERAGE(262); // Hit
       constStr = "NaN";
       break;
     }
@@ -5041,45 +5274,6 @@ static Value vm_convertToString(VM* vm, Value value) {
   }
 
   return vm_newStringFromCStrNT(vm, constStr);
-}
-
-static Value vm_intToStr(VM* vm, int32_t i) {
-  CODE_COVERAGE(618); // Hit
-  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
-  // TODO: Is this really logic we can't just assume in the C standard library?
-  // What if we made it a port entry? Maybe all uses of the standard library
-  // should be port entries anyway.
-
-  static const char strMinInt[] = "-2147483648";
-  char buf[12]; // Up to 11 digits plus a minus sign
-  char* cur = &buf[sizeof buf];
-  bool negative = false;
-  if (i < 0) {
-    CODE_COVERAGE(619); // Hit
-    // Special case for this value because `-i` overflows.
-    if (i == (int32_t)0x80000000) {
-      CODE_COVERAGE(621); // Hit
-      return vm_newStringFromCStrNT(vm, strMinInt);
-    } else {
-      CODE_COVERAGE(622); // Hit
-    }
-    negative = true;
-    i = -i;
-  }
-  else {
-    CODE_COVERAGE(620); // Hit
-    negative = false;
-  }
-  do {
-    *--cur = '0' + i % 10;
-    i /= 10;
-  } while (i);
-
-  if (negative) {
-    *--cur = '-';
-  }
-
-  return mvm_newString(vm, cur, &buf[sizeof buf] - cur);
 }
 
 static Value vm_concat(VM* vm, Value* left, Value* right) {
@@ -5142,7 +5336,7 @@ static TeTypeCode deepTypeOf(VM* vm, Value value) {
 #if MVM_SUPPORT_FLOAT
 int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
   CODE_COVERAGE(486); // Hit
-  if (isfinite(value)) {
+  if (MVM_FLOAT_IS_FINITE(value)) {
     CODE_COVERAGE(487); // Hit
     return (int32_t)value;
   } else {
@@ -5153,15 +5347,14 @@ int32_t mvm_float64ToInt32(MVM_FLOAT64 value) {
 
 Value mvm_newNumber(VM* vm, MVM_FLOAT64 value) {
   CODE_COVERAGE(28); // Hit
-  if (isnan(value)) {
+  if (MVM_FLOAT_IS_NAN(value)) {
     CODE_COVERAGE(298); // Hit
     return VM_VALUE_NAN;
   } else {
     CODE_COVERAGE(517); // Hit
   }
 
-  // Note: VisualC++ (and maybe other compilers) seem to have `0.0==-0.0` evaluate to true, which is why there's the second check here
-  if ((value == -0.0) && (signbit(value) != 0)) {
+  if (MVM_FLOAT_IS_NEG_ZERO(value)) {
     CODE_COVERAGE(299); // Hit
     return VM_VALUE_NEG_ZERO;
   } else {
@@ -5450,7 +5643,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
     *out_sizeBytes = size;
 
   void* pTarget = LongPtr_truncate(vm, lpTarget);
-  // Is the string in local memory?
+  // Is the string in RAM? (i.e. the truncated pointer is the same as the full pointer)
   if (LongPtr_new(pTarget) == lpTarget) {
     CODE_COVERAGE(624); // Hit
     return (const char*)pTarget;
@@ -5462,6 +5655,14 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 
     return (const char*)pTarget;
   }
+}
+
+size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value) {
+  CODE_COVERAGE_UNTESTED(620); // Not hit
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  size_t size;
+  vm_toStringUtf8_long(vm, value, &size);
+  return size;
 }
 
 Value mvm_newBoolean(bool source) {
@@ -5627,9 +5828,14 @@ static void setBuiltin(VM* vm, mvm_TeBuiltins builtinID, Value value) {
   setSlot_long(vm, lpBuiltin, value);
 }
 
-// Warning: this function trashes the word at pObjectValue.
-// Note: out_propertyValue may point to the same address as pObjectValue
-static TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue) {
+// Warning: this function trashes the word at pObjectValue, which happens when
+// traversing the prototype chain.
+//
+// Warning: this function will convert the value at pPropertyName to an interned
+// string if it isn't already.
+//
+// Note: out_propertyValue is allowed point to the same address as pObjectValue
+MVM_HIDDEN TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue) {
   CODE_COVERAGE(48); // Hit
 
   mvm_TeError err;
@@ -5674,8 +5880,9 @@ SUB_GET_PROPERTY:
       int16_t index = VirtualInt14_decode(vm, propertyName);
 
       if ((index < 0) || (index >= length)) {
-        CODE_COVERAGE_ERROR_PATH(343); // Not hit
-        return MVM_E_INVALID_ARRAY_INDEX;
+        CODE_COVERAGE(343); // Hit
+        *out_propertyValue = VM_VALUE_UNDEFINED;
+        return MVM_E_SUCCESS;
       }
 
       uint8_t byteValue = LongPtr_read1(LongPtr_add(lpArr, (uint16_t)index));
@@ -5841,6 +6048,8 @@ SUB_GET_PROP_FIXED_LENGTH_ARRAY:
   }
 }
 
+// Note: the array is passed by pointer (pvArr) because this function can
+// trigger a GC cycle, not because `*pvArr` is mutated by this function.
 static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapacity) {
   CODE_COVERAGE(293); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
@@ -5888,7 +6097,7 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
  * properties, which are identified as any property with a key that is a
  * negative int14.
  */
-static TeError vm_objectKeys(VM* vm, Value* inout_slot) {
+MVM_HIDDEN TeError vm_objectKeys(VM* vm, Value* inout_slot) {
   CODE_COVERAGE(636); // Hit
   Value obj;
   LongPtr lpClass;
@@ -5991,15 +6200,17 @@ SUB_OBJECT_KEYS:
 }
 
 /**
- * Note: the operands are passed by pointer to make sure they're anchored in the
- * stack and that if the GC moves their targets, we will be using the latest
- * values. The operands are:
+ * Note: the operands are passed by pointer because they can move during
+ * setProperty if a GC cycle is triggered (the pointers should point to
+ * GC-reachable slots).
  *
- *   - pOperands[0]: object
- *   - pOperands[1]: propertyName
- *   - pOperands[2]: propertyValue
+ * Warning: `pObject` is trashed. In particular, when setting a property on a
+ * class, the `pObject` slot is reused for the `staticProps` of the class.
+ *
+ * Warning: this function will convert the value at pPropertyName to an interned
+ * string if it isn't already.
  */
-static TeError setProperty(VM* vm, Value* pOperands) {
+MVM_HIDDEN TeError setProperty(VM* vm, Value* pObject, Value* pPropertyName, Value* pPropertyValue) {
   CODE_COVERAGE(49); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
@@ -6010,16 +6221,16 @@ static TeError setProperty(VM* vm, Value* pOperands) {
   // This function may trigger a GC cycle because it may add a cell to the string intern table
   VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
 
-  err = toPropertyName(vm, &pOperands[1]);
+  err = toPropertyName(vm, pPropertyName);
   if (err != MVM_E_SUCCESS) return err;
 
   MVM_LOCAL(Value, vObjectValue, 0);
-  MVM_LOCAL(Value, vPropertyName, pOperands[1]);
-  MVM_LOCAL(Value, vPropertyValue, pOperands[2]);
+  MVM_LOCAL(Value, vPropertyName, *pPropertyName);
+  MVM_LOCAL(Value, vPropertyValue, *pPropertyValue);
 
 SUB_SET_PROPERTY:
 
-  MVM_SET_LOCAL(vObjectValue, pOperands[0]);
+  MVM_SET_LOCAL(vObjectValue, *pObject);
   type = deepTypeOf(vm, MVM_GET_LOCAL(vObjectValue));
   switch (type) {
     case TC_REF_UINT8_ARRAY: {
@@ -6050,6 +6261,7 @@ SUB_SET_PROPERTY:
       }
 
       p[index] = (uint8_t)VirtualInt14_decode(vm, byteValue);
+      VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
       return MVM_E_SUCCESS;
     }
 
@@ -6083,6 +6295,7 @@ SUB_SET_PROPERTY:
           if (key == MVM_GET_LOCAL(vPropertyName)) {
             CODE_COVERAGE(368); // Hit
             *p = MVM_GET_LOCAL(vPropertyValue);
+            VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
             return MVM_E_SUCCESS;
           } else {
             // Skip to next property
@@ -6110,9 +6323,9 @@ SUB_SET_PROPERTY:
 
       // GC collection invalidates the following values so we need to refresh
       // them from the stack slots.
-      MVM_SET_LOCAL(vPropertyName, pOperands[1]);
-      MVM_SET_LOCAL(vPropertyValue, pOperands[2]);
-      MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, pOperands[0]));
+      MVM_SET_LOCAL(vPropertyName, *pPropertyName);
+      MVM_SET_LOCAL(vPropertyValue, *pPropertyValue);
+      MVM_SET_LOCAL(pPropertyList, DynamicPtr_decode_native(vm, *pObject));
 
       /*
       Note: This is a bit of a pain. When we allocate the new cell, it may or
@@ -6143,7 +6356,7 @@ SUB_SET_PROPERTY:
       // Note: `pPropertyList` currently points to the last property list in
       // the chain.
       MVM_GET_LOCAL(pPropertyList)->dpNext = spNewCell;
-
+      VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
       return MVM_E_SUCCESS;
     }
     case TC_REF_ARRAY: {
@@ -6188,6 +6401,7 @@ SUB_SET_PROPERTY:
             *p++ = VM_VALUE_DELETED;
 
           MVM_GET_LOCAL(arr)->viLength = VirtualInt14_encode(vm, newLength);
+          VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
           return MVM_E_SUCCESS;
         } else if (newLength == oldLength) {
           CODE_COVERAGE_UNTESTED(546); // Not hit
@@ -6198,6 +6412,7 @@ SUB_SET_PROPERTY:
           // We can just overwrite the length field. Note that the newly
           // uncovered memory is already filled with VM_VALUE_DELETED
           MVM_GET_LOCAL(arr)->viLength = VirtualInt14_encode(vm, newLength);
+          VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
           return MVM_E_SUCCESS;
         } else { // Make array bigger
           CODE_COVERAGE(288); // Hit
@@ -6205,7 +6420,8 @@ SUB_SET_PROPERTY:
           // know exactly how big the array should be, so we don't add any
           // extra capacity
           uint16_t newCapacity = newLength;
-          growArray(vm, &pOperands[0], newLength, newCapacity);
+          growArray(vm, &*pObject, newLength, newCapacity);
+          VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
           return MVM_E_SUCCESS;
         }
       } else if (MVM_GET_LOCAL(vPropertyName) == VM_VALUE_STR_PROTO) { // Writing to the __proto__ property
@@ -6237,9 +6453,9 @@ SUB_SET_PROPERTY:
             uint16_t newCapacity = oldCapacity * 2;
             if (newCapacity < VM_ARRAY_INITIAL_CAPACITY) newCapacity = VM_ARRAY_INITIAL_CAPACITY;
             if (newCapacity < newLength) newCapacity = newLength;
-            growArray(vm, &pOperands[0], newLength, newCapacity);
-            MVM_SET_LOCAL(vPropertyValue, pOperands[2]); // Value could have changed due to GC collection
-            MVM_SET_LOCAL(vObjectValue, pOperands[0]); // Value could have changed due to GC collection
+            growArray(vm, &*pObject, newLength, newCapacity);
+            MVM_SET_LOCAL(vPropertyValue, *pPropertyValue); // Value could have changed due to GC collection
+            MVM_SET_LOCAL(vObjectValue, *pObject); // Value could have changed due to GC collection
             MVM_SET_LOCAL(arr, DynamicPtr_decode_native(vm, MVM_GET_LOCAL(vObjectValue))); // Value could have changed due to GC collection
           }
         } // End of array expansion
@@ -6254,6 +6470,7 @@ SUB_SET_PROPERTY:
         // Write the item to memory
         MVM_GET_LOCAL(pData)[(uint16_t)index] = MVM_GET_LOCAL(vPropertyValue);
 
+        VM_EXEC_SAFE_MODE(*pObject = VM_VALUE_NULL);
         return MVM_E_SUCCESS;
       }
 
@@ -6266,7 +6483,7 @@ SUB_SET_PROPERTY:
       CODE_COVERAGE(630); // Hit
       lpClass = DynamicPtr_decode_long(vm, MVM_GET_LOCAL(vObjectValue));
       // Delegate to the `staticProps` of the class
-      pOperands[0] = READ_FIELD_2(lpClass, TsClass, staticProps);
+      *pObject = READ_FIELD_2(lpClass, TsClass, staticProps);
       goto SUB_SET_PROPERTY;
     }
 
@@ -6547,6 +6764,79 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
   return true;
 }
 
+// Convert a string to an integer
+TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
+  CODE_COVERAGE(404); // Hit
+
+  TeTypeCode type = deepTypeOf(vm, value);
+  VM_ASSERT(vm, type == TC_REF_STRING || type == TC_REF_INTERNED_STRING);
+
+  bool isFloat = false;
+
+  // Note: this function is implemented to use long pointers to access ROM
+  // memory. This is because the string may be in ROM and we don't want to copy
+  // the string to RAM. Copying to RAM involves allocating the available memory,
+  // which requires that the VM register cache be in a flushed state, which they
+  // aren't necessarily at this point in the code.
+
+  LongPtr start = DynamicPtr_decode_long(vm, value);
+  LongPtr s = start;
+  uint16_t size = vm_getAllocationSize_long(s);
+  uint16_t len = size - 1; // Excluding null terminator
+
+  // Skip leading whitespace
+  while (isspace(LongPtr_read1(s))) {
+    s = LongPtr_add(s, 1);
+  }
+
+  int sign = (LongPtr_read1(s) == '-') ? -1 : 1;
+  if (LongPtr_read1(s) == '+' || LongPtr_read1(s) == '-') {
+    s = LongPtr_add(s, 1);
+  }
+
+  // Find end of digits
+  int32_t n = 0;
+  while (isdigit(LongPtr_read1(s))) {
+    int32_t n2 = n * 10 + (LongPtr_read1(s) - '0');
+    s = LongPtr_add(s, 1);
+    // Overflow Int32
+    if (n2 < n) isFloat = true;
+    n = n2;
+  }
+
+  // Decimal point
+  if ((LongPtr_read1(s) == ',') || (LongPtr_read1(s) == '.')) {
+    CODE_COVERAGE(653); // Hit
+    isFloat = true;
+    s = LongPtr_add(s, 1);
+  }
+
+  // Digits after decimal point
+  while (isdigit(LongPtr_read1(s))) s = LongPtr_add(s, 1);
+
+  // Skip trailing whitespace
+  while (isspace(LongPtr_read1(s))) s = LongPtr_add(s, 1);
+
+  // Check if we reached the end of the string. If we haven't reached the end of
+  // the string then there is a non-digit character in the string.
+  if (LongPtr_sub(s, start) != len) {
+    CODE_COVERAGE(654); // Hit
+    return MVM_E_NAN;
+  }
+
+  // This function cannot handle floating point numbers
+  if (isFloat) {
+    CODE_COVERAGE_UNTESTED(655); // Not hit
+    return MVM_E_FLOAT64;
+  }
+
+  CODE_COVERAGE(656); // Hit
+
+  *out_result = sign * n;
+
+  return MVM_E_SUCCESS;
+}
+
 TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
   CODE_COVERAGE(56); // Hit
   // TODO: when the type codes are more stable, we should convert these to a table.
@@ -6563,22 +6853,18 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       CODE_COVERAGE(402); // Hit
       return MVM_E_FLOAT64;
     }
-    MVM_CASE(TC_REF_STRING): {
-      CODE_COVERAGE_UNIMPLEMENTED(403); // Not hit
-      VM_NOT_IMPLEMENTED(vm);
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
-    }
+    MVM_CASE(TC_REF_STRING):
     MVM_CASE(TC_REF_INTERNED_STRING): {
-      CODE_COVERAGE_UNIMPLEMENTED(404); // Not hit
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+      CODE_COVERAGE(403); // Hit
+      return strToInt32(vm, value, out_result);
     }
     MVM_CASE(TC_VAL_STR_LENGTH): {
-      CODE_COVERAGE_UNIMPLEMENTED(270); // Not hit
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+      CODE_COVERAGE(270); // Hit
+      return MVM_E_NAN;
     }
     MVM_CASE(TC_VAL_STR_PROTO): {
-      CODE_COVERAGE_UNIMPLEMENTED(271); // Not hit
-      return vm_newError(vm, MVM_E_NOT_IMPLEMENTED);
+      CODE_COVERAGE(271); // Hit
+      return MVM_E_NAN;
     }
     MVM_CASE(TC_REF_PROPERTY_LIST): {
       CODE_COVERAGE(405); // Hit
@@ -6695,7 +6981,7 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value) {
     return MVM_FLOAT64_NAN;
   } else if (err == MVM_E_NEG_ZERO) {
     CODE_COVERAGE(426); // Hit
-    return -0.0;
+    return MVM_FLOAT_NEG_ZERO;
   } else {
     CODE_COVERAGE(427); // Hit
   }
@@ -7093,7 +7379,7 @@ void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb) {
  * point to actual bytecode, whereas pHeader should point to a local copy that's
  * been validated.
  */
-static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader) {
+static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader, void* context) {
   uint32_t x1 = 0x12345678;
   uint32_t x2 = 0x12345678;
   uint32_t x3 = 0x87654321;
@@ -7137,8 +7423,8 @@ static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsByt
   if ((!MVM_NATIVE_POINTER_IS_16_BIT) && (sizeof(void*) == 2)) return MVM_E_EXPECTED_POINTER_SIZE_NOT_TO_BE_16_BIT;
 
   #if MVM_USE_SINGLE_RAM_PAGE
-    void* ptr = MVM_MALLOC(2);
-    MVM_FREE(ptr);
+    void* ptr = MVM_CONTEXTUAL_MALLOC(2, context);
+    MVM_CONTEXTUAL_FREE(ptr, context);
     if ((intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR > 0xffff) return MVM_E_MALLOC_NOT_WITHIN_RAM_PAGE;
   #endif // MVM_USE_SINGLE_RAM_PAGE
 
@@ -7200,7 +7486,7 @@ static TeError vm_newError(VM* vm, TeError err) {
 }
 
 static void* vm_malloc(VM* vm, size_t size) {
-  void* result = MVM_MALLOC(size);
+  void* result = MVM_CONTEXTUAL_MALLOC(size, vm->context);
 
   #if MVM_SAFE_MODE && MVM_USE_SINGLE_RAM_PAGE
     // See comment on MVM_RAM_PAGE_ADDR in microvium_port_example.h
@@ -7209,15 +7495,27 @@ static void* vm_malloc(VM* vm, size_t size) {
   return result;
 }
 
+// This is because we get an unused warning on the `context` variable if the
+// MVM_CONTEXTUAL_FREE macro doesn't actually use the context.
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
 // Note: mvm_free frees the VM, while vm_free is the counterpart to vm_malloc
 static void vm_free(VM* vm, void* ptr) {
+  // Capture the context before freeing the ptr, since the pointer could be the vm
+  void* context = vm->context;
+
   #if MVM_SAFE_MODE && MVM_USE_SINGLE_RAM_PAGE
     // See comment on MVM_RAM_PAGE_ADDR in microvium_port_example.h
     VM_ASSERT(vm, !ptr || ((intptr_t)ptr - (intptr_t)MVM_RAM_PAGE_ADDR <= 0xFFFF));
   #endif
 
-  MVM_FREE(ptr);
+  MVM_CONTEXTUAL_FREE(ptr, context);
 }
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
   CODE_COVERAGE(344); // Hit
@@ -7930,3 +8228,13 @@ mvm_TsHeapAllocationInfo* mvm_readHeap(VM* vm, int* out_count) {
   return heap;
 }
 #endif // MVM_DEBUG_UTILS
+
+#ifdef MVM_GAS_COUNTER
+void mvm_stopAfterNInstructions(mvm_VM* vm, int32_t n) {
+  vm->stopAfterNInstructions = n;
+}
+
+int32_t mvm_getInstructionCountRemaining(mvm_VM* vm) {
+  return vm->stopAfterNInstructions;
+}
+#endif // MVM_GAS_COUNTER

@@ -1,5 +1,5 @@
 import * as IL from './il';
-import { SnapshotIL, BYTECODE_VERSION, HEADER_SIZE, ENGINE_VERSION } from "./snapshot-il";
+import { SnapshotIL, ENGINE_MAJOR_VERSION, HEADER_SIZE, ENGINE_MINOR_VERSION } from "./snapshot-il";
 import { notImplemented, invalidOperation, unexpected, hardAssert, assertUnreachable, notUndefined, reserved, entries } from "./utils";
 import { SmartBuffer } from 'smart-buffer';
 import { crc16ccitt } from "crc";
@@ -106,7 +106,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     return invalidOperation(`Invalid bytecode file (CRC mismatch)`);
   }
 
-  if (bytecodeVersion !== BYTECODE_VERSION) {
+  if (bytecodeVersion !== ENGINE_MAJOR_VERSION) {
     return invalidOperation(`Bytecode version ${bytecodeVersion} is not supported`);
   }
 
@@ -134,8 +134,8 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
 
   endRegion('Header');
 
-  if (requiredEngineVersion !== ENGINE_VERSION) {
-    return invalidOperation(`Engine version ${requiredEngineVersion} is not supported (expected ${ENGINE_VERSION})`);
+  if (requiredEngineVersion !== ENGINE_MINOR_VERSION) {
+    return invalidOperation(`Engine version ${requiredEngineVersion} is not supported (expected ${ENGINE_MINOR_VERSION})`);
   }
 
   // Note: we could in future decode the ROM and HEAP sections explicitly, since

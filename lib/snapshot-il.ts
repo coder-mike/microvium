@@ -4,9 +4,9 @@ import { entriesInOrder, stringifyIdentifier } from './utils';
 import { stringifyValue, stringifyFunction, stringifyAllocation, StringifyILOpts } from './stringify-il';
 import { crc16ccitt } from 'crc';
 
-export const BYTECODE_VERSION = 7;
+export const ENGINE_MAJOR_VERSION = 7  /* aka MVM_BYTECODE_VERSION */;
 export const HEADER_SIZE = 28;
-export const ENGINE_VERSION = 7;
+export const ENGINE_MINOR_VERSION = 8  /* aka MVM_ENGINE_VERSION */;
 
 /**
  * A snapshot represents the state of the machine captured at a specific moment
@@ -73,7 +73,7 @@ export function validateSnapshotBinary(bytecode: Buffer): { err: string } | unde
     return { err: `CRC fail` };
 
   const actualBytecodeVersion = bytecode.readUInt8(0);
-  if (actualBytecodeVersion !== BYTECODE_VERSION) {
-    return { err: `Supported bytecode version is ${BYTECODE_VERSION} but file is version ${actualBytecodeVersion}` };
+  if (actualBytecodeVersion !== ENGINE_MAJOR_VERSION) {
+    return { err: `Supported bytecode version is ${ENGINE_MAJOR_VERSION} but file is version ${actualBytecodeVersion}` };
   }
 }

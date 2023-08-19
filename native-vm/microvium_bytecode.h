@@ -2,11 +2,6 @@
 
 #include "stdint.h"
 
-// WIP: Need to bump this to version 8 for the change to function headers
-#define MVM_BYTECODE_VERSION 7
-// Note: MVM_ENGINE_VERSION is at the top of `microvium_internals.h`
-
-
 // These sections appear in the bytecode in the order they appear in this
 // enumeration.
 typedef enum mvm_TeBytecodeSection {
@@ -148,9 +143,9 @@ typedef enum mvm_TeBuiltins {
 
 // Minimal bytecode is 32 bytes (sizeof(mvm_TsBytecodeHeader) + BCS_SECTION_COUNT*2 + BIN_BUILTIN_COUNT*2)
 typedef struct mvm_TsBytecodeHeader { // Size = 12B + sectionOffsets
-  uint8_t bytecodeVersion; // MVM_BYTECODE_VERSION
+  uint8_t bytecodeVersion; // MVM_ENGINE_MAJOR_VERSION
   uint8_t headerSize;
-  uint8_t requiredEngineVersion;
+  uint8_t requiredEngineVersion; // MVM_ENGINE_MINOR_VERSION
   uint8_t reserved; // =0
 
   uint16_t bytecodeSize; // Including header

@@ -1,4 +1,5 @@
-import { hardAssert } from "./utils";
+// Note: `runtime-types.ts` should not have any imports, because it's used by the wasm library as well
+const assert = (x: boolean) => { if (!x) throw new Error('Assertion failed')}
 
 export type UInt4 = number;
 export type UInt8 = number;
@@ -14,17 +15,17 @@ export type SInt14 = number;
 export type SInt16 = number;
 export type SInt32 = number;
 
-export const UInt4 = (n: UInt4): UInt4 => (hardAssert(isUInt4(n)), n);
-export const UInt7 = (n: UInt7): UInt8 => (hardAssert(isUInt7(n)), n);
-export const UInt8 = (n: UInt8): UInt8 => (hardAssert(isUInt8(n)), n);
-export const UInt12 = (n: UInt12): UInt12 => (hardAssert(isUInt12(n)), n);
-export const UInt14 = (n: UInt14): UInt14 => (hardAssert(isUInt14(n)), n);
-export const UInt16 = (n: UInt16): UInt16 => (hardAssert(isUInt16(n)), n);
-export const UInt32 = (n: UInt32): UInt32 => (hardAssert(isUInt32(n)), n);
-export const SInt8 = (n: SInt8): SInt8 => (hardAssert(isSInt8(n)), n);
-export const SInt14 = (n: SInt14): SInt14 => (hardAssert(isSInt14(n)), n);
-export const SInt16 = (n: SInt16): SInt16 => (hardAssert(isSInt16(n)), n);
-export const SInt32 = (n: SInt32): SInt32 => (hardAssert(isSInt32(n)), n);
+export const UInt4 = (n: UInt4): UInt4 => (assert(isUInt4(n)), n);
+export const UInt7 = (n: UInt7): UInt8 => (assert(isUInt7(n)), n);
+export const UInt8 = (n: UInt8): UInt8 => (assert(isUInt8(n)), n);
+export const UInt12 = (n: UInt12): UInt12 => (assert(isUInt12(n)), n);
+export const UInt14 = (n: UInt14): UInt14 => (assert(isUInt14(n)), n);
+export const UInt16 = (n: UInt16): UInt16 => (assert(isUInt16(n)), n);
+export const UInt32 = (n: UInt32): UInt32 => (assert(isUInt32(n)), n);
+export const SInt8 = (n: SInt8): SInt8 => (assert(isSInt8(n)), n);
+export const SInt14 = (n: SInt14): SInt14 => (assert(isSInt14(n)), n);
+export const SInt16 = (n: SInt16): SInt16 => (assert(isSInt16(n)), n);
+export const SInt32 = (n: SInt32): SInt32 => (assert(isSInt32(n)), n);
 
 export type mvm_Value = UInt16;
 export type vm_Reference = mvm_Value;
@@ -83,12 +84,13 @@ export enum mvm_TeError {
   /* 48 */ MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, // Value assigned to index of Uint8Array must be an integer in the range 0 to 255
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
   /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
-  /* 51 */ MVM_E_REQUIRES_ACTIVE_VM, // The given operation requires that the VM has active calls on the stack
-  /* 52 */ MVM_E_ASYNC_START_ERROR, // mvm_asyncStart must be called exactly once at the beginning of a host function that is called from JS
-  /* 53 */ MVM_E_ASYNC_WITHOUT_AWAIT, // mvm_asyncStart can only be used with a script that has await points. Add at least one (reachable) await point to the script.
-  /* 54 */ MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE, // Can only await a promise in Microvium
-  /* 55 */ MVM_E_HEAP_CORRUPT, // Microvium's internal heap is not in a consistent state
-  /* 56 */ MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT, // The prototype property of a class must be null or a plain object
+  /* 51 */ MVM_E_INSTRUCTION_COUNT_REACHED, // The instruction count set by `mvm_stopAfterNInstructions` has been reached
+  /* 52 */ MVM_E_REQUIRES_ACTIVE_VM, // The given operation requires that the VM has active calls on the stack
+  /* 53 */ MVM_E_ASYNC_START_ERROR, // mvm_asyncStart must be called exactly once at the beginning of a host function that is called from JS
+  /* 54 */ MVM_E_ASYNC_WITHOUT_AWAIT, // mvm_asyncStart can only be used with a script that has await points. Add at least one (reachable) await point to the script.
+  /* 55 */ MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE, // Can only await a promise in Microvium
+  /* 56 */ MVM_E_HEAP_CORRUPT, // Microvium's internal heap is not in a consistent state
+  /* 57 */ MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT, // The prototype property of a class must be null or a plain object
 };
 
 

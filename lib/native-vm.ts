@@ -41,6 +41,8 @@ export interface NativeVM {
   createSnapshot(): Buffer;
   getMemoryStats(): MemoryStats;
   asyncStart(): Value;
+  stopAfterNInstructions(n: number): void;
+  getInstructionCountRemaining(): number;
   readonly undefined: Value;
 }
 

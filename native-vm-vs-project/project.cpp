@@ -25,8 +25,10 @@ vector<string> skipTests = {
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = {
+  //0x193
   0
 };
+
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
 #define IS_ANY_BREAKPOINTS ((BREAKPOINT_COUNT > 1) || (breakpoints[0] != 0))
 

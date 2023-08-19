@@ -20,6 +20,8 @@ Steps:
   - Run `npm build`
   - Run `npm test`
 
+Note: `npm install` also triggers `node-gyp-build` which builds the native module. If you want to build the native module again, you can run `npm run build:native`.
+
 ## What needs doing?
 
 See [todo](../todo). Talk to me before doing anything major because I might already have designs or partial progress on some of these things.
@@ -67,8 +69,11 @@ A suggested pre-commit git hook is as follows:
 ```sh
 #!/bin/sh
 set -e
-npm run check-for-wip
-npm test
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+if [ "main" = $BRANCH_NAME ]; then
+  npm run check-for-wip
+  npm test
+fi
 ```
 
 Then if you have anything you need to remember to change before committing, put a `// WIP` comment on it, and the hook will catch it if you accidentally forget about it. The `check-for-wip` script also catches cases where `testOnly: true` or `test.only` has accidentally been left on a specific test case.

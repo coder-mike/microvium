@@ -28,6 +28,8 @@ public:
   Napi::Value asyncStart(const Napi::CallbackInfo&);
 
   void NativeVM::fatalError(int error);
+  Napi::Value stopAfterNInstructions(const Napi::CallbackInfo&);
+  Napi::Value getInstructionCountRemaining(const Napi::CallbackInfo&);
 
   static void setCoverageCallback(const Napi::CallbackInfo&);
   static Napi::FunctionReference coverageCallback;

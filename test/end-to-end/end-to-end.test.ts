@@ -174,6 +174,7 @@ async function runTest(anySkips: boolean, testArtifactDir: string, yamlText: str
     asyncTestComplete,
     $$MicroviumNopInstruction: () => { },
     Number: { isNaN: Number.isNaN },
+    NaN: NaN,
     Infinity,
     undefined,
     overflowChecks: true,

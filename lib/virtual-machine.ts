@@ -2220,7 +2220,7 @@ export class VirtualMachine {
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
       case 'NumberValue': return value.value;
-      case 'StringValue': return parseFloat(value.value);
+      case 'StringValue': return +value.value;
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
@@ -2702,8 +2702,8 @@ export class VirtualMachine {
       }
       this.checkIndexValue(propertyName)
 
-      if (propertyName < 0 && propertyName >= object.bytes.length) {
-        return this.runtimeError(`Uint8Array index out of bounds (${propertyName})`)
+      if (propertyName < 0 || propertyName >= object.bytes.length) {
+        return IL.undefinedValue;
       }
 
       return this.numberValue(object.bytes[propertyName] ?? unexpected());

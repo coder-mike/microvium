@@ -239,5 +239,33 @@ suite('native-api', function () {
 
     vm.resolveExport(1)();
   })
+
+  test('mvm_stopAfterNInstructions', () => {
+    const snapshot = compileJs`
+      vmExport(1, () => { for (let i = 0; i < 50; i++) {} })
+    `
+
+    const vm = new NativeVM(snapshot.data, () => unexpected());
+
+    const f = vm.resolveExport(1);
+
+    vm.stopAfterNInstructions(1000);
+    assert.equal(vm.getInstructionCountRemaining(), 1000);
+
+    vm.call(f, []);
+    assert.equal(vm.getInstructionCountRemaining(), 340);
+
+    let err: any;
+    // Calling `f` again will trigger the error
+    try { vm.call(f, []); } catch (e) { err = e; }
+    assert.equal(err.message, "The instruction count set by `mvm_stopAfterNInstructions` has been reached");
+
+    assert.equal(vm.getInstructionCountRemaining(), 0);
+
+    err = undefined;
+    // the counter doesn't reset
+    try { vm.call(f, []); } catch (e) { err = e; }
+    assert.equal(err.message, "The instruction count set by `mvm_stopAfterNInstructions` has been reached");
+  })
 })
 

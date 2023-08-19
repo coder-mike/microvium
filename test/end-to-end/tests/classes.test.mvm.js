@@ -3,7 +3,6 @@ description: >
   Testing support for classes
 runExportedFunction: 0
 assertionCount: 72
-testOnly: false
 ---*/
 
 

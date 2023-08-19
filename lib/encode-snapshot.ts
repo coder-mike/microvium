@@ -10,8 +10,8 @@ import { BinaryRegion, Future, FutureLike } from './binary-region';
 import { HTML, BinaryData } from './visual-buffer';
 import * as formats from './snapshot-binary-html-formats';
 import { SnapshotClass } from './snapshot';
+import { SnapshotIL, validateSnapshotBinary, ENGINE_MAJOR_VERSION, ENGINE_MINOR_VERSION } from './snapshot-il';
 import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx3 } from './bytecode-opcodes';
-import { SnapshotIL, validateSnapshotBinary, BYTECODE_VERSION, ENGINE_VERSION } from './snapshot-il';
 import { crc16ccitt } from 'crc';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
 import { stringifyValue } from './stringify-il';
@@ -144,9 +144,9 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean,
 
   // -------------------------- Header --------------------
 
-  bytecode.append(BYTECODE_VERSION, 'bytecodeVersion', formats.uInt8Row);
+  bytecode.append(ENGINE_MAJOR_VERSION, 'bytecodeVersion', formats.uInt8Row);
   bytecode.append(headerSize, 'headerSize', formats.uInt8Row);
-  bytecode.append(ENGINE_VERSION, 'requiredEngineVersion', formats.uInt8Row);
+  bytecode.append(ENGINE_MINOR_VERSION, 'requiredEngineVersion', formats.uInt8Row);
   bytecode.append(0, 'reserved', formats.uInt8Row);
 
   bytecode.append(bytecodeSize, 'bytecodeSize', formats.uInt16LERow);
@@ -699,6 +699,9 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean,
   }
 
   function makeHeaderWord(size: number, typeCode: TeTypeCode) {
+    if (size > 4095) {
+      throw new Error('Maximum allocation size exceeded. Allocations in Microvium are limited to 4kB each. If you have arrays of larger than 2047 items then you may need to refactor them into multiple smaller arrays.')
+    }
     hardAssert(isUInt12(size));
     hardAssert(isUInt4(typeCode));
     return size | (typeCode << 12);

@@ -2,7 +2,7 @@
 description: >
   Tests various operations that should classify as vm_TeNumberOp operations
 runExportedFunction: 0
-assertionCount: 122
+assertionCount: 153
 ---*/
 vmExport(0, run);
 
@@ -18,6 +18,9 @@ function run() {
   testRemainder();
   testPower();
   testIncrDecr();
+  testStringToInt();
+  testIntToString();
+  testFloatToString();
 }
 
 function testNegate() {
@@ -207,4 +210,56 @@ function testIncrDecr() {
   x = 1.5;
   assertEqual(++x, 2.5);
   assertEqual(--x, 1.5);
+}
+
+function testStringToInt() {
+  assert(Number.isNaN(+"x"));
+  assert(Number.isNaN(+"length"));
+  assert(Number.isNaN(+"__proto__"));
+  assert(Number.isNaN(+"1a"));
+  assert(Number.isNaN(+"1.1.1"));
+  assert(Number.isNaN(+"123456789123456789.1.1"));
+  assert(Number.isNaN(+"123\0"));
+
+  // Empty string
+  assertEqual(+"", 0);
+
+  // Whitespace
+  assertEqual(+"  ", 0);
+
+  // Small integers
+  assertEqual(+"123", 123);
+  assertEqual(+"-123", -123);
+
+  // Leading and trailing whitespace
+  assertEqual(+"  123   ", 123);
+  assertEqual(+"  -123   ", -123);
+
+  // Int32
+  assertEqual(+"12345678", 12345678);
+  assertEqual(+"-12345678", -12345678);
+
+  // Multiply
+  assertEqual(1 * "123", 123);
+}
+
+function testIntToString() {
+  assertEqual('' + 0, '0');
+  assertEqual('' + 1, '1');
+  assertEqual('' + -1, '-1');
+  assertEqual('' + (0x7FFFFFFF), '2147483647');
+  assertEqual('' + (-0x80000000), '-2147483648');
+}
+
+function testFloatToString() {
+  assertEqual('' + NaN, 'NaN');
+  assertEqual('' + Infinity, 'Infinity');
+  assertEqual('' + (-Infinity), '-Infinity');
+  assertEqual('' + (-0.0), '0');
+  assertEqual('' + 0.1, '0.1');
+  assertEqual('' + (-0.1), '-0.1');
+  assertEqual('' + 1e30, '1e+30');
+  assertEqual('' + (-1e30), '-1e+30');
+  assertEqual('' + 1e-30, '1e-30');
+  assertEqual('' + (-1e-30), '-1e-30');
 }

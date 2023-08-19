@@ -95,7 +95,7 @@ A foundational principle in Microvium is the ability to the snapshot the state o
 
 The Microvium engine implementation for MCUs has _no ability to parse source text_, since it is designed particularly for small MCUs with only a few kB of RAM and ROM, and no space to store source text or parsers, nor processing power to perform the parsing at runtime. But the desktop Microvium implementation has full text parsing ability.
 
-The way to get a script onto a microcontroller is to first run virtual machine on a desktop computer (or backend build server, etc), where it has access to the script source text and other resources it may need to pre-load, and then to snapshot the VM after it has finished loading. The snapshot can subsequently be copied to the target device, where it can resume execution where it left off.
+The way to get a script onto a microcontroller is to first run the virtual machine on a desktop computer (or backend build server, etc), where it has access to the script source text and other resources it may need to pre-load, and then to snapshot the VM after it has finished loading. The snapshot can subsequently be copied to the target device, where it can resume execution where it left off.
 
 So, let's create a snapshot.
 

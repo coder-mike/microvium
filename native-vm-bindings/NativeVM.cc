@@ -35,6 +35,8 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
     NativeVM::InstanceMethod("createSnapshot", &NativeVM::createSnapshot),
     NativeVM::InstanceMethod("getMemoryStats", &NativeVM::getMemoryStats),
     NativeVM::InstanceMethod("asyncStart", &NativeVM::asyncStart),
+    NativeVM::InstanceMethod("stopAfterNInstructions", &NativeVM::stopAfterNInstructions),
+    NativeVM::InstanceMethod("getInstructionCountRemaining", &NativeVM::getInstructionCountRemaining),
     NativeVM::StaticValue("MVM_PORT_INT32_OVERFLOW_CHECKS", Napi::Boolean::New(env, MVM_PORT_INT32_OVERFLOW_CHECKS)),
   });
   constructor = Napi::Persistent(ctr);
@@ -140,6 +142,37 @@ Napi::Value NativeVM::asyncStart(const Napi::CallbackInfo& info) {
   mvm_Value callback = mvm_asyncStart(vm, pResult);
   pResult = nullptr; // No longer let the user set the result
   return VM::Value::wrap(vm, callback);
+}
+
+Napi::Value NativeVM::stopAfterNInstructions(const Napi::CallbackInfo& info) {
+
+  Napi::Env env = info.Env();
+  if (info.Length() < 1) {
+    Napi::Error::New(env, "Expected argument `n`")
+      .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  auto arg = info[0];
+  if (!arg.IsNumber()) {
+    Napi::TypeError::New(env, "Expected argument `n` to be a number")
+      .ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  auto n = arg.ToNumber().Int32Value();
+
+  mvm_stopAfterNInstructions(vm, n);
+
+  return env.Undefined();
+}
+
+Napi::Value NativeVM::getInstructionCountRemaining(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  int32_t n = mvm_getInstructionCountRemaining(vm);
+
+  return Napi::Number::New(env, n);
 }
 
 Napi::Value NativeVM::typeOf(const Napi::CallbackInfo& info) {
