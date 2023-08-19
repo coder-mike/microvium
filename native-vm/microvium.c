@@ -1038,7 +1038,7 @@ SUB_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_OBJECT_SET_1): {
       CODE_COVERAGE(124); // Hit
       FLUSH_REGISTER_CACHE();
-      err = setProperty(vm, pStackPointer - 3, pStackPointer - 2, pStackPointer - 1);
+      err = setProperty(vm, reg->pStackPointer - 3, reg->pStackPointer - 2, reg->pStackPointer - 1);
       CACHE_REGISTERS();
       if (err != MVM_E_SUCCESS) {
         CODE_COVERAGE_UNTESTED(265); // Not hit
@@ -2836,12 +2836,6 @@ SUB_CALL_HOST_COMMON: {
 
   // Call the host function
   err = hostFunction(vm, hostFunctionID, pResult, regP1, (uint8_t)reg3);
-
-  // The host function should not have left the stack unbalanced. A failure here
-  // is not really a problem with the host since the Microvium C API doesn't
-  // give the host access to the stack anyway.
-  VM_ASSERT(vm, pStackPointer == reg->pStackPointer);
-  VM_ASSERT(vm, pFrameBase == reg->pFrameBase);
 
   #if (MVM_SAFE_MODE)
     VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);

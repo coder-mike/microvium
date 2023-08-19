@@ -87,8 +87,8 @@ suite('minimal-size', function () {
 
     const vm2 = Microvium.restore(snapshot, {});
     const stats = vm2.getMemoryStats();
-    assert.equal(stats.totalSize, 80);
-    assert.equal(stats.coreSize, 80);
+    assert.equal(stats.totalSize, 88);
+    assert.equal(stats.coreSize, 88);
     assert.equal(stats.fragmentCount, 1);
     assert.equal(stats.virtualHeapAllocatedCapacity, 0);
     assert.equal(stats.virtualHeapUsed, 0);
@@ -220,8 +220,8 @@ suite('minimal-size', function () {
     assert.equal(stats.virtualHeapAllocatedCapacity, virtualHeapSize);
     assert.equal(stats.virtualHeapUsed, virtualHeapSize);
     assert.equal(stats.virtualHeapHighWaterMark, virtualHeapSize);
-    assert.equal(stats.stackHighWaterMark, 24);
-    assert.equal(stats.stackHeight, 16);
+    assert.equal(stats.stackHighWaterMark, 26);
+    assert.equal(stats.stackHeight, 18);
     assert.equal(stats.stackAllocatedCapacity, defaultStackCapacity);
     assert.equal(stats.registersSize, registersSize64BitMax);
     assert.equal(stats.importTableSize, importTableSize64Bit);
@@ -234,8 +234,8 @@ suite('minimal-size', function () {
     assert.equal(registersSize32BitMin, 28);
     assert.equal(registersSize16BitMin, 20);
 
-    assert.equal(totalSize64BitMax, 402);
-    assert.equal(totalSize32BitMax, 338);
+    assert.equal(totalSize64BitMax, 410);
+    assert.equal(totalSize32BitMax, 342);
     assert.equal(totalSize32BitMin, 326);
     assert.equal(totalSize16BitMin, 306);
   })
