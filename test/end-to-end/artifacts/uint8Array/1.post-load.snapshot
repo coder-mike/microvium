@@ -36,6 +36,13 @@ function run() {
     ObjectGet();
     Literal(lit 5);
     Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'buf1');
+    Literal(lit 5);
+    ObjectGet();
+    Literal(lit undefined);
+    Call(count 3, flag true);
     // Mutating compile-time Uint8Array at runtime
     Literal(lit 42);
     LoadGlobal(name 'buf1');
@@ -119,6 +126,13 @@ function run() {
     Literal(lit 2);
     ObjectGet();
     Literal(lit 102);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit 3);
+    ObjectGet();
+    Literal(lit undefined);
     Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);

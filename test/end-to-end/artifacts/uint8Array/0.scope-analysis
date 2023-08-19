@@ -2,6 +2,7 @@
 [free var] 'vmExport'
 [free var] 'Microvium'
 [free var] 'assertEqual'
+[free var] 'undefined'
 [global slot] 'thisModule'; [global slot] 'buf1'
 
 module with entry 'moduleEntry' {
@@ -22,6 +23,9 @@ module with entry 'moduleEntry' {
     buf1 @ binding_1
     assertEqual @ free assertEqual
     buf1 @ binding_1
+    assertEqual @ free assertEqual
+    buf1 @ binding_1
+    undefined @ free undefined
   }
 
   prologue { func 'run' -> local[0] }
@@ -72,6 +76,9 @@ module with entry 'moduleEntry' {
         buf1 @ binding_1
         assertEqual @ free assertEqual
         buf1 @ binding_1
+        assertEqual @ free assertEqual
+        buf1 @ binding_1
+        undefined @ free undefined
         buf1 @ binding_1
         assertEqual @ free assertEqual
         buf1 @ binding_1
@@ -84,6 +91,9 @@ module with entry 'moduleEntry' {
         buf2 @ binding_5
         assertEqual @ free assertEqual
         buf2 @ binding_5
+        assertEqual @ free assertEqual
+        buf2 @ binding_5
+        undefined @ free undefined
       }
 
       block {

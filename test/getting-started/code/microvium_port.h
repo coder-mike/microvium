@@ -220,23 +220,9 @@ fixes and improvement from the original github or npm repository.
  * Macro that evaluates to true if the CRC of the given data matches the
  * expected value. Note that this is evaluated against the bytecode, so lpData
  * needs to be a long pointer type. If you don't want the overhead of validating
- * the CRC, just return `true`.
+ * the CRC, just return `true`. The Microvium compiler uses CCITT16 as the CRC.
  */
-#define MVM_CHECK_CRC16_CCITT(lpData, size, expected) (crc16(lpData, size) == expected)
-
-static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
-  uint16_t r = 0xFFFF;
-  while (size--)
-  {
-    r  = (uint8_t)(r >> 8) | (r << 8);
-    r ^= MVM_READ_LONG_PTR_1(lp);
-    lp = MVM_LONG_PTR_ADD(lp, 1);
-    r ^= (uint8_t)(r & 0xff) >> 4;
-    r ^= (r << 8) << 4;
-    r ^= ((r & 0xff) << 4) << 1;
-  }
-  return r;
-}
+#define MVM_CHECK_CRC16_CCITT(lpData, size, expected) (default_crc16(lpData, size) == expected)
 
 /**
  * Set to 1 to compile in the ability to generate snapshots (mvm_createSnapshot)
@@ -254,7 +240,7 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
  *
  * Unlike MVM_CHECK_CRC16_CCITT, pData here is a pointer to RAM.
  */
-#define MVM_CALC_CRC16_CCITT(pData, size) (crc16(pData, size))
+#define MVM_CALC_CRC16_CCITT(pData, size) (default_crc16(pData, size))
 #endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
 /**
@@ -279,10 +265,19 @@ static uint16_t crc16(MVM_LONG_PTR_TYPE lp, uint16_t size) {
 /**
  * Implementation of malloc and free to use.
  *
- * Note that MVM_FREE needs to accept null pointers as well.
+ * Note that MVM_CONTEXTUAL_FREE needs to accept null pointers as well.
  *
- * If MVM_USE_SINGLE_RAM_PAGE is set, pointers returned by MVM_MALLOC must
- * always be within 64kB of MVM_RAM_PAGE_ADDR.
+ * If MVM_USE_SINGLE_RAM_PAGE is set, pointers returned by MVM_CONTEXTUAL_MALLOC
+ * must always be within 64kB of MVM_RAM_PAGE_ADDR.
+ *
+ * The `context` passed to these macros is whatever value that the host passes
+ * to `mvm_restore`. It can be any value that fits in a pointer.
  */
-#define MVM_MALLOC(size) malloc(size)
-#define MVM_FREE(ptr) free(ptr)
+#define MVM_CONTEXTUAL_MALLOC(size, context) MVM_MALLOC(size)
+#define MVM_CONTEXTUAL_FREE(ptr, context) MVM_FREE(ptr)
+
+/**
+ * If defined, this will enable the API methods `mvm_stopAfterNInstructions` and
+ * `mvm_getInstructionCountRemaining`.
+ */
+#define MVM_GAS_COUNTER

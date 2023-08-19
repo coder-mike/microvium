@@ -3,7 +3,7 @@
 /*
  * Microvium Bytecode Interpreter
  *
- * Version: 0.0.25
+ * Version: 7.8.0
  *
  * This is the main header for the Microvium bytecode interpreter. Latest source
  * available at https://microvium.com. Raise issues at
@@ -14,6 +14,9 @@
 #include "microvium_port.h"
 #include <stdbool.h>
 #include <stdint.h>
+
+#define MVM_ENGINE_MAJOR_VERSION 7  /* aka MVM_BYTECODE_VERSION */
+#define MVM_ENGINE_MINOR_VERSION 8  /* aka MVM_ENGINE_VERSION */
 
 typedef uint16_t mvm_Value;
 typedef uint16_t mvm_VMExportID;
@@ -71,12 +74,13 @@ typedef enum mvm_TeError {
   /* 48 */ MVM_E_CAN_ONLY_ASSIGN_BYTES_TO_UINT8_ARRAY, // Value assigned to index of Uint8Array must be an integer in the range 0 to 255
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
   /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
-  /* 51 */ MVM_E_REQUIRES_ACTIVE_VM, // The given operation requires that the VM has active calls on the stack
-  /* 52 */ MVM_E_ASYNC_START_ERROR, // mvm_asyncStart must be called exactly once at the beginning of a host function that is called from JS
-  /* 53 */ MVM_E_ASYNC_WITHOUT_AWAIT, // mvm_asyncStart can only be used with a script that has await points. Add at least one (reachable) await point to the script.
-  /* 54 */ MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE, // Can only await a promise in Microvium
-  /* 55 */ MVM_E_HEAP_CORRUPT, // Microvium's internal heap is not in a consistent state
-  /* 56 */ MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT, // The prototype property of a class must be null or a plain object
+  /* 51 */ MVM_E_INSTRUCTION_COUNT_REACHED, // The instruction count set by `mvm_stopAfterNInstructions` has been reached
+  /* 52 */ MVM_E_REQUIRES_ACTIVE_VM, // The given operation requires that the VM has active calls on the stack
+  /* 53 */ MVM_E_ASYNC_START_ERROR, // mvm_asyncStart must be called exactly once at the beginning of a host function that is called from JS
+  /* 54 */ MVM_E_ASYNC_WITHOUT_AWAIT, // mvm_asyncStart can only be used with a script that has await points. Add at least one (reachable) await point to the script.
+  /* 55 */ MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE, // Can only await a promise in Microvium
+  /* 56 */ MVM_E_HEAP_CORRUPT, // Microvium's internal heap is not in a consistent state
+  /* 57 */ MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT, // The prototype property of a class must be null or a plain object
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -95,6 +99,24 @@ typedef enum mvm_TeType {
 
   VM_T_END,
 } mvm_TeType;
+
+// Prefix to attach to exported microvium API functions. If a user doesn't
+// specify this, we just set it up as the empty macro.
+#ifndef MVM_EXPORT
+#define MVM_EXPORT
+#endif
+
+#ifndef MVM_SUPPORT_FLOAT
+#define MVM_SUPPORT_FLOAT 1
+#endif
+
+#ifndef MVM_FLOAT64
+#define MVM_FLOAT64 double
+#endif
+
+#ifndef MVM_INCLUDE_DEBUG_CAPABILITY
+#define MVM_INCLUDE_DEBUG_CAPABILITY 1
+#endif
 
 typedef struct mvm_VM mvm_VM;
 
@@ -149,8 +171,12 @@ typedef struct mvm_TsMemoryStats {
 
 /**
  * A handle holds a value that must not be garbage collected.
+ *
+ * Maintainer note: `_value` is the first field so that a `mvm_Handle*` is also
+ * a `mvm_Value*`, which allows some internal functions to be polymorphic in
+ * whether they accept handles or just plain value pointers.
  */
-typedef struct mvm_Handle { struct mvm_Handle* _next; mvm_Value _value; } mvm_Handle;
+typedef struct mvm_Handle { mvm_Value _value; struct mvm_Handle* _next; } mvm_Handle;
 
 #include "microvium_port.h"
 
@@ -175,12 +201,12 @@ extern "C" {
  * @param context Any value. The context for a VM can be retrieved later using
  * `mvm_getContext`. It can be used to attach user-defined data to a VM.
  */
-mvm_TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE snapshotBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport);
+MVM_EXPORT mvm_TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE snapshotBytecode, size_t bytecodeSize, void* context, mvm_TfResolveImport resolveImport);
 
 /**
  * Free all memory associated with a VM. The VM must not be used again after freeing.
  */
-void mvm_free(mvm_VM* vm);
+MVM_EXPORT void mvm_free(mvm_VM* vm);
 
 /**
  * Call a function in the VM
@@ -195,21 +221,26 @@ void mvm_free(mvm_VM* vm);
  * MVM_E_UNCAUGHT_EXCEPTION and the exception value will be put into
  * `out_result`
  */
-mvm_TeError mvm_call(mvm_VM* vm, mvm_Value func, mvm_Value* out_result, mvm_Value* args, uint8_t argCount);
+MVM_EXPORT mvm_TeError mvm_call(mvm_VM* vm, mvm_Value func, mvm_Value* out_result, mvm_Value* args, uint8_t argCount);
 
-void* mvm_getContext(mvm_VM* vm);
+MVM_EXPORT void* mvm_getContext(mvm_VM* vm);
 
-void mvm_initializeHandle(mvm_VM* vm, mvm_Handle* handle); // Handle must be released by mvm_releaseHandle
-void mvm_cloneHandle(mvm_VM* vm, mvm_Handle* target, const mvm_Handle* source); // Target must be released by mvm_releaseHandle
-mvm_TeError mvm_releaseHandle(mvm_VM* vm, mvm_Handle* handle);
+/**
+ * Handle operations. Handles are used to hold values that must not be garbage
+ * collected. See `doc\handles-and-garbage-collection.md` for more information.
+ */
+MVM_EXPORT void mvm_initializeHandle(mvm_VM* vm, mvm_Handle* handle); // Handle must be released by mvm_releaseHandle
+MVM_EXPORT void mvm_cloneHandle(mvm_VM* vm, mvm_Handle* target, const mvm_Handle* source); // Target must be released by mvm_releaseHandle
+MVM_EXPORT mvm_TeError mvm_releaseHandle(mvm_VM* vm, mvm_Handle* handle);
 static inline mvm_Value mvm_handleGet(const mvm_Handle* handle) { return handle->_value; }
+static inline mvm_Value* mvm_handleAt(mvm_Handle* handle) { return &handle->_value; }
 static inline void mvm_handleSet(mvm_Handle* handle, mvm_Value value) { handle->_value = value; }
 
 /**
  * Roughly like the `typeof` operator in JS, except with distinct values for
  * null and arrays
  */
-mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
+MVM_EXPORT mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
 
 /**
  * Converts the value to a string encoded as UTF-8.
@@ -232,21 +263,27 @@ mvm_TeType mvm_typeOf(mvm_VM* vm, mvm_Value value);
  * [memory-management.md](https://github.com/coder-mike/microvium/blob/master/doc/native-vm/memory-management.md)
  * for details.
  */
-const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
+MVM_EXPORT const char* mvm_toStringUtf8(mvm_VM* vm, mvm_Value value, size_t* out_sizeBytes);
+
+/**
+ * Returns the length of a string as it appears in bytes when encoded as UTF-8
+ * (which is also the internal representation of Microvium).
+ */
+MVM_EXPORT size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value);
 
 /**
  * Convert the value to a bool based on its truthiness.
  *
  * See https://developer.mozilla.org/en-US/docs/Glossary/Truthy
  */
-bool mvm_toBool(mvm_VM* vm, mvm_Value value);
+MVM_EXPORT bool mvm_toBool(mvm_VM* vm, mvm_Value value);
 
 /**
  * Converts the value to a 32-bit signed integer.
  *
  * The result of this should be the same as `value|0` in JavaScript code.
  */
-int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
+MVM_EXPORT int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
 
 #if MVM_SUPPORT_FLOAT
 /**
@@ -256,45 +293,65 @@ int32_t mvm_toInt32(mvm_VM* vm, mvm_Value value);
  *
  * For efficiency, use mvm_toInt32 instead if your value is an integer.
  */
-MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
+MVM_EXPORT MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
 
 /**
- * Create a number value in the VM.
+ * Create a JavaScript number value in the VM.
+ *
+ * WARNING: the result is eligible for garbage collection the next time the VM
+ * has control. See `doc\handles-and-garbage-collection.md` for more information.
  *
  * For efficiency, use mvm_newInt32 instead if your value is an integer.
  *
  * Design note: mvm_newNumber creates a number *from* a float64, so it's named
  * `newNumber` and not `newFloat64`
  */
-mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value);
+MVM_EXPORT mvm_Value mvm_newNumber(mvm_VM* vm, MVM_FLOAT64 value);
 #endif
 
-bool mvm_isNaN(mvm_Value value);
+MVM_EXPORT bool mvm_isNaN(mvm_Value value);
 
 extern const mvm_Value mvm_undefined;
 extern const mvm_Value mvm_null;
-mvm_Value mvm_newBoolean(bool value);
-mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
+
+/**
+ * Create a JavaScript boolean value in the VM.
+ */
+MVM_EXPORT mvm_Value mvm_newBoolean(bool value);
+
+/**
+ * Create a JavaScript number from a 32-bit integer.
+ *
+ * WARNING: the result is eligible for garbage collection the next time the VM
+ * has control. See `doc\handles-and-garbage-collection.md` for more information.
+ */
+MVM_EXPORT mvm_Value mvm_newInt32(mvm_VM* vm, int32_t value);
 
 /**
  * Create a new string in Microvium memory.
  *
+ * WARNING: the result is eligible for garbage collection the next time the VM
+ * has control. See `doc\handles-and-garbage-collection.md` for more information.
+ *
  * @param valueUtf8 The a pointer to the string content.
  * @param sizeBytes The size in bytes of the string, excluding any null terminator.
  */
-mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
+MVM_EXPORT mvm_Value mvm_newString(mvm_VM* vm, const char* valueUtf8, size_t sizeBytes);
 
 /**
  * A Uint8Array in Microvium is an efficient buffer of bytes. It is mutable but
  * cannot be resized. The new Uint8Array created by this method will contain a
  * *copy* of the supplied data.
  *
+ * WARNING: the result is eligible for garbage collection the next time the VM
+ * has control. See `doc\handles-and-garbage-collection.md` for more information.
+ *
  * Within the VM, you can create a new Uint8Array using the global
  * `Microvium.newUint8Array`.
  *
  * See also: mvm_uint8ArrayToBytes
  */
-mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t size);
+MVM_EXPORT mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t size);
 
 /**
  * Given a Uint8Array, this will give a pointer to its data and its size (in
@@ -306,9 +363,9 @@ mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t size);
  *
  * The returned pointer can also be used to mutate the buffer, with caution.
  *
- * See also: mvm_newUint8Array
+ * See also: mvm_uint8ArrayFromBytes
  */
-mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t** out_data, size_t* out_size);
+MVM_EXPORT mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t** out_data, size_t* out_size);
 
 /**
  * Resolves (finds) the values exported by the VM, identified by ID.
@@ -321,7 +378,7 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
  * captured by a mvm_Handle. In typical usage, exports will each be function
  * values, but any value type is valid.
  */
-mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value* results, uint8_t count);
+MVM_EXPORT mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value* results, uint8_t count);
 
 /**
  * Run a garbage collection cycle.
@@ -333,12 +390,12 @@ mvm_TeError mvm_resolveExports(mvm_VM* vm, const mvm_VMExportID* ids, mvm_Value*
  * of needed as the amount of space used after the last compaction, and then
  * adding blocks as-necessary.
  */
-void mvm_runGC(mvm_VM* vm, bool squeeze);
+MVM_EXPORT void mvm_runGC(mvm_VM* vm, bool squeeze);
 
 /**
  * Compares two values for equality. The same semantics as JavaScript `===`
  */
-bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
+MVM_EXPORT bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
 
 /**
  * The current bytecode address being executed (relative to the beginning of the
@@ -347,12 +404,12 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b);
  * This value can be looked up in the map file generated by the CLI flag
  * `--map-file`
  */
-uint16_t mvm_getCurrentAddress(mvm_VM* vm);
+MVM_EXPORT uint16_t mvm_getCurrentAddress(mvm_VM* vm);
 
 /**
  * Get stats about the VM memory
  */
-void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
+MVM_EXPORT void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
 
 
 /**
@@ -412,7 +469,7 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result);
  * Note: The result is malloc'd on the host heap, and so needs to be freed with
  * a call to *free*.
  */
-void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
+MVM_EXPORT void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
 #endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY
 
 #if MVM_INCLUDE_DEBUG_CAPABILITY
@@ -435,15 +492,15 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
  * Setting a breakpoint a second time on the same address of an existing active
  * breakpoint will have no effect.
  */
-void mvm_dbg_setBreakpoint(mvm_VM* vm, int bytecodeAddress);
+MVM_EXPORT void mvm_dbg_setBreakpoint(mvm_VM* vm, int bytecodeAddress);
 
 /**
  * Remove a breakpoint added by mvm_dbg_setBreakpoint
  */
-void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
+MVM_EXPORT void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
 
 /**
- * Set the function to be called when any breakpoint is hit. 
+ * Set the function to be called when any breakpoint is hit.
  *
  * The callback only applies to the given virtual machine (the callback can be
  * different for different VMs).
@@ -458,8 +515,45 @@ void mvm_dbg_removeBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
  * still active. This should *NOT* be used to continue execution, but could
  * theoretically be used to evaluate debug watch expressions.
  */
-void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb);
+MVM_EXPORT void mvm_dbg_setBreakpointCallback(mvm_VM* vm, mvm_TfBreakpointCallback cb);
 #endif // MVM_INCLUDE_DEBUG_CAPABILITY
+
+#ifdef MVM_GAS_COUNTER
+/**
+ * mvm_stopAfterNInstructions
+ *
+ * Sets the VM to stop (return error MVM_E_INSTRUCTION_COUNT_REACHED) after n
+ * further bytecode instructions have been executed. This may help the host to
+ * catch run-away VMs or infinite loops. Use n = -1 to disable the limit.
+ *
+ * If `n` is zero, the VM will stop before executing any further instructions.
+ *
+ * When the VM reaches the stopped state, further calls to the VM will fail with
+ * the same error until `mvm_stopAfterNInstructions` is called again to reset
+ * the countdown.
+ *
+ * The stopping unwinds the current call stack in a similar way to an exception,
+ * except that it will not hit any catch blocks. However, be aware that if the
+ * call to the VM is reentrant (e.g. the host calls the VM which calls the host
+ * which calls the VM again), the stopping will only unwind the innermost call
+ * stack. The outer call stack will then unwind if the inner host function
+ * returns an error code (e.g. propagating the MVM_E_INSTRUCTION_COUNT_REACHED)
+ * or simply does not reset the countdown, so that the VM will fail again when
+ * the host returns control to the VM.
+ */
+MVM_EXPORT void mvm_stopAfterNInstructions(mvm_VM* vm, int32_t n);
+
+/**
+ * mvm_getInstructionCountRemaining
+ *
+ * If `mvm_stopAfterNInstructions` has been used to set a limit on the number of
+ * instructions to execute, this function can be used to see the remaining
+ * number of instructions before the VM will stop.
+ *
+ * The return value will be negative if the countdown is currently disabled.
+ */
+MVM_EXPORT int32_t mvm_getInstructionCountRemaining(mvm_VM* vm);
+#endif // MVM_GAS_COUNTER
 
 #ifdef __cplusplus
 } // extern "C"

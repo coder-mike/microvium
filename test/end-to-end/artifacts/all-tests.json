@@ -79,5 +79,6 @@
     "async-await export-async-function",
     "async-await await-over-snapshot",
     "async-await await-over-snapshot-throw",
-    "async-await host-async-no-await"
+    "async-await host-async-no-await",
+    "native-api mvm_stopAfterNInstructions"
 ]
