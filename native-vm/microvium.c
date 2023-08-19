@@ -1057,11 +1057,13 @@ SUB_OP_EXTENDED_1: {
 } // End of SUB_OP_EXTENDED_1
 
 
+
 /* ------------------------------------------------------------------------- */
-/*                              SUB_THROW                                    */
+/*                             SUB_THROW                                     */
 /*   Expects:                                                                */
-/*     reg1: error value to throw                                            */
+/*     reg1: The exception value                                             */
 /* ------------------------------------------------------------------------- */
+
 SUB_THROW: {
   // Find the closest catch block
   regP1 = reg->pCatchTarget;
@@ -1107,7 +1109,6 @@ SUB_THROW: {
 
   // Jump to the catch block
   reg2 = pStackPointer[1];
-
   VM_ASSERT(vm, Value_isBytecodeMappedPtrOrWellKnown(reg2));
   lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
 
@@ -1558,66 +1559,6 @@ SUB_OP_EXTENDED_2: {
   VM_ASSERT_UNREACHABLE(vm);
 
 } // End of SUB_OP_EXTENDED_2
-
-
-/* ------------------------------------------------------------------------- */
-/*                             SUB_THROW                                     */
-/*   Expects:                                                                */
-/*     reg1: The exception value                                             */
-/* ------------------------------------------------------------------------- */
-
-SUB_THROW: {
-  // Find the closest catch block
-  reg2 = reg->pCatchTarget;
-
-  // If none, it's an uncaught exception
-  if (reg2 == VM_VALUE_UNDEFINED) {
-    CODE_COVERAGE(208); // Hit
-
-    if (out_result) {
-      *out_result = reg1;
-    }
-    err = MVM_E_UNCAUGHT_EXCEPTION;
-    goto SUB_EXIT;
-  } else {
-    CODE_COVERAGE(209); // Hit
-  }
-
-  VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
-
-  // Unwind the stack. regP1 is the stack pointer address we want to land up at
-  regP1 = (uint16_t*)(((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2) & ~1);
-  VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
-  VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
-
-  while (pFrameBase > regP1) {
-    CODE_COVERAGE(211); // Hit
-
-    // Near the beginning of mvm_call, we set `catchTarget` to undefined
-    // (and then restore at the end), which should direct exceptions through
-    // the path of "uncaught exception" above, so no frame here should ever
-    // be a host frame.
-    VM_ASSERT(vm, !(reg->argCountAndFlags & AF_CALLED_FROM_HOST));
-
-    // In the current frame structure, the size of the preceding frame is
-    // saved 4 words ahead of the frame base
-    pStackPointer = pFrameBase;
-    POP_REGISTERS();
-  }
-
-  pStackPointer = regP1;
-
-  // The next catch target is the outer one
-  reg->pCatchTarget = pStackPointer[0];
-
-  // Jump to the catch block
-  reg2 = pStackPointer[1];
-  VM_ASSERT(vm, (reg2 & 1) == 1);
-  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
-
-  // Push the exception to the stack for the catch block to use
-  goto SUB_TAIL_POP_0_PUSH_REG1;
-}
 
 /* ------------------------------------------------------------------------- */
 /*                             SUB_FIXED_ARRAY_NEW                           */

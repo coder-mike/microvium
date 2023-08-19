@@ -980,10 +980,8 @@ typedef enum vm_TeActivationFlags {
   // Flag to indicate that returning from the current frame should return to the host
   AF_CALLED_FROM_HOST = 1 << 9,
 
-  AF_OVERRIDE_THIS = 1 << 10,
-
   // Only used by mvm_callEx to indicate that the `this` value is already on the stack
-  AF_OVERRIDE_THIS = 1 << 11,
+  AF_OVERRIDE_THIS = 1 << 10,
 } vm_TeActivationFlags;
 
 /**
