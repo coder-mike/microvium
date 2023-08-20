@@ -1127,7 +1127,7 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
-static void* gc_allocate(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
+static void* mvm_allocate(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError toPropertyName(VM* vm, Value* value);
@@ -1147,7 +1147,7 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr);
 static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2);
 static inline uint16_t readAllocationHeaderWord(void* pAllocation);
 static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation);
-static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
+static inline void* mvm_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
 static inline uint16_t vm_makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
 static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
 static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end);
@@ -1209,7 +1209,7 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, Value value);
 // needed. This is currently used by the WASM wrapper to get low-level access to
 // some features.
 MVM_HIDDEN TeError vm_objectKeys(VM* vm, Value* pObject);
-MVM_HIDDEN void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
+MVM_HIDDEN void* mvm_mvm_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 MVM_HIDDEN TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
 MVM_HIDDEN TeError setProperty(VM* vm, Value* pObject, Value* pPropertyName, Value* pPropertyValue);
 
@@ -1297,7 +1297,7 @@ static const uint8_t typeByTC[TC_END] = {
 };
 
 #define GC_ALLOCATE_TYPE(vm, type, typeCode) \
-  (type*)gc_allocateWithConstantHeader(vm, vm_makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))
+  (type*)mvm_allocateWithConstantHeader(vm, vm_makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))
 
 #if MVM_SUPPORT_FLOAT
 static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);

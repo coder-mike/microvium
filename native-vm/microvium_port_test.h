@@ -30,3 +30,6 @@
 // references hang around.
 #undef MVM_MAX_HEAP_SIZE
 #define MVM_MAX_HEAP_SIZE 2048
+
+#undef MVM_SAFE_MODE
+#define MVM_SAFE_MODE 1

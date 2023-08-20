@@ -1,9 +1,10 @@
 # To do
 
-  - WIP: Merge branches
-  - WIP: Run tests without safe mode
-  - WIP: Bump the version numbers, since we have new builtins and operations
-  - WIP: Update wasm library
+  - WIP: WASM: Host awaiting async JS func
+  - WIP: WASM: Host awaiting JS promise
+  - WIP: WASM: async host func
+  - WIP: WASM: rejecting async host func
+  - WIP: WASM: Error passing host promise to VM
   - WIP: Update the "Microvium is small" blog-post
   - WIP: Release
 
