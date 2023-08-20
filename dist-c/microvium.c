@@ -3,7 +3,7 @@
 /*
  * Microvium Bytecode Interpreter
  *
- * Version: 7.8.0
+ * Version: 8.0.0
  *
  * This file contains the Microvium virtual machine C implementation.
  *
@@ -1691,7 +1691,7 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
-static void* gc_allocate(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
+static void* mvm_allocate(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError toPropertyName(VM* vm, Value* value);
@@ -1711,7 +1711,7 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr);
 static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2);
 static inline uint16_t readAllocationHeaderWord(void* pAllocation);
 static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation);
-static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
+static inline void* mvm_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
 static inline uint16_t vm_makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
 static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
 static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end);
@@ -1773,7 +1773,7 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, Value value);
 // needed. This is currently used by the WASM wrapper to get low-level access to
 // some features.
 MVM_HIDDEN TeError vm_objectKeys(VM* vm, Value* pObject);
-MVM_HIDDEN void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
+MVM_HIDDEN void* mvm_mvm_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 MVM_HIDDEN TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
 MVM_HIDDEN TeError setProperty(VM* vm, Value* pObject, Value* pPropertyName, Value* pPropertyValue);
 
@@ -1861,7 +1861,7 @@ static const uint8_t typeByTC[TC_END] = {
 };
 
 #define GC_ALLOCATE_TYPE(vm, type, typeCode) \
-  (type*)gc_allocateWithConstantHeader(vm, vm_makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))
+  (type*)mvm_allocateWithConstantHeader(vm, vm_makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))
 
 #if MVM_SUPPORT_FLOAT
 static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
@@ -2693,7 +2693,7 @@ SUB_OP_EXTENDED_1: {
       CODE_COVERAGE(599); // Hit
 
       FLUSH_REGISTER_CACHE();
-      Value* pClosure = gc_allocate(vm, 4, TC_REF_CLOSURE);
+      Value* pClosure = mvm_allocate(vm, 4, TC_REF_CLOSURE);
       CACHE_REGISTERS();
       reg1 = ShortPtr_encode(vm, pClosure);
       *pClosure++ = POP(); // The function pointer
@@ -3457,7 +3457,7 @@ SUB_OP_EXTENDED_2: {
 
 SUB_FIXED_ARRAY_NEW: {
   FLUSH_REGISTER_CACHE();
-  uint16_t* arr = gc_allocate(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* arr = mvm_allocate(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
   CACHE_REGISTERS();
   uint16_t* p = arr;
   // Note: when reading a DELETED value from the array, it will read as
@@ -3880,7 +3880,7 @@ SUB_OP_EXTENDED_4: {
       // opcodes together according to whether they flush the register cache.
       // Also maybe they could be dispatched through a lookup table.
       FLUSH_REGISTER_CACHE();
-      TsClass* pClass = gc_allocate(vm, sizeof (TsClass), TC_REF_CLASS);
+      TsClass* pClass = mvm_allocate(vm, sizeof (TsClass), TC_REF_CLASS);
       CACHE_REGISTERS();
       pClass->constructorFunc = pStackPointer[-2];
       pClass->staticProps = pStackPointer[-1];
@@ -4581,7 +4581,7 @@ SUB_NEW: {
     goto SUB_EXIT;
   }
 
-  Value* pObject = gc_allocate(vm, sizeof(TsPropertyList) + reg2 * sizeof(Value), TC_REF_PROPERTY_LIST);
+  Value* pObject = mvm_allocate(vm, sizeof(TsPropertyList) + reg2 * sizeof(Value), TC_REF_PROPERTY_LIST);
   Value* p = pObject;
   *p++ = VM_VALUE_NULL; // dpNext
   *p++ = regP1[1]; // dpProto
@@ -5026,7 +5026,7 @@ static Value vm_newArray(VM* vm, uint16_t capacity) {
 
   if (capacity) {
     vm_push(vm, result); // GC-reachable
-    uint16_t* pData = gc_allocate(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+    uint16_t* pData = mvm_allocate(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
     result = vm_pop(vm);
     arr = ShortPtr_decode(vm, result); // Invalidated
     arr->dpData = ShortPtr_encode(vm, pData);
@@ -5090,7 +5090,7 @@ static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess,
   vm_push(vm, resultOrError); // anchor to GC
   vm_push(vm, continuation); // anchor to GC
 
-  Value* closure = gc_allocate(vm, 4 * 2, TC_REF_CLOSURE);
+  Value* closure = mvm_allocate(vm, 4 * 2, TC_REF_CLOSURE);
 
   closure[0] = getBuiltin(vm, BIN_ASYNC_CONTINUE);
   closure[1] = vm_pop(vm); // continuation
@@ -5110,7 +5110,7 @@ static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   int size = slotCount * 2;
 
-  uint16_t* newScope = gc_allocate(vm, size, TC_REF_CLOSURE);
+  uint16_t* newScope = mvm_allocate(vm, size, TC_REF_CLOSURE);
 
   uint16_t* p = newScope;
   while (--slotCount) { // Note: pre-decrement so will stop one short of the end
@@ -5609,7 +5609,7 @@ void mvm_free(VM* vm) {
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
  */
-static void* gc_allocate(VM* vm, uint16_t sizeBytes,  uint8_t /*TeTypeCode*/ typeCode) {
+static void* mvm_allocate(VM* vm, uint16_t sizeBytes,  uint8_t /*TeTypeCode*/ typeCode) {
   uint16_t* p;
   uint16_t* end;
 
@@ -5662,8 +5662,8 @@ GROW_HEAP_AND_RETRY:
   goto RETRY;
 }
 
-// Slow fallback for gc_allocateWithConstantHeader
-static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
+// Slow fallback for mvm_allocateWithConstantHeader
+static void* mvm_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
   CODE_COVERAGE(188); // Hit
 
   // If we happened to trigger a GC collection, we need to know that the
@@ -5672,11 +5672,11 @@ static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
 
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
   TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
-  return gc_allocate(vm, size, tc);
+  return mvm_allocate(vm, size, tc);
 }
 
 /*
- * This function is like gc_allocate except that it's optimized for
+ * This function is like mvm_allocate except that it's optimized for
  * situations where:
  *
  *   1. The header can be precomputed to a C constant, rather than assembling it
@@ -5692,7 +5692,7 @@ static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
  *
  * WARNING: this does not initialize the data in the allocation.
  */
-static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader) {
+static inline void* mvm_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader) {
   CODE_COVERAGE(189); // Hit
 
   uint16_t* p;
@@ -5726,7 +5726,7 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
 
 SLOW:
   CODE_COVERAGE(192); // Hit
-  return gc_allocateWithConstantHeaderSlow(vm, header);
+  return mvm_allocateWithConstantHeaderSlow(vm, header);
 }
 
 // Looks for a variable in the closure scope chain based on its index. Scope
@@ -7502,7 +7502,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   }
 
   // Note: allocating 1 extra byte for the extra null terminator
-  char* pData = gc_allocate(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
+  char* pData = mvm_allocate(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
   *out_pData = pData;
   // Null terminator
   pData[sizeBytes] = '\0';
@@ -7885,7 +7885,7 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
   }
   VM_ASSERT(vm, newCapacity != 0);
 
-  uint16_t* pNewData = gc_allocate(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* pNewData = mvm_allocate(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
   // Copy values from the old array. Note that the above allocation can trigger
   // a GC collection which moves the array, so we need to decode the value again
   TsArray* arr = DynamicPtr_decode_native(vm, *pvArr);
@@ -7984,7 +7984,7 @@ SUB_OBJECT_KEYS:
   }
 
   // Allocate the new array.
-  Value* pArr = gc_allocate(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
+  Value* pArr = mvm_allocate(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
   obj = *inout_slot; // Invalidated by potential GC collection
 
   // Populate the array
@@ -9274,7 +9274,7 @@ static Value vm_cloneContainer(VM* vm, Value* pArr) {
   LongPtr* lpSource = DynamicPtr_decode_long(vm, *pArr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-  uint16_t* newArray = gc_allocate(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
+  uint16_t* newArray = mvm_allocate(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
 
   // May have moved during allocation
   lpSource = DynamicPtr_decode_long(vm, *pArr);
@@ -9351,7 +9351,7 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
   }
   size = VirtualInt14_decode(vm, size);
 
-  uint8_t* p = gc_allocate(vm, size, TC_REF_UINT8_ARRAY);
+  uint8_t* p = mvm_allocate(vm, size, TC_REF_UINT8_ARRAY);
   *slot = ShortPtr_encode(vm, p);
   memset(p, 0, size);
 
@@ -9364,8 +9364,8 @@ mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t sizeBy
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
     return VM_VALUE_UNDEFINED;
   }
-  // Note: gc_allocate will also check the size
-  uint8_t* p = gc_allocate(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
+  // Note: mvm_allocate will also check the size
+  uint8_t* p = mvm_allocate(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
   Value result = ShortPtr_encode(vm, p);
   memcpy(p, data, sizeBytes);
   return result;
@@ -9504,7 +9504,7 @@ static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount) {
   VM_ASSERT(vm, (internalSlotCount % 2) == 0);
   size_t size = sizeof(TsPropertyList) + internalSlotCount * sizeof(Value);
   vm_push(vm, prototype); // GC reachable
-  TsPropertyList* pObject = gc_allocate(vm, (uint16_t)size, TC_REF_PROPERTY_LIST);
+  TsPropertyList* pObject = mvm_allocate(vm, (uint16_t)size, TC_REF_PROPERTY_LIST);
   pObject->dpProto = vm_pop(vm); // prototype
   pObject->dpNext = VM_VALUE_NULL;
 
@@ -9539,7 +9539,7 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
   // Anchor on stack
   vm_push(vm, callbackOrPromise);
 
-  uint16_t* pClosure = gc_allocate(vm, 4, TC_REF_CLOSURE);
+  uint16_t* pClosure = mvm_allocate(vm, 4, TC_REF_CLOSURE);
   pClosure[0] = asyncHostCallback;
   pClosure[1] = vm_pop(vm); // callbackOrPromise
   mvm_Value closureValue = ShortPtr_encode(vm, pClosure);
@@ -9604,7 +9604,7 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
     // (cycle). Each element in the linked cycle is a triple with [prev, job,
     // next]. Here there is only one node in the cycle, so the next and prev are
     // itself.
-    firstNode = (Value*)gc_allocate(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
+    firstNode = (Value*)mvm_allocate(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
     firstNodeRef = ShortPtr_encode(vm, firstNode);
     firstNode[0] = firstNodeRef; // prev
     firstNode[1] = reg->jobQueue; // job
@@ -9622,7 +9622,7 @@ static void vm_enqueueJob(VM* vm, Value jobClosure) {
   VM_ASSERT(vm, deepTypeOf(vm, reg->jobQueue) == TC_REF_FIXED_LENGTH_ARRAY);
 
   // Create a new node in the linked cycle
-  Value* newNode = gc_allocate(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
+  Value* newNode = mvm_allocate(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
   VM_EXEC_SAFE_MODE(firstNodeRef = VM_VALUE_DELETED); // Invalidated
   VM_EXEC_SAFE_MODE(firstNode = 0); // Invalidated
   VM_EXEC_SAFE_MODE(jobClosure = VM_VALUE_DELETED); // Invalidated
