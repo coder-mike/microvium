@@ -1207,7 +1207,6 @@ MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, Value value);
 // needed. This is currently used by the WASM wrapper to get low-level access to
 // some features.
 MVM_HIDDEN TeError vm_objectKeys(VM* vm, Value* pObject);
-MVM_HIDDEN void* mvm_mvm_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 MVM_HIDDEN TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
 MVM_HIDDEN TeError setProperty(VM* vm, Value* pObject, Value* pPropertyName, Value* pPropertyValue);
 MVM_HIDDEN void* mvm_allocate(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);

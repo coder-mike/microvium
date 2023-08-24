@@ -7586,9 +7586,6 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
     return VM_VALUE_NO_OP_FUNC;
   }
 
-  // Pointer to registers
-  vm_TsRegisters* reg = &vm->stack->reg;
-
   mvm_Value asyncHostCallback = getBuiltin(vm, BIN_ASYNC_HOST_CALLBACK);
   CODE_COVERAGE(695); // Hit
   if (asyncHostCallback == VM_VALUE_UNDEFINED) {
@@ -7824,11 +7821,9 @@ void mvm_checkHeap(mvm_VM* vm) {
     uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
     Value* p = (Value*)bucketBegin;
     Value* bucketEnd = bucket->pEndOfUsedSpace;
-    uint16_t offsetStart = bucket->offsetStart;
     while (p < bucketEnd) {
       uint16_t header = *p++;
       Value* pAlloc = p;
-      uint16_t offset = (uint16_t)((uint8_t*)p - bucketBegin) + offsetStart;
       uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
       TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
       Value* next = pAlloc + ((size + 1) / 2); // Round up
@@ -7883,7 +7878,6 @@ void mvm_checkValue(mvm_VM* vm, mvm_Value value) {
     uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
     Value* p = (Value*)bucketBegin;
     Value* bucketEnd = bucket->pEndOfUsedSpace;
-    uint16_t offsetStart = bucket->offsetStart;
     while (p < bucketEnd) {
       uint16_t header = *p++;
       if (ShortPtr_encode(vm, p) == value) {
@@ -7969,7 +7963,6 @@ mvm_TsCallStackFrame* mvm_readCallStack(VM* vm, int* out_frameCount) {
   Value closure = reg->closure;
 
   pFrameBase = reg->pFrameBase;
-  uint16_t* endOfFrame = reg->pStackPointer;
   while (true) {
     VM_ASSERT(vm, pFrame >= frames);
     VM_ASSERT(vm, pFrame < frames + frameCount);
@@ -8026,10 +8019,8 @@ int mvm_readHeapCount(VM* vm) {
     uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
     Value* p = (Value*)bucketBegin;
     Value* bucketEnd = bucket->pEndOfUsedSpace;
-    uint16_t offsetStart = bucket->offsetStart;
     while (p < bucketEnd) {
       uint16_t header = *p++;
-      uint16_t offset = (uint16_t)((uint8_t*)p - bucketBegin) + offsetStart;
       uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
       count++;
 

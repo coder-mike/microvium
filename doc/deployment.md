@@ -44,10 +44,10 @@ npm run test
 I'm deploying from a Windows machine, but I want to pre-build the linux binary files as well so I open up a WSL terminal and run the following to generate the linux release binaries:
 
 ```sh
-prebuildify --napi
+prebuildify --napi   # in WSL
 ```
 
-Note: this wipes the `build` directory and uses it for the Linux files. When you're done, you'll need to go back to Windows and run `node-gyp configure` to get the Windows files back. Or otherwise, continue with step `3`, since `npm run build-and-deploy` will rebuild the Windows files anyway.
+Note: this wipes the `build` directory and uses it for the Linux files. When you're done, you'll need to go back to Windows and run `npm run rebuild` to get the Windows files back. Or otherwise, continue with step `3`, since `npm run build-and-deploy` will rebuild the Windows files anyway.
 
 ### 3. Build for Windows and Deploy
 

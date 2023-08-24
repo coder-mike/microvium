@@ -27,7 +27,7 @@ public:
   Napi::Value getMemoryStats(const Napi::CallbackInfo&);
   Napi::Value asyncStart(const Napi::CallbackInfo&);
 
-  void NativeVM::fatalError(int error);
+  void fatalError(int error);
   Napi::Value stopAfterNInstructions(const Napi::CallbackInfo&);
   Napi::Value getInstructionCountRemaining(const Napi::CallbackInfo&);
 
