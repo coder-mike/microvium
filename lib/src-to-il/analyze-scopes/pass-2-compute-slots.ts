@@ -9,6 +9,7 @@ export function pass2_computeSlots({
   importedModuleNamespaceSlots,
   importBindings,
   model,
+  awaitStackDepths,
 }: AnalysisState) {
   /*
   This function calculates the size of each closure scope, and the index of each
@@ -169,15 +170,68 @@ export function pass2_computeSlots({
        *  - exception binding, if the block is a catch handler
        */
 
-      // The first nested function under this scope, with the same lifetime as
-      // this scope, can be embedded in this scope.
-      // See [Closure Embedding](../../../doc/internals/closure-embedding.md)
-      const embeddingFunction = blockScope.embeddingCandidates.find(f => f.functionIsClosure);
-      if (embeddingFunction) {
-        // Reserve the first slot for the function pointer for this closure
-        const embeddedClosureSlot = nextClosureSlotInBlockOrParent(`embedded-closure:${embeddingFunction.funcName ?? 'anonymous'}`);
-        blockScope.embeddedChildClosure = embeddingFunction;
-        embeddingFunction.embeddedInParentSlot = embeddedClosureSlot;
+      if (blockScope.isAsyncFunction) {
+        // Synchronous return value (engine assumes this is the first slot in the frame)
+        stackDepth === 0 || unexpected();
+        pushLocalSlot('syncReturnValue');
+
+        // Space for async catch target. This will physically be realized with
+        // the AsyncStart instruction.
+        stackDepth += 2;
+
+        // Function pointer that continues the current async function
+        nextClosureSlot('async-continuation');
+        // The engine machinery always assumes the continuation is the first slot
+        hardAssert(functionScope.closureSlots?.length === 1);
+
+        // Function pointer that references the callback to invoke when the current async function completes.
+        nextClosureSlot('async-callback');
+
+        // If we know the stack depth at all the await points, we use that to
+        // calculate how many slots need to be reserved to preserve the stack
+        // at the await points.
+        if (awaitStackDepths) {
+          let maxStackDepthAtAwait = undefined;
+          for (const awaitExpr of functionScope.awaitExpressions) {
+            const line = awaitExpr.loc?.start.line ?? unexpected();
+            const col = (awaitExpr.loc?.start.column ?? unexpected()) + 1;
+            const depthAtAwait = awaitStackDepths.get(`${line}:${col}`) ?? unexpected();
+            if (maxStackDepthAtAwait === undefined || depthAtAwait > maxStackDepthAtAwait) {
+              maxStackDepthAtAwait = depthAtAwait;
+            }
+          }
+          // It's possible that there are no await points
+          if (maxStackDepthAtAwait !== undefined) {
+            // Local slot 0 is the async return value, and slots 1 and 2 are
+            // reserved for the async catch target. So the stack depth at the
+            // await points should be 3. The await statements only need to
+            // preserve the slots above these since the AsyncStart and
+            // AsyncResume instructions set up the first 3 slots. The `-1` is
+            // because the top of the stack holds the awaited value, which is
+            // not part of what is preserved to the closure when the async
+            // function is suspended.
+            hardAssert(stackDepth === 3);
+            const slotsRequired = maxStackDepthAtAwait - stackDepth - 1;
+            for (let i = 0; i < slotsRequired; i++) {
+              nextClosureSlot(`await-save-${i}`);
+            }
+          }
+        }
+      } else {
+        // Note: can only use closure embedding in non-async functions, because
+        // the async callback uses the same slot number (0) as embedded
+        // closures.
+
+        // The first nested function under this scope, with the same lifetime as
+        // this scope, can be embedded in this scope.
+        // See [Closure Embedding](../../../doc/internals/closure-embedding.md)
+        const embeddingFunction = blockScope.embeddingCandidates.find(f => f.functionIsClosure);
+        if (embeddingFunction) {
+          // Reserve the first slot for the function pointer for this closure
+          const embeddedClosureSlot = nextClosureSlotInBlockOrParent(`embedded-closure:${embeddingFunction.funcName ?? 'anonymous'}`);
+          blockScope.embeddedChildClosure = embeddingFunction;
+          embeddingFunction.embeddedInParentSlot = embeddedClosureSlot;
+        }
       }
 
       computeIlParameterSlots(blockScope, nextClosureSlotInBlockOrParent, pushLocalSlot);
@@ -323,14 +377,22 @@ export function pass2_computeSlots({
       if (blockScope.closureSlots) {
         blockScope.closureSlots.length >= 1 || unexpected();
         const slotCount = blockScope.closureSlots.length;
-        if (blockScope.accessesParentScope) {
-          blockScope.prologue.unshift({ type: 'ScopePush', slotCount })
-          // Note: not required during a return because the return will restore the caller's scope.
-          blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
-        } else {
-          blockScope.prologue.unshift({ type: 'ScopeNew', slotCount })
-          // Note: not required during a return because the return will restore the caller's scope.
-          blockScope.epilogue.push({ type: 'ScopeDiscard', requiredDuringReturn: false })
+        if (blockScope.isAsyncFunction) {
+          blockScope.prologue.unshift({
+            type: 'AsyncStart',
+            slotCount,
+            captureParent: Boolean(blockScope.accessesParentScope)
+          });
+        } else /* not async function */ {
+          if (blockScope.accessesParentScope) {
+            blockScope.prologue.unshift({ type: 'ScopePush', slotCount })
+            // Note: not required during a return because the return will restore the caller's scope.
+            blockScope.epilogue.push({ type: 'ScopePop', requiredDuringReturn: false });
+          } else {
+            blockScope.prologue.unshift({ type: 'ScopeNew', slotCount })
+            // Note: not required during a return because the return will restore the caller's scope.
+            blockScope.epilogue.push({ type: 'ScopeDiscard', requiredDuringReturn: false })
+          }
         }
       }
 
@@ -413,7 +475,7 @@ function computeIlParameterSlots(
     // function) then it needs initialization to copy it from `LoadArg` to
     // `StoreScoped`.
     hardAssert(!thisBinding.isWrittenTo);
-    if (thisBinding.isAccessedByNestedFunction) {
+    if (thisBinding.isAccessedByNestedFunction || (scope.isAsyncFunction && thisBinding.isUsed)) {
       thisBinding.slot = nextClosureSlot('this');
       scope.prologue.push({
         type: 'InitThis',
@@ -440,7 +502,7 @@ function computeIlParameterSlots(
   for (const [paramI, binding] of scope.parameterBindings.entries()) {
     // Note: `LoadArg(0)` always refers to the caller-passed `this` value
     const argIndex = paramI + 1;
-    if (binding.isAccessedByNestedFunction) {
+    if (binding.isAccessedByNestedFunction || scope.isAsyncFunction) {
       binding.slot = nextClosureSlot(binding.name);
       scope.prologue.push({
         type: 'InitParameter',

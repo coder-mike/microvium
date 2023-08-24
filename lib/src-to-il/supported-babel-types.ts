@@ -59,6 +59,7 @@ export {
   ClassMethod,
   SourceLocation,
   NewExpression,
+  AwaitExpression
 } from '@babel/types';
 
 export type SupportedStatement =
@@ -121,6 +122,7 @@ export type SupportedExpression =
   | B.TemplateLiteral
   | B.ClassExpression
   | B.NewExpression
+  | B.AwaitExpression
   | SupportedFunctionExpression
 
 export type SupportedNode =

@@ -2,8 +2,8 @@ import * as IL from './il';
 import * as VM from './virtual-machine-types';
 import _, { Dictionary } from 'lodash';
 import { SnapshotIL } from "./snapshot-il";
-import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, fromEntries, mapObject, mapMap, Todo, RuntimeError, arrayOfLength } from "./utils";
-import { compileScript, computeMaximumStackDepth, indexOperand } from "./src-to-il/src-to-il";
+import { notImplemented, invalidOperation, uniqueName, unexpected, assertUnreachable, hardAssert, notUndefined, entries, stringifyIdentifier, mapObject, RuntimeError } from "./utils";
+import { compileScript, computeMaximumStackDepth, countOperand, flagOperand, indexOperand, literalOperand } from "./src-to-il/src-to-il";
 import { stringifyFunction, stringifyAllocation, stringifyValue, stringifyUnit } from './stringify-il';
 import deepFreeze from 'deep-freeze';
 import { SnapshotClass } from './snapshot';
@@ -89,9 +89,16 @@ export class VirtualMachine {
   private moduleCache = new Map<VM.ModuleSource, VM.ModuleObject>();
 
   private debuggerInstrumentation: DebuggerInstrumentationState | undefined;
-  private builtins: {
-    arrayPrototype: IL.Value
-  }
+  private builtins: SnapshotIL['builtins'];
+  private jobQueue: IL.Value = IL.undefinedValue;
+
+  // Represents the `cpsCallback` register. Unlike most other registers, the
+  // `cpsCallback` register is not persisted across a function call and so I've
+  // put it as a class property rather than embedded in the frame. The other
+  // reason to put it here is that host functions don't get their own frame
+  // unless they call back into the VM, but you still need to know if they were
+  // cps-called.
+  private cpsCallback: IL.Value = IL.deletedValue;
 
   public constructor(
     resumeFromSnapshot: SnapshotIL | undefined,
@@ -123,6 +130,10 @@ export class VirtualMachine {
 
     this.builtins = {
       arrayPrototype: IL.nullValue,
+      promisePrototype: this.createPromisePrototype(),
+      asyncContinue:  this.createAsyncContinueFunction(),
+      asyncCatchBlock: this.createAsyncCatchBlock(),
+      asyncHostCallback: this.createAsyncHostCallbackFunction(),
     };
 
     this.addBuiltinGlobals();
@@ -133,7 +144,7 @@ export class VirtualMachine {
     if (moduleObject) {
       return moduleObject;
     }
-    moduleObject = this.newObject();
+    moduleObject = this.newObject(IL.nullValue, 0);
     this.moduleCache.set(moduleSource, moduleObject);
 
     const filename = moduleSource.debugFilename || '<no file>';
@@ -184,14 +195,17 @@ export class VirtualMachine {
       type: 'ExternalFrame',
       frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
       callerFrame: this.frame,
-      result: IL.undefinedValue
+      result: IL.undefinedValue,
     });
 
     // Set up the call
-    this.callCommon(loadedUnit.entryFunction, [moduleObject]);
+    // Note: I've marked this as a void call, but I'm not sure what happens to the result
+    this.callCommon(loadedUnit.entryFunction, [moduleObject], true, IL.undefinedValue);
     // Execute
     this.run();
     this.popFrame();
+
+    this.tryRunJobQueue();
 
     return moduleObject;
   }
@@ -251,9 +265,59 @@ export class VirtualMachine {
     return deepFreeze(_.cloneDeep(snapshot)) as any;
   }
 
-  public createSnapshot(): SnapshotClass {
+  public tryRunJobQueue() {
+    // Don't run job queue if the VM is not idle
+    if (this.frame) return;
+
+    while (true) {
+      // No more jobs
+      if (this.jobQueue.type === 'UndefinedValue') return;
+
+      const job = this.dequeueJob();
+      if (!this.isCallableValue(job)) unexpected();
+
+      this.runFunction(job, [], false);
+    }
+  }
+
+  private dequeueJob() {
+    if (this.jobQueue.type !== 'ReferenceValue') unexpected();
+    const alloc = this.dereference(this.jobQueue);
+
+    // Single job
+    if (alloc.type === 'ClosureAllocation') {
+      const job = this.jobQueue;
+      this.jobQueue = IL.undefinedValue;
+      return job;
+    }
+
+    // One or more jobs in the linked-list cycle
+    alloc.type === 'ArrayAllocation' || unexpected();
+
+    const firstCell = this.jobQueue;
+    const lastCell = this.getProperty(firstCell, IL.numberValue(0));
+    const job = this.getProperty(firstCell, IL.numberValue(1));
+    const nextCell = this.getProperty(firstCell, IL.numberValue(2));
+
+    // Only one item in the circular linked list
+    if (this.areValuesEqual(firstCell, lastCell)) {
+      this.jobQueue = IL.undefinedValue;
+      return job;
+    }
+
+    // Unlink the first cell
+    this.setProperty(lastCell, IL.numberValue(2), nextCell);
+    this.setProperty(nextCell, IL.numberValue(0), lastCell);
+
+    // Move the job queue forward
+    this.jobQueue = nextCell;
+
+    return job;
+  }
+
+  public createSnapshot(generateSourceMap: boolean): SnapshotClass {
     const snapshotInfo = this.createSnapshotIL();
-    const { snapshot } = encodeSnapshot(snapshotInfo, false);
+    const { snapshot } = encodeSnapshot(snapshotInfo, false, generateSourceMap);
     return snapshot;
   }
 
@@ -298,9 +362,26 @@ export class VirtualMachine {
     this.exports.set(exportID, value);
   }
 
-  public vmImport(hostFunctionID: IL.HostFunctionID, hostImplementation?: VM.HostFunctionHandler): IL.HostFunctionValue {
-    if (!this.hostFunctions.has(hostFunctionID)) {
-      hostImplementation = hostImplementation || {
+  public vmImport(hostFunctionID: IL.HostFunctionID, defaultImplementation?: VM.HostFunctionHandler): IL.HostFunctionValue {
+    if (this.hostFunctions.has(hostFunctionID)) {
+      return {
+        type: 'HostFunctionValue',
+        value: hostFunctionID
+      };
+    }
+
+    // Ask the import map
+    let hostImplementation = this.resolveFFIImport(hostFunctionID);
+
+    // Otherwise use the default implementation
+    if (!hostImplementation) {
+      hostImplementation = defaultImplementation;
+    }
+
+    // Otherwise, just import a stub that throws. The runtime host will resolve
+    // a different implementation for the same ID, so this is just a placeholder.
+    if (!hostImplementation) {
+      hostImplementation = {
         call(args: IL.Value[]): IL.Value | void {
           throw new Error(`Host implementation not provided for imported ID ${hostFunctionID}`);
         },
@@ -308,8 +389,10 @@ export class VirtualMachine {
           return undefined;
         }
       }
-      this.hostFunctions.set(hostFunctionID, hostImplementation);
     }
+
+    this.hostFunctions.set(hostFunctionID, hostImplementation);
+
     return {
       type: 'HostFunctionValue',
       value: hostFunctionID
@@ -325,18 +408,6 @@ export class VirtualMachine {
 
   public setArrayPrototype(value: IL.Value) {
     this.builtins.arrayPrototype = value;
-  }
-
-  public importHostFunction(hostFunctionID: IL.HostFunctionID): IL.HostFunctionValue {
-    let hostFunc = this.hostFunctions.get(hostFunctionID);
-    if (!hostFunc) {
-      hostFunc = this.resolveFFIImport(hostFunctionID);
-      this.hostFunctions.set(hostFunctionID, hostFunc);
-    }
-    return {
-      type: 'HostFunctionValue',
-      value: hostFunctionID
-    };
   }
 
   /**
@@ -537,14 +608,14 @@ export class VirtualMachine {
     }
   }
 
-  public runFunction(func: IL.CallableValue, args: IL.Value[]): IL.Value | IL.Exception {
+  public runFunction(func: IL.CallableValue, args: IL.Value[], runJobQueue = true): IL.Value | IL.Exception {
     this.pushFrame({
       type: 'ExternalFrame',
       frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
       callerFrame: this.frame,
-      result: IL.undefinedValue
+      result: IL.undefinedValue,
     });
-    this.callCommon(func, args);
+    this.callCommon(func, args, false, IL.undefinedValue);
     this.run();
     if (this.exception) {
       hardAssert(this.frame === undefined);
@@ -558,6 +629,11 @@ export class VirtualMachine {
     // Result of module script
     const result = this.frame.result;
     this.popFrame();
+
+    if (runJobQueue) {
+      this.tryRunJobQueue();
+    }
+
     return result;
   }
 
@@ -793,12 +869,19 @@ export class VirtualMachine {
       case 'ArrayGet'     : return this.operationArrayGet(operands[0]);
       case 'ArrayNew'     : return this.operationArrayNew();
       case 'ArraySet'     : return this.operationArraySet(operands[0]);
+      case 'AsyncComplete': return this.operationAsyncComplete();
+      case 'AsyncResume'  : return this.operationAsyncResume(operands[0], operands[1]);
+      case 'AsyncReturn'  : return this.operationAsyncReturn();
+      case 'AsyncStart'   : return this.operationAsyncStart(operands[0], operands[1]);
+      case 'Await'        : return this.operationAwait();
+      case 'AwaitCall'    : return this.operationAwaitCall(operands[0]);
       case 'BinOp'        : return this.operationBinOp(operands[0]);
       case 'Branch'       : return this.operationBranch(operands[0], operands[1]);
-      case 'Call'         : return this.operationCall(operands[0]);
+      case 'Call'         : return this.operationCall(operands[0], operands[1]);
       case 'ClassCreate'  : return this.operationClassCreate();
       case 'ClosureNew'   : return this.operationClosureNew();
       case 'EndTry'       : return this.operationEndTry();
+      case 'EnqueueJob'   : return this.operationEnqueueJob();
       case 'Jump'         : return this.operationJump(operands[0]);
       case 'Literal'      : return this.operationLiteral(operands[0]);
       case 'LoadArg'      : return this.operationLoadArg(operands[0]);
@@ -819,6 +902,7 @@ export class VirtualMachine {
       case 'ScopeNew'     : return this.operationScopeNew(operands[0]);
       case 'ScopePop'     : return this.operationScopePop();
       case 'ScopePush'    : return this.operationScopePush(operands[0]);
+      case 'ScopeSave'    : return this.operationScopeSave();
       case 'StartTry'     : return this.operationStartTry(operands[0]);
       case 'StoreGlobal'  : return this.operationStoreGlobal(operands[0]);
       case 'StoreScoped'  : return this.operationStoreScoped(operands[0]);
@@ -859,8 +943,13 @@ export class VirtualMachine {
       && op.opcode !== 'Call'
       && op.opcode !== 'New'
       && op.opcode !== 'Return'
+      && op.opcode !== 'AsyncReturn'
       && op.opcode !== 'Throw'
       && op.opcode !== 'EndTry'
+      && op.opcode !== 'AwaitCall'
+      && op.opcode !== 'Await'
+      && op.opcode !== 'AsyncResume'
+      && op.opcode !== 'AsyncComplete'
     ) {
       const stackDepthAfter = this.variables.length;
       if (op.stackDepthAfter !== undefined && stackDepthAfter !== op.stackDepthAfter) {
@@ -886,6 +975,11 @@ export class VirtualMachine {
           return this.ilError('Expected count operand');
         }
         return operand.count;
+      case 'FlagOperand':
+        if (operand.type !== 'FlagOperand') {
+          return this.ilError('Expected count operand');
+        }
+        return operand.flag;
       case 'IndexOperand':
         if (operand.type !== 'IndexOperand') {
           return this.ilError('Expected index operand');
@@ -951,6 +1045,297 @@ export class VirtualMachine {
     array.lengthIsFixed || this.ilError('Using ArraySet on variable-length-array');
     index >= 0 && index < array.items.length || this.ilError('ArraySet index out of bounds');
     array.items[index] = value;
+  }
+
+  private operationAsyncResume(slotCount: number, catchTarget: number) {
+    // The AsyncResume instruction should be the first instruction in the new frame
+    hardAssert(this.internalFrame.variables.length === 0);
+    // Synchronous return value
+    this.push(IL.undefinedValue);
+
+    // Push the async catch target (note that async functions are resumed from
+    // the job queue so there should be no outer catch block)
+    const stackDepth = this.stackPointer;
+    hardAssert(this.catchTarget.type === 'UndefinedValue');
+    this.push(IL.numberValue(0));
+    this.push(this.builtins.asyncCatchBlock);
+    this.catchTarget = stackDepth;
+
+    // Restore state of local temporaries
+    for (let i = 0; i < slotCount; i++) {
+      // Note: +2 to skip over the continuation and callback in the async scope
+      const [slotArr, slotI] = this.findScopedVariable(i + 2);
+      const value = slotArr[slotI];
+      this.push(value);
+    }
+
+    this.catchTarget = this.slotIndexToStackDepth(this.stackDepthToSlotIndex(this.stackPointer) - catchTarget);
+
+    // Push the return value or error to the stack.
+    // Note: the signature here is (this, isSuccess, value)
+    this.operationLoadArg(2);
+
+    this.operationLoadArg(1); // isSuccess
+    const isSuccess = this.pop();
+    if (!this.isTruthy(isSuccess)) {
+      this.operationThrow(); // Throw the error
+    }
+  }
+
+  private addressOfFunctionEntry(funcValue: IL.Value): IL.ProgramAddressValue {
+    if (funcValue.type !== 'FunctionValue') unexpected();
+    const funcId = funcValue.value;
+    const func = this.functions.get(funcId) ?? unexpected();
+    const blockId = func.entryBlockID;
+    return {
+      type: 'ProgramAddressValue',
+      blockId,
+      funcId,
+      operationIndex: 0,
+    }
+  }
+
+  private operationAsyncReturn() {
+    const result = this.pop();
+
+    hardAssert(this.variables.length >= 3);
+    // Pop the async catch target to variable slot 1 (the slot at which it was pushed)
+    while (this.variables.length > 1) {
+      this.operationEndTry();
+    }
+    hardAssert(this.variables.length === 1);
+
+    this.push(result);
+    this.push(IL.trueValue); // isSuccess
+
+    this.operationAsyncComplete();
+  }
+
+  private operationAsyncComplete() {
+    const isSuccess = this.isTruthy(this.pop()) ? IL.trueValue : IL.falseValue;
+    const resultOrError = this.pop();
+    const callbackOrPromise = this.getScoped(1);
+
+    const type = this.deepTypeOf(callbackOrPromise);
+
+    // If no callback to run then the async function was
+    // void-called, meaning that nobody is going to use the synchronous result
+    // and there is nothing to do in the job queue.
+    if (type === 'NoOpFunction') {
+      /* Nothing to do */
+    } else if (type === 'ClosureAllocation') {
+      // The callback is a direct continuation
+      this.scheduleContinuation(callbackOrPromise, isSuccess, resultOrError);
+    } else {
+      // Otherwise, the callback slot holds a promise. This happens if the current
+      // async operation was not called in an await-call or void-call, so a
+      // promise was synthesized.
+      hardAssert(callbackOrPromise.type === 'ReferenceValue');
+      const promise = this.dereference(callbackOrPromise);
+      hardAssert(promise.type === 'ObjectAllocation');
+
+      // The promise is generated internally, and the slot is not accessible by
+      // user code, so it will always be a promise if it's not a function
+      // callback.
+      hardAssert(promise.prototype === this.builtins.promisePrototype);
+
+      // The promise is guaranteed to be a in pending state because AsyncComplete
+      // is the only way to transition out of the pending state, and this will
+      // only be invoked once. This closure self-destructs by setting closure slot
+      // 0 to a no-op function, so that successive calls will have no effect.
+      hardAssert(promise.internalSlots[VM.VM_OIS_PROMISE_STATUS] === VM.VM_PROMISE_STATUS_PENDING);
+
+      const refCallbackList = promise.internalSlots[VM.VM_OIS_PROMISE_OUT];
+
+      // Mark the promise as settled
+      promise.internalSlots[VM.VM_OIS_PROMISE_STATUS] = isSuccess.value === true ? VM.VM_PROMISE_STATUS_RESOLVED : VM.VM_PROMISE_STATUS_REJECTED;
+      promise.internalSlots[VM.VM_OIS_PROMISE_OUT] = resultOrError;
+
+      const callbackType = this.deepTypeOf(refCallbackList);
+      if (callbackType === 'UndefinedValue') {
+        // Subscriber list is empty
+      } else if (callbackType === 'ClosureAllocation') {
+        // Single subscriber
+        this.scheduleContinuation(refCallbackList, isSuccess, resultOrError);
+      } else {
+        // Multiple subscribers
+        hardAssert(callbackType === 'ArrayAllocation');
+        hardAssert(refCallbackList.type === 'ReferenceValue');
+        const callbackList = this.dereference(refCallbackList);
+        hardAssert(callbackList.type === 'ArrayAllocation');
+        for (const refCallback of callbackList.items) {
+          hardAssert(refCallback !== undefined);
+          hardAssert(this.deepTypeOf(refCallback) === 'ClosureAllocation');
+          this.scheduleContinuation(refCallback, isSuccess, resultOrError);
+        }
+      }
+    }
+
+    // Invalidate the current closure so if it's called again it won't do anything
+    this.setScoped(0, IL.noOpFunction);
+
+    // The synchronous return value should now be at the top of the stack. This
+    // is the Promise or elided promise if the async function has not yet been
+    // suspended, or it's just the value `undefined` if the function has already
+    // been suspended at least once before.
+    hardAssert(this.variables.length === 1);
+    this.operationReturn();
+  }
+
+  private scheduleContinuation(continuation: IL.Value, isSuccess: IL.BooleanValue, resultOrError: IL.Value) {
+    const { newScope, slots } = this.createScope(4);
+    slots[0] = this.builtins.asyncContinue;
+    slots[1] = continuation;
+    slots[2] = isSuccess;
+    slots[3] = resultOrError;
+
+    this.enqueueJob(newScope);
+  }
+
+  private operationAwait() {
+    const valueToAwait = this.pop();
+
+    // Turn the current closure into a continuation
+    const pc = this.nextProgramCounter;
+    const nextOp = this.readProgramAddress(pc);
+    hardAssert(nextOp.opcode === 'AsyncResume');
+    this.setScoped(0, { type: 'ResumePoint', address: pc });
+
+    // Save the stack state to the closure
+
+    let variableIndex =
+      + 1 // Skip synchronous return value
+      + 2 // Skip root catch block
+
+    let targetSlotIndex =
+      + 1 // Skip continuation
+      + 1 // Skip callback
+
+    while (variableIndex < this.variables.length) {
+      const value = this.variables[variableIndex];
+      this.setScoped(targetSlotIndex, value);
+      variableIndex++;
+      targetSlotIndex++;
+    }
+
+    // Unwind the root async catch block which is always at slot 1
+    while (this.variables.length > 1) {
+      this.operationEndTry();
+    }
+
+    // The callee of an await-call accepted the callback
+    if (valueToAwait.type === 'DeletedValue') {
+      const synchronousResult = this.internalFrame.variables[0];
+      this.returnValue(synchronousResult);
+      return;
+    }
+
+    // If the value to await is not elided by a CPS-optimized call, then it
+    // must be a promise. If it's not a promise, then we have a type error.
+    // This doesn't match the ECMAScript standard because in normal JS you can
+    // await anything, but I think it's a reasonable behavior and a subset of
+    // the full spec.
+
+    const type = this.deepTypeOf(valueToAwait);
+    if (type !== 'ObjectAllocation') {
+      return this.runtimeError('TypeError: await value is not a promise');
+    }
+
+    const promise = this.dereference(valueToAwait as IL.ReferenceValue<IL.ObjectAllocation>);
+    if (promise.prototype !== this.builtins.promisePrototype) {
+      return this.runtimeError('TypeError: await value is not a promise');
+    }
+
+    const promiseStatus = promise.internalSlots[VM.VM_OIS_PROMISE_STATUS];
+
+    if (promiseStatus === VM.VM_PROMISE_STATUS_PENDING) {
+      // Subscribe to the promise
+      let subscribers = promise.internalSlots[VM.VM_OIS_PROMISE_OUT];
+      if (subscribers.type === 'UndefinedValue') {
+        // No subscribers yet
+        promise.internalSlots[VM.VM_OIS_PROMISE_OUT] = this.closure;
+      } else {
+        if (this.deepTypeOf(subscribers) === 'ClosureAllocation') {
+          // Single subscriber promote to list
+          const subscriberList = this.newArray(false);
+          const arr = this.dereference(subscriberList);
+          arr.items.push(subscribers);
+          subscribers = subscriberList;
+          promise.internalSlots[VM.VM_OIS_PROMISE_OUT] = subscriberList;
+        }
+
+        hardAssert(this.deepTypeOf(subscribers) === 'ArrayAllocation');
+        const arr = this.dereference(subscribers as IL.ReferenceValue<IL.ArrayAllocation>);
+        arr.items.push(this.closure);
+      }
+    } else { // Promise is already settled
+      const resultOrError = promise.internalSlots[VM.VM_OIS_PROMISE_OUT];
+      const isSuccess = promiseStatus === VM.VM_PROMISE_STATUS_RESOLVED ? IL.trueValue : IL.falseValue;
+      this.scheduleContinuation(this.closure, isSuccess, resultOrError);
+    }
+
+    // The stack has been unwound, so it should just be the synchronous return
+    // value remaining
+    hardAssert(this.internalFrame.variables.length === 1);
+    const synchronousResult = this.internalFrame.variables[0];
+
+    this.returnValue(synchronousResult);
+  }
+
+  private operationAwaitCall(argCount: number) {
+    // See runtime engine for comments
+
+    // Note: the closure at this point is not a valid continuation because the
+    // first slot should be IL.deleted. It will be made into a valid
+    // continuation at the Await operation. Since the callback can't be called
+    // synchronously, it doesn't matter that it's not currently valid.
+    const callback = this.closure;
+
+    this.callDynamic(argCount, false, callback);
+  }
+
+  private readProgramAddress(pc: IL.ProgramAddressValue): IL.Operation {
+    const func = this.functions.get(pc.funcId) ?? unexpected();
+    const block = func.blocks[pc.blockId] ?? unexpected();
+    const operation = block.operations[pc.operationIndex];
+    return operation;
+  }
+
+  private operationAsyncStart(slotCount: number, captureParent: boolean) {
+    if (captureParent) {
+      this.operationScopePush(slotCount);
+    } else {
+      this.operationScopeNew(slotCount);
+    }
+
+    const { callbackOrPromise, synchronousResult } = this.asyncStartUnsafe();
+
+    // Synchronous return value in stack slot 0
+    this.internalFrame.variables.length === 0 || unexpected();
+    this.push(synchronousResult);
+
+    // The root catch target
+    this.pushCatchTarget(this.builtins.asyncCatchBlock);
+
+    // slot[1] in the closure is used for the callback. Note: slot[0] is used
+    // for the continuation, but this is only set when the async function is
+    // suspended.
+    this.setScoped(1, callbackOrPromise);
+  }
+
+  setScoped(index: number, value: IL.Value) {
+    const [arr, i] = this.findScopedVariable(index);
+    arr[i] = value;
+  }
+
+  getScoped(index: number) {
+    const [arr, i] = this.findScopedVariable(index);
+    // Note: if arr[i] is undefined, it is a "hole" in the physical array, which
+    // corresponds to the TDZ
+    const value = arr[i];
+    if (!value || value.type === 'DeletedValue')
+      return this.runtimeError("Access of variable before its declaration (TDZ)");
+    return value;
   }
 
   private operationBinOp(op_: string) {
@@ -1069,8 +1454,36 @@ export class VirtualMachine {
     ) {
       prototype = IL.nullValue;
     }
+
+    // Get the internal slot count. This is only for the case where the
+    // prototype object is a special object such as the promise prototype, which
+    // is marked by finding the VM_PROTO_SLOT_MAGIC_KEY_VALUE in the first
+    // internal slot of the prototype object itself.
+    const internalSlots: IL.Value[] = [];
+    if (prototype.type === 'ReferenceValue') {
+      const prototypeAllocation = this.dereference(prototype);
+      if (prototypeAllocation.type === 'ObjectAllocation') {
+        if (prototypeAllocation.internalSlots.length >= 4 &&
+          prototypeAllocation.internalSlots[VM.VM_OIS_PROTO_SLOT_MAGIC_KEY] === VM.VM_PROTO_SLOT_MAGIC_KEY_VALUE
+        ) {
+          const internalSlotCount = prototypeAllocation.internalSlots[VM.VM_OIS_PROTO_SLOT_COUNT];
+          hardAssert(internalSlotCount.type === 'NumberValue');
+          const count = internalSlotCount.value;
+          for (const slot of prototypeAllocation.internalSlots.slice(4, 4 + count)) {
+            internalSlots.push(slot);
+          }
+        }
+      }
+    }
+
+    const newObject = this.newObject(prototype, internalSlots.length);
+    const newObjectAllocation = this.dereference(newObject);
+    for (let i = 0; i < internalSlots.length; i++) {
+      newObjectAllocation.internalSlots[i + 2] = internalSlots[i];
+    }
+
     // The first argument is the `this` value
-    args[0] = this.newObject(prototype);
+    args[0] = newObject;
 
     const constructorFunc = class_.constructorFunc;
     if (constructorFunc.type !== 'FunctionValue' &&
@@ -1080,29 +1493,15 @@ export class VirtualMachine {
       this.ilError('A class constructor must always be a function');
     }
 
-    this.callCommon(constructorFunc, args);
+    this.callCommon(constructorFunc, args, false, IL.undefinedValue);
   }
 
   isClosure(value: IL.Value): value is IL.ReferenceValue<IL.ClosureAllocation> {
     return value.type === 'ReferenceValue' && this.dereference(value).type === 'ClosureAllocation';
   }
 
-  private operationCall(argCount: number) {
-    const args: IL.Value[] = [];
-    for (let i = 0; i < argCount; i++) {
-      args.unshift(this.pop());
-    }
-    if (this.operationBeingExecuted.opcode !== 'Call') return unexpected();
-    // For the moment, I'm making the assumption that the VM doesn't execute IL
-    // that's already been through the optimizer, since normally that's the last
-    // step before bytecode. We may need to change this in future.
-    hardAssert(!this.operationBeingExecuted.staticInfo);
-    const callTarget = this.pop();
-    if (!this.isCallableValue(callTarget)) {
-      return this.runtimeError(`Calling uncallable target (${this.getType(callTarget)})`);
-    }
-
-    return this.callCommon(callTarget, args);
+  private operationCall(argCount: number, isVoidCall: boolean) {
+    return this.callDynamic(argCount, isVoidCall, IL.undefinedValue);
   }
 
   isCallableValue(value: IL.Value): value is IL.CallableValue {
@@ -1110,6 +1509,8 @@ export class VirtualMachine {
       value.type === 'FunctionValue' ||
       value.type === 'HostFunctionValue' ||
       value.type === 'EphemeralFunctionValue' ||
+      value.type === 'NoOpFunction' ||
+      value.type === 'ResumePoint' ||
       this.isClosure(value)
     )
   }
@@ -1146,13 +1547,8 @@ export class VirtualMachine {
   }
 
   private operationLoadScoped(index: number) {
-    const [arr, i] = this.findScopedVariable(index);
-    // Note: if arr[i] is undefined, it is a "hole" in the physical array, which
-    // corresponds to the TDZ
-    const item = arr[i] ?? unexpected();
-    if (item.type === 'DeletedValue')
-      return this.runtimeError("Access of variable before its declaration (TDZ)");
-    this.push(item);
+    const value = this.getScoped(index);
+    this.push(value);
   }
 
   private findScopedVariable(index: number): [IL.Value[], number] {
@@ -1217,7 +1613,7 @@ export class VirtualMachine {
   // Note: `ObjectNew` is for creating object literals, but `New` is for
   // instantiating classes
   private operationObjectNew() {
-    this.push(this.newObject());
+    this.push(this.newObject(IL.nullValue, 0));
   }
 
   private operationObjectGet() {
@@ -1269,11 +1665,73 @@ export class VirtualMachine {
     this.push(newScope);
   }
 
+  /**
+   * Converts a stack depth to a slot index relative to the bottom of the stack.
+   * Not quite the same index that would appear in the runtime VM, but
+   * consistent with the runtime VM within a single frame.
+   */
+  private stackDepthToSlotIndex(stackDepth: IL.StackDepthValue) {
+    let frame = this.frame;
+    // Start at the right frame
+    while (frame && frame.frameNumber > stackDepth.frameNumber) {
+      frame = frame.callerFrame;
+    }
+    hardAssert(frame);
+    // Variables in the selected frame
+    let slotCount = stackDepth.variableDepth;
+    frame = frame.callerFrame;
+    // Variables in frames above the selected frame
+    while (frame) {
+      // Note: we don't actually need to produce exactly the same stack depth
+      // here as in the runtime VM when it comes to cross-frame deltas, because
+      // the only persisted catch targets are those in an async function, which
+      // always have their root catch handler at the bottom (so those persisted
+      // catch targets will be relative to the async function's stack frame). In
+      // particular, we don't need to handle external frames correctly, and
+      // don't need to account for the slots between frames. But we need to be
+      // consistent with the runtime VM for intra-frame deltas.
+      slotCount += frame.type === 'InternalFrame' ? frame.variables.length : 0;
+      frame = frame.callerFrame;
+    }
+
+    return slotCount;
+  }
+
+  private frameList() {
+    const frames: VM.Frame[] = [];
+    let frame = this.frame;
+    while (frame) {
+      frames.unshift(frame);
+      frame = frame.callerFrame;
+    }
+    return frames;
+  }
+
+  private slotIndexToStackDepth(index: number): IL.StackDepthValue {
+    const frames = this.frameList();
+
+    let slotCount = index;
+    for (const frame of frames) {
+      if (frame.type === 'InternalFrame') {
+        if (slotCount < frame.variables.length) {
+          return {
+            type: 'StackDepthValue',
+            frameNumber: frame.frameNumber,
+            variableDepth: slotCount,
+          };
+        }
+        slotCount -= frame.variables.length;
+      }
+    }
+
+    unexpected(`Slot index ${index} is out of range`);
+  }
+
   private operationStartTry(catchBlockId: string) {
-    const stackDepth = this.stackPointer;
-    this.push(this.catchTarget);
-    this.push(this.addressOfBlock(catchBlockId));
-    this.catchTarget = stackDepth;
+    this.pushCatchTarget({
+      type: 'ResumePoint',
+      address: this.addressOfBlock(catchBlockId)
+    });
   }
 
   private addressOfBlock(blockId: string): IL.ProgramAddressValue {
@@ -1298,15 +1756,89 @@ export class VirtualMachine {
     }
     hardAssert(this.stackPointer.variableDepth === catchTarget.variableDepth + 2);
 
-    const programAddress = this.pop();
-    const previousCatch = this.pop();
+    this.popCatchTarget();
+  }
 
-    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'UndefinedValue') {
-      return this.ilError('EndTry stack imbalance');
-    }
-    hardAssert(programAddress.type === 'ProgramAddressValue');
+  private pushCatchTarget(handler: IL.Value) {
+    // Note: With the introduction of async-await, we can encounter a situation
+    // where an async function at compile time is suspended until runtime. The
+    // stack is not preserved for general functions, but for async functions the
+    // stack is copied into the closure, which may land up in the bytecode, so
+    // the values used need to make sense (including the catch blocks). We can't
+    // use types here that won't round-trip successfully.
+
+    // Calculate the stack depth as measured in slots
+    const slotDelta = this.catchTarget.type !== 'UndefinedValue'
+      ? this.stackDepthToSlotIndex(this.catchTarget) - this.stackDepthToSlotIndex(this.stackPointer)
+      : 0;
+
+    const newCatchTarget = this.stackPointer; // Address before pushing
+
+    // Note: needs to be 14-bit signed integer because this is assumed by the runtime VM
+    this.push(IL.numberValue(slotDelta));
+    this.push(handler);
+    this.catchTarget = newCatchTarget;
+  }
+
+  /**
+   * Pops the catch target that is under the current stack pointer.
+   */
+  private popCatchTarget() {
+    const programAddress = this.pop();
+    const previousCatchDelta = this.pop();
+    hardAssert(programAddress.type === 'ResumePoint' || programAddress.type === 'FunctionValue');
+    hardAssert(previousCatchDelta.type === 'NumberValue');
+    hardAssert(previousCatchDelta.value <= 0); // Delta relative to stack pointer so always negative
+
+    const address = programAddress.type === 'FunctionValue'
+      ? this.addressOfFunctionEntry(programAddress)
+      : programAddress.address;
+
+    const currentStackDepth = this.stackDepthToSlotIndex(this.stackPointer);
+    const previousCatch =
+      previousCatchDelta.value === 0
+        ? IL.undefinedValue
+        : this.slotIndexToStackDepth(currentStackDepth + previousCatchDelta.value);
 
     this.catchTarget = previousCatch;
+
+    return address;
+  }
+
+  private operationEnqueueJob() {
+    this.enqueueJob(this.closure);
+  }
+
+  private enqueueJob(job: IL.Value) {
+    // Queue empty?
+    if (this.jobQueue.type === 'UndefinedValue') {
+      this.jobQueue = job;
+      return;
+    }
+
+    if (this.jobQueue.type !== 'ReferenceValue') unexpected();
+
+    const alloc = this.dereference(this.jobQueue);
+
+    // Single item? Promote it to a circular linked list of one node
+    if (alloc.type === 'ClosureAllocation') {
+      const cell = this.newArray(true, 3);
+      this.setProperty(cell, IL.numberValue(0), cell); // prev
+      this.setProperty(cell, IL.numberValue(1), this.jobQueue); // job
+      this.setProperty(cell, IL.numberValue(2), cell); // next
+      this.jobQueue = cell;
+      /* no return */
+    }
+
+    const last = this.getProperty(this.jobQueue, IL.numberValue(0));
+
+    // Create a new cell and link it into the end of the circular linked list
+    const cell = this.newArray(true, 3);
+    this.setProperty(cell, IL.numberValue(0), last); // prev
+    this.setProperty(cell, IL.numberValue(1), job); // job
+    this.setProperty(cell, IL.numberValue(2), this.jobQueue); // next
+    this.setProperty(this.jobQueue, IL.numberValue(0), cell); // prev
+    this.setProperty(last, IL.numberValue(2), cell); // next
   }
 
   private operationPop(count: number) {
@@ -1325,6 +1857,10 @@ export class VirtualMachine {
   private operationScopeNew(slotCount: number) {
     const { newScope } = this.createScope(slotCount);
     this.closure = newScope;
+  }
+
+  private operationScopeSave() {
+    this.push(this.closure);
   }
 
   private createScope(slotCount: number) {
@@ -1371,14 +1907,24 @@ export class VirtualMachine {
 
   private operationReturn() {
     const result = this.pop();
+    this.returnValue(result);
+  }
+
+  private returnValue(result: IL.Value) {
+    const isVoidCall = this.frame?.type === 'InternalFrame' && this.frame.isVoidCall;
     if (!this.callerFrame) {
       return this.ilError('Returning from non-function context')
     }
     this.frame = this.callerFrame;
 
+    // Poison the cpsCallback because it no longer holds the callback provided for the current frame
+    this.cpsCallback = IL.deletedValue;
+
     // Result of call
     if (this.frame.type === 'InternalFrame') {
-      this.push(result);
+      if (!isVoidCall) {
+        this.push(result);
+      }
     } else {
       this.frame.result = result;
     }
@@ -1415,22 +1961,10 @@ export class VirtualMachine {
     }
     hardAssert(this.stackPointer.variableDepth === catchTarget.variableDepth + 2);
 
-    const catchTargetAddress = this.pop();
-    const previousCatch = this.pop();
-
-    if (previousCatch.type !== 'StackDepthValue' && previousCatch.type !== 'UndefinedValue') {
-      return this.ilError('EndTry stack imbalance');
-    }
-    if (catchTargetAddress.type !== 'ProgramAddressValue') {
-      return this.ilError('Invalid program address of catch block')
-    }
+    this.nextProgramCounter = this.popCatchTarget();
 
     // Push the exception to the stack
     this.push(exception);
-
-    this.catchTarget = previousCatch;
-
-    this.nextProgramCounter = catchTargetAddress;
   }
 
   private operationStoreGlobal(slotID: string) {
@@ -1442,8 +1976,7 @@ export class VirtualMachine {
 
   private operationStoreScoped(index: number) {
     const value = this.pop();
-    const [arr, i] = this.findScopedVariable(index);
-    arr[i] = value;
+    this.setScoped(index, value);
   }
 
   private operationStoreVar(index: number) {
@@ -1488,8 +2021,9 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
       case 'ProgramAddressValue': return '';
-      case 'StackDepthValue': return '';
       case 'ClassValue': return 'function';
+      case 'NoOpFunction': return 'function';
+      case 'ResumePoint': return 'function';
       case 'ReferenceValue':
         const alloc = this.dereference(value);
         switch (alloc.type) {
@@ -1500,6 +2034,15 @@ export class VirtualMachine {
           default: return assertUnreachable(alloc);
         }
       default: return assertUnreachable(value);
+    }
+  }
+
+  private deepTypeOf(value: IL.Value) {
+    if (value.type === 'ReferenceValue') {
+      const alloc = this.dereference(value);
+      return alloc.type;
+    } else {
+      return value.type;
     }
   }
 
@@ -1516,8 +2059,9 @@ export class VirtualMachine {
       case 'EphemeralFunctionValue': return mvm_TeType.VM_T_FUNCTION;
       case 'EphemeralObjectValue': return mvm_TeType.VM_T_OBJECT;
       case 'ClassValue': return mvm_TeType.VM_T_CLASS;
+      case 'NoOpFunction': return mvm_TeType.VM_T_FUNCTION;
+      case 'ResumePoint': return mvm_TeType.VM_T_FUNCTION;
       case 'ProgramAddressValue': return this.ilError('Cannot use typeCodeOf a program address');
-      case 'StackDepthValue': this.ilError('Cannot use typeCodeOf a stack address');
       case 'ReferenceValue':
         const alloc = this.dereference(value);
         switch (alloc.type) {
@@ -1543,13 +2087,14 @@ export class VirtualMachine {
       case 'FunctionValue': return true;
       case 'HostFunctionValue': return true;
       case 'EphemeralFunctionValue': return true;
+      case 'ResumePoint': return true;
       case 'EphemeralObjectValue': return true;
       case 'ClassValue': return true;
+      case 'NoOpFunction': return true;
       // Deleted values should be converted to "undefined" (or a TDZ error) upon reading them
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
       case 'ProgramAddressValue': return unexpected();
-      case 'StackDepthValue': return unexpected();
       default: assertUnreachable(value);
     }
   }
@@ -1642,8 +2187,10 @@ export class VirtualMachine {
       }
       case 'BooleanValue': return value.value ? 'true' : 'false';
       case 'FunctionValue': return '[Function]';
+      case 'ResumePoint': return '[Function]';
       case 'HostFunctionValue': return '[Function]';
       case 'EphemeralFunctionValue': return '[Function]';
+      case 'NoOpFunction': return '[Function]';
       case 'ClassValue': return '[Class]';
       case 'EphemeralObjectValue': return '[Object]';
       case 'NullValue': return 'null';
@@ -1654,7 +2201,6 @@ export class VirtualMachine {
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
       case 'ProgramAddressValue': return unexpected();
-      case 'StackDepthValue': return unexpected();
 
       default: assertUnreachable(value);
     }
@@ -1667,7 +2213,9 @@ export class VirtualMachine {
       case 'FunctionValue': return NaN;
       case 'HostFunctionValue': return NaN;
       case 'EphemeralFunctionValue': return NaN;
+      case 'ResumePoint': return NaN;
       case 'EphemeralObjectValue': return NaN;
+      case 'NoOpFunction': return NaN;
       case 'ClassValue': return NaN;
       case 'NullValue': return 0;
       case 'UndefinedValue': return NaN;
@@ -1677,7 +2225,6 @@ export class VirtualMachine {
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
       case 'ProgramAddressValue': return unexpected();
-      case 'StackDepthValue': return unexpected();
       default: assertUnreachable(value);
     }
   }
@@ -1691,19 +2238,71 @@ export class VirtualMachine {
     }
 
     // Some internal types that should never be compared
-    if (value1.type === 'StackDepthValue' || value1.type === 'ProgramAddressValue' ||
-      value2.type === 'StackDepthValue' || value2.type === 'ProgramAddressValue'
+    if (value1.type === 'ProgramAddressValue' ||
+      value2.type === 'ProgramAddressValue'
     ) {
         return unexpected();
     }
 
+    if (value1.type === 'ResumePoint') {
+      return this.areValuesEqual(value1.address, (value2 as IL.ResumePoint).address);
+    }
+
+    // Since both values are the same type, we know they're both NoOpFunction
+    if (value1.type === 'NoOpFunction') return true;
 
     // It happens to be the case that all other types compare equal if the inner
     // value is equal
     return value1.value === (value2 as typeof value1).value;
   }
 
-  private callCommon(funcValue: IL.CallableValue, args: IL.Value[]) {
+  private callDynamic(argCount: number, isVoidCall: boolean, cpsCallback: IL.Value) {
+    const args: IL.Value[] = [];
+    for (let i = 0; i < argCount; i++) {
+      args.unshift(this.pop());
+    }
+    if (
+      this.operationBeingExecuted.opcode !== 'Call' &&
+      this.operationBeingExecuted.opcode !== 'AwaitCall'
+    ) {
+      return unexpected();
+    }
+    // For the moment, I'm making the assumption that the VM doesn't execute IL
+    // that's already been through the optimizer, since normally that's the last
+    // step before bytecode. We may need to change this in future.
+    hardAssert(!this.operationBeingExecuted.staticInfo);
+    const callTarget = this.pop();
+    if (!this.isCallableValue(callTarget)) {
+      return this.runtimeError(`Calling uncallable target (${this.getType(callTarget)})`);
+    }
+    this.callCommon(callTarget, args, isVoidCall, cpsCallback);
+  }
+
+  private callCommon(funcValue: IL.CallableValue, args: IL.Value[], isVoidCall: boolean, cpsCallback: IL.Value) {
+    /*
+    Note: the cpsCallback and isVoidCall have slightly different semantics to
+    the runtime engine. The issue I'm working around is the fact that the
+    compile-time engine doesn't create a frame for host function calls (unless
+    the host function calls back into the VM), and the `isVoidCall` flag is part
+    of the frame, so it means we can't communicate `isVoidCall` to the host
+    (e.g. for if/when the host calls `asyncStart`). But by changing the
+    semantics of cpsCallback, I _think_ we can get away without it (at least for
+    the moment?).
+
+    In the runtime engine, the value of `VM_VALUE_UNDEFINED` for the callback
+    has 2 different meanings depending on whether `AF_VOID_CALLED` is set. If
+    `AF_VOID_CALLED` is set, `VM_VALUE_UNDEFINED` is interpreted as "no callback
+    needed" but if `AF_VOID_CALLED` is unset then `VM_VALUE_UNDEFINED` is
+    interpreted as "callback needed but not provided (caller is async but not
+    CPS)". Here I'm instead using `IL.noOpFunction` to represent the former.
+    */
+    if (isVoidCall) {
+      hardAssert(cpsCallback.type === 'UndefinedValue');
+      this.cpsCallback = IL.noOpFunction;
+    } else {
+      this.cpsCallback = cpsCallback;
+    }
+
     if (funcValue.type === 'HostFunctionValue') {
       if (!this.frame) {
         return unexpected();
@@ -1725,7 +2324,9 @@ export class VirtualMachine {
         return unexpected();
       }
       if (this.frame.type === 'InternalFrame') {
-        this.push(resultValue);
+        if (!isVoidCall) {
+          this.push(resultValue);
+        }
       } else {
         this.frame.result = resultValue;
       }
@@ -1750,7 +2351,9 @@ export class VirtualMachine {
         return unexpected();
       }
       if (this.frame.type === 'InternalFrame') {
-        this.push(resultValue);
+        if (!isVoidCall) {
+          this.push(resultValue);
+        }
       } else {
         this.frame.result = resultValue;
       }
@@ -1768,29 +2371,63 @@ export class VirtualMachine {
         nextOperationIndex: 0,
         operationBeingExecuted: block.operations[0],
         variables: [],
-        args: args
+        args: args,
+        isVoidCall,
       });
     } else if (this.isClosure(funcValue)) {
       const closure = this.dereference(funcValue);
       const funcTargetValue = closure.slots[0];
-      if (funcTargetValue.type !== 'FunctionValue') {
-        // For the moment, I'm assuming that closures point to IL functions
-        return notImplemented('Closures referencing non-IL targets');
+      let func: VM.Function;
+      let block: IL.Block;
+      let nextOperationIndex: number;
+      if (funcTargetValue.type === 'FunctionValue') {
+        func = this.functions.get(funcTargetValue.value) ?? unexpected();
+        block = func.blocks[func.entryBlockID];
+        nextOperationIndex = 0;
+      } else if (funcTargetValue.type === 'ResumePoint') {
+        func = this.functions.get(funcTargetValue.address.funcId) ?? unexpected();
+        block = func.blocks[funcTargetValue.address.blockId] ?? unexpected();
+        nextOperationIndex = funcTargetValue.address.operationIndex;
+      } else {
+        notImplemented('Closures referencing non-IL targets');
       }
-      const func = notUndefined(this.functions.get(funcTargetValue.value));
-      const block = func.blocks[func.entryBlockID];
+
       this.pushFrame({
         type: 'InternalFrame',
         frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
         callerFrame: this.frame,
         scope: funcValue,
         filename: func.sourceFilename,
+        func,
+        block,
+        nextOperationIndex,
+        operationBeingExecuted: block.operations[nextOperationIndex],
+        variables: [],
+        args,
+        isVoidCall,
+      });
+    } else if (funcValue.type === 'NoOpFunction') {
+      if (!isVoidCall) {
+        this.push(IL.undefinedValue);
+      }
+    } else if (funcValue.type === 'ResumePoint') {
+      const address = funcValue.address;
+      const func = this.functions.get(address.funcId) ?? unexpected();
+      const block = func.blocks[address.blockId] ?? unexpected();
+      const operationIndex = address.operationIndex;
+      this.pushFrame({
+        type: 'InternalFrame',
+        frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
+        callerFrame: this.frame,
+        scope: IL.deletedValue,
+        filename: func.sourceFilename,
         func: func,
         block,
-        nextOperationIndex: 0,
+        nextOperationIndex: operationIndex,
         operationBeingExecuted: block.operations[0],
         variables: [],
-        args: args
+        args: args,
+        isVoidCall,
       });
     } else {
       assertUnreachable(funcValue);
@@ -1818,6 +2455,8 @@ export class VirtualMachine {
         }
       case 'FunctionValue': return 'function';
       case 'HostFunctionValue': return 'function';
+      case 'NoOpFunction': return 'function';
+      case 'ResumePoint': return 'function';
       case 'ClassValue': return 'class';
       case 'EphemeralFunctionValue': return 'function';
       case 'EphemeralObjectValue': return 'object';
@@ -1825,7 +2464,6 @@ export class VirtualMachine {
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
       case 'ProgramAddressValue': return unexpected();
-      case 'StackDepthValue': return unexpected();
       default: return assertUnreachable(value);
     }
   }
@@ -1858,6 +2496,8 @@ export class VirtualMachine {
       case 'HostFunctionValue':
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
+      case 'NoOpFunction':
+      case 'ResumePoint':
       case 'ClassValue':
         return invalidOperation(`Cannot convert ${value.type} to POD`)
       case 'ReferenceValue':
@@ -1883,7 +2523,6 @@ export class VirtualMachine {
       case 'DeletedValue': return unexpected();
       // The user shouldn't have access to these values
       case 'ProgramAddressValue': return unexpected();
-      case 'StackDepthValue': return unexpected();
       default:
         return assertUnreachable(value);
     }
@@ -1929,18 +2568,36 @@ export class VirtualMachine {
     }
   }
 
-  public newObject(prototype: IL.Value = IL.nullValue): IL.ReferenceValue<IL.ObjectAllocation> {
+  public newObject(prototype: IL.Value, internalSlotCount: number): IL.ReferenceValue<IL.ObjectAllocation> {
     return this.allocate<IL.ObjectAllocation>({
       type: 'ObjectAllocation',
       prototype,
-      properties: Object.create(null)
+      properties: Object.create(null),
+      internalSlots: [undefined, undefined, ...new Array(internalSlotCount)].map(() => IL.deletedValue)
     });
   }
 
-  public newArray({ fixedLength }: { fixedLength: boolean } = { fixedLength: false }): IL.ReferenceValue<IL.ArrayAllocation> {
+  public newClass(constructorFunc: IL.Value, prototype: IL.Value): IL.ClassValue {
+    if (this.deepTypeOf(prototype) !== 'NullValue' && this.deepTypeOf(prototype) !== 'ObjectAllocation') {
+      return this.runtimeError(`Class prototype must be an object or null`);
+    }
+
+    const staticProps = this.newObject(prototype, 0);
+    const staticPropsAllocation = this.dereference(staticProps);
+    staticPropsAllocation.properties.prototype = prototype;
+    return {
+      type: 'ClassValue',
+      constructorFunc,
+      staticProps,
+    }
+  }
+
+  public newArray(fixedLength = false, length = 0): IL.ReferenceValue<IL.ArrayAllocation> {
+    const items: IL.Value[] = [];
+    for (let i = 0; i < length; i++) items.push(IL.deletedValue);
     return this.allocate<IL.ArrayAllocation>({
       type: 'ArrayAllocation',
-      items: [],
+      items,
       lengthIsFixed: fixedLength
     });
   }
@@ -2132,7 +2789,7 @@ export class VirtualMachine {
       keys = Reflect.ownKeys(object.properties) as string[];
     }
 
-    const result = this.newArray({ fixedLength: true });
+    const result = this.newArray(true, keys.length);
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       const value = typeof key === 'string' ? this.stringValue(key) : this.numberValue(key);
@@ -2259,12 +2916,12 @@ export class VirtualMachine {
     // Note: VirtualMachineFriendly also adds its own globals. The globals here
     // are ones that require custom IL.
 
-    // Note: if we add more globals, then this needs refactoring
+    this.addGlobalPromiseClass();
 
     /* Reflect.ownKeys uses the custom IL instruction `ObjectKeys` which can't
     be generated syntactically. Hopefully there aren't too many cases like this
     in future. */
-    const obj_Reflect = this.newObject()
+    const obj_Reflect = this.newObject(IL.nullValue, 0);
     this.globalSet('Reflect', obj_Reflect)
     this.setProperty(obj_Reflect, this.stringValue('ownKeys'), this.importCustomILFunction('Reflect.ownKeys', {
       entryBlockID: 'entry',
@@ -2284,7 +2941,7 @@ export class VirtualMachine {
 
     /* Microvium.newUint8Array uses the custom IL instruction `Uint8ArrayNew`
     which can't be generated syntactically. */
-    const obj_Microvium = this.newObject()
+    const obj_Microvium = this.newObject(IL.nullValue, 0);
     this.globalSet('Microvium', obj_Microvium)
     this.setProperty(obj_Microvium, this.stringValue('newUint8Array'), this.importCustomILFunction('Microvium.newUint8Array', {
       entryBlockID: 'entry',
@@ -2318,10 +2975,115 @@ export class VirtualMachine {
         }
       }
     }));
+
+    // The no-op-function is exposed through Microvium.noOpFunction just so we
+    // can have test cases for it.
+    this.setProperty(obj_Microvium, this.stringValue('noOpFunction'), IL.noOpFunction);
+
+    // For tests that need to differentiate whether they're being run on node vs Microvium
+    this.setProperty(obj_Microvium, this.stringValue('isMicrovium'), IL.trueValue);
+  }
+
+  private addGlobalPromiseClass() {
+    // IL to use for the resolve closure
+    const promiseResolve = this.importCustomILFunction('promiseResolve', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // Synchronous return value
+            { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            // The result is the first arg
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 1, stackDepthAfter: 2 },
+            // Push `true` to indicate that the promise is resolved
+            { opcode: 'Literal', operands: [literalOperand(true)], stackDepthBefore: 2, stackDepthAfter: 3 },
+            // Async-complete will schedule the promise subscribers in the queue
+            // and change the promise state, as well as invalidating the current
+            // closure so if it's called again it will be a no-op.
+            { opcode: 'AsyncComplete', operands: [], stackDepthBefore: 3, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
+
+    // IL to use for the reject closure
+    const promiseReject = this.importCustomILFunction('promiseReject', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // Synchronous return value
+            { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            // The result is the first arg
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 1, stackDepthAfter: 2 },
+            // Push `false` to indicate that the promise is rejected
+            { opcode: 'Literal', operands: [literalOperand(false)], stackDepthBefore: 2, stackDepthAfter: 3 },
+            // Async-complete will schedule the promise subscribers in the queue
+            // and change the promise state, as well as invalidating the current
+            // closure so if it's called again it will be a no-op.
+            { opcode: 'AsyncComplete', operands: [], stackDepthBefore: 3, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
+
+    const promiseConstructor = this.importCustomILFunction('promiseConstructor', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // Push the function to the stack
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
+
+            // The first arg is the `this` value
+            { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 1, stackDepthAfter: 2 },
+
+            // Create a new closure for the resolve function
+            { opcode: 'ScopeNew', operands: [countOperand(2)], stackDepthBefore: 2, stackDepthAfter: 2 },
+            // Set the callback
+            { opcode: 'Literal', operands: [{ type: 'LiteralOperand', literal: promiseResolve }], stackDepthBefore: 2, stackDepthAfter: 3 },
+            { opcode: 'StoreScoped', operands: [indexOperand(0)], stackDepthBefore: 3, stackDepthAfter: 2 },
+            // Set the promise slot to the `this` value of the constructor
+            { opcode: 'LoadArg', operands: [indexOperand(0)], stackDepthBefore: 2, stackDepthAfter: 3 },
+            { opcode: 'StoreScoped', operands: [indexOperand(1)], stackDepthBefore: 3, stackDepthAfter: 2 },
+            // Take the new closure and put it on the stack
+            { opcode: 'ScopeSave', operands: [], stackDepthBefore: 2, stackDepthAfter: 3 },
+
+            // Create a new closure for the reject function
+            { opcode: 'ScopeNew', operands: [countOperand(2)], stackDepthBefore: 3, stackDepthAfter: 3 },
+            // Set the callback
+            { opcode: 'Literal', operands: [{ type: 'LiteralOperand', literal: promiseReject }], stackDepthBefore: 3, stackDepthAfter: 4 },
+            { opcode: 'StoreScoped', operands: [indexOperand(0)], stackDepthBefore: 4, stackDepthAfter: 3 },
+            // Set the promise slot to the `this` value of the constructor
+            { opcode: 'LoadArg', operands: [indexOperand(0)], stackDepthBefore: 3, stackDepthAfter: 4 },
+            { opcode: 'StoreScoped', operands: [indexOperand(1)], stackDepthBefore: 4, stackDepthAfter: 3 },
+            // Take the new closure and put it on the stack
+            { opcode: 'ScopeSave', operands: [], stackDepthBefore: 3, stackDepthAfter: 4 },
+
+            // Call the handler function (void call)
+            { opcode: 'Call', operands: [countOperand(3), flagOperand(true)], stackDepthBefore: 4, stackDepthAfter: 0 },
+
+            // Return this promise
+            { opcode: 'LoadArg', operands: [indexOperand(0)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
+
+    const promisePrototype = this.builtins.promisePrototype ?? unexpected();
+    const obj_Promise = this.newClass(promiseConstructor, promisePrototype);
+    this.globalSet('Promise', obj_Promise);
   }
 
   importCustomILFunction(nameHint: string, il: Pick<VM.Function, 'entryBlockID' | 'blocks'>): IL.FunctionValue {
-    const funID_ownKeys = uniqueName('Reflect_ownKeys', n => this.functions.has(n))
+    const funID_ownKeys = uniqueName(nameHint, n => this.functions.has(n))
     const fun_ownKeys: VM.Function = {
       type: 'Function',
       id: funID_ownKeys,
@@ -2334,6 +3096,39 @@ export class VirtualMachine {
     return {
       type: 'FunctionValue',
       value: funID_ownKeys
+    }
+  }
+
+  // This is the equivalent of the vm_asyncStartUnsafe runtime function
+  private asyncStartUnsafe(): { callbackOrPromise: IL.Value, synchronousResult: IL.Value } {
+    const callback = this.cpsCallback;
+    this.cpsCallback = IL.deletedValue; // Poison
+
+    // Was a callback provided? Note that this includes a noOpFunction for the
+    // case where the caller performed a void-call
+    if (this.isCallableValue(callback)) {
+      const synchronousResult = IL.deletedValue; // Elided
+      return { callbackOrPromise: callback, synchronousResult };
+    }
+
+    if (callback.type === 'DeletedValue') {
+      return this.runtimeError('Cannot call `asyncStart` more than once in a function or after calling other JS functions.')
+    }
+
+    // Otherwise, the caller does not support CPS (the caller is not a void call
+    // and not an await-call) and so is expecting a promise result. We need to
+    // instantiate a promise and then create a closure callback that resolves the
+    // promise.
+    hardAssert(callback.type === 'UndefinedValue');
+
+    const refPromise = this.newObject(this.builtins.promisePrototype, 2);
+    const promise = this.dereference(refPromise);
+    promise.internalSlots[VM.VM_OIS_PROMISE_STATUS] = VM.VM_PROMISE_STATUS_PENDING;
+    promise.internalSlots[VM.VM_OIS_PROMISE_OUT] = IL.undefinedValue; // No subscribers yet
+
+    return {
+      synchronousResult: refPromise, // The promise to put in var[0] to return to the caller of the async function
+      callbackOrPromise: refPromise, // The promise to put in slot[1] of the closure to invoke when the async operation completes
     }
   }
 
@@ -2352,7 +3147,7 @@ export class VirtualMachine {
 
     return {
       type: 'StackDepthValue',
-      frameNumber: this.frame ? this.frame.frameNumber + 1 : 1,
+      frameNumber: this.frame ? this.frame.frameNumber : 0,
       variableDepth
     }
   }
@@ -2370,6 +3165,119 @@ export class VirtualMachine {
     this.func = this.functions.get(value.funcId) ?? unexpected();
     this.block = this.func.blocks[value.blockId] ?? unexpected();
     this.nextOperationIndex = value.operationIndex;
+  }
+
+  createAsyncCatchBlock(): IL.Value {
+    // Note: The async catch block is wrapped in a function, but it's not
+    // invoked by a function call -- it's invoked via a catch target by an
+    // exception being thrown. As such, the IL in the catch block has direct
+    // access to the async function closure.
+    return this.importCustomILFunction('asyncCatchBlock', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          // Executing in the frame of an async function. var[0] is the
+          // synchronous return, and var[1] is the thrown exception.
+          expectedStackDepthAtEntry: 2,
+          operations: [
+            // push isSuccess = false
+            { opcode: 'Literal', operands: [literalOperand(false)], stackDepthBefore: 2, stackDepthAfter: 3 },
+            // Note: AsyncComplete expects the synchronous return value in
+            // var[0], and the error and isSuccess values at the top of the
+            // stack.
+            { opcode: 'AsyncComplete', operands: [], stackDepthBefore: 3, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
+  }
+
+  createObjectPrototype(internalSlotInitialValues: IL.Value[]): IL.Value {
+    // Create with 2 internal slots. The one is the "magic key" that signals
+    // that the other slot is the number of internal slots for objects derived
+    // from this prototype. The `new` operator checks if the given prototype has
+    // this magic slot, and if so it uses the given slot count to create the new
+    // object, and the internal slots after that as the initial values.
+    const ref = this.newObject(IL.nullValue, 2 + internalSlotInitialValues.length);
+    const obj = this.dereference(ref);
+    obj.internalSlots[VM.VM_OIS_PROTO_SLOT_MAGIC_KEY] = VM.VM_PROTO_SLOT_MAGIC_KEY_VALUE;
+    obj.internalSlots[VM.VM_OIS_PROTO_SLOT_COUNT] = IL.numberValue(internalSlotInitialValues.length);
+    for (let i = 0; i < internalSlotInitialValues.length; i++) {
+      obj.internalSlots[i + 4] = internalSlotInitialValues[i];
+    }
+    return ref;
+  }
+
+  createPromisePrototype(): IL.Value {
+    return this.createObjectPrototype([
+      VM.VM_PROMISE_STATUS_PENDING, // Promise status
+      IL.undefinedValue, // No subscribers yet
+    ]);
+  }
+
+  createAsyncContinueFunction(): IL.Value {
+    // The IL to be invoked from the job queue to resolve or reject an async
+    // operation by invoking the callback.
+    return this.importCustomILFunction('asyncContinue', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // Continuation function in slot[1]
+            { opcode: 'LoadScoped', operands: [indexOperand(1)], stackDepthBefore: 0, stackDepthAfter: 1 },
+            // Push `undefined` -- the `this` value
+            { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 1, stackDepthAfter: 2 },
+            // Push `slot[2]` -- `isSuccess`
+            { opcode: 'LoadScoped', operands: [indexOperand(2)], stackDepthBefore: 2, stackDepthAfter: 3 },
+            // Push `slot[3]` -- `result/error`
+            { opcode: 'LoadScoped', operands: [indexOperand(3)], stackDepthBefore: 3, stackDepthAfter: 4 },
+            // Function call operation with `3` arguments
+            { opcode: 'Call', operands: [countOperand(3), flagOperand(false)], stackDepthBefore: 4, stackDepthAfter: 1 },
+            // Return to job queue
+            { opcode: 'Return', operands: [], stackDepthBefore: 1, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
+  }
+
+  createAsyncHostCallbackFunction(): IL.Value {
+    // IL for a wrapper around an async-continuation that provides a level of
+    // safety so that the host can call it. This is essentially a wrapper around
+    // the AsyncComplete IL operation. It is expected to be used to generate a
+    // closure that has a single slot (slot[1]), which references the naked
+    // continuation or promise object. See `VM_OP4_ASYNC_COMPLETE` and
+    // `SUB_ASYNC_COMPLETE` for details.
+
+    return this.importCustomILFunction('asyncHostCallback', {
+      entryBlockID: 'entry',
+      blocks: {
+        'entry': {
+          id: 'entry',
+          expectedStackDepthAtEntry: 0,
+          operations: [
+            // var[0] needs to hold the synchronous return value. In this case
+            // we return undefined to the host when they call the callback.
+            { opcode: 'Literal', operands: [literalOperand(undefined)], stackDepthBefore: 0, stackDepthAfter: 1 },
+
+            // Arg[2] will contain the result value (or error)
+            { opcode: 'LoadArg', operands: [indexOperand(2)], stackDepthBefore: 1, stackDepthAfter: 2 },
+
+            // Arg[1] will contain the isSuccess flag. Note that the
+            // AsyncComplete operation will coerce this to a bool, so we don't
+            // need to do it here.
+            { opcode: 'LoadArg', operands: [indexOperand(1)], stackDepthBefore: 2, stackDepthAfter: 3 },
+
+            // AsyncComplete will schedule the callback in slot[1] to be called
+            // from the job queue, and then it will return
+            { opcode: 'AsyncComplete', operands: [], stackDepthBefore: 3, stackDepthAfter: 0 },
+          ]
+        }
+      }
+    })
   }
 
   // Frame properties
@@ -2412,7 +3320,7 @@ function garbageCollect({
   allocations: Map<IL.AllocationID, IL.Allocation>,
   hostFunctions: Map<IL.HostFunctionID, VM.HostFunctionHandler>,
   functions: Map<IL.FunctionID, VM.Function>,
-  builtins: { [name: string]: IL.Value }
+  builtins: SnapshotIL['builtins']
 }) {
   const reachableFunctions = new Set<string>();
   const reachableAllocations = new Set<IL.Allocation>();
@@ -2447,10 +3355,8 @@ function garbageCollect({
     markValueIsReachable(moduleObjectValue);
   }
 
-  // Roots in the builtins
-  for (const builtin of Object.values(builtins)) {
-    markValueIsReachable(builtin);
-  }
+  // Note: builtins are no longer considered to be roots. They're only baked in
+  // if they're needed. See `builtinIsReachable`
 
   // Sweep allocations
   for (const [i, a] of allocations) {
@@ -2480,10 +3386,36 @@ function garbageCollect({
     }
   }
 
+  // Sweep builtins
+  for (const builtinId of Object.keys(builtins) as Array<keyof SnapshotIL['builtins']>) {
+    const builtinValue = builtins[builtinId];
+    let reachable: boolean;
+    if (builtinValue.type === 'FunctionValue') {
+      reachable = reachableFunctions.has(builtinValue.value);
+    } else if (builtinValue.type === 'ReferenceValue') {
+      // Note: by this point we've already swept the allocations, so if the
+      // allocation is still there then it's reachable.
+      reachable = allocations.has(builtinValue.value);
+    } else if (builtinValue.type === 'UndefinedValue' || builtinValue.type === 'NullValue') {
+      // The value is already collected or not used.
+      reachable = false;
+    } else {
+      notImplemented(); // Other types of builtins?
+    }
+    if (!reachable) {
+      builtins[builtinId] = IL.undefinedValue;
+    }
+  }
+
   function markValueIsReachable(value: IL.Value) {
     switch (value.type) {
       case 'FunctionValue': {
         const func = notUndefined(functions.get(value.value));
+        functionIsReachable(func);
+        break;
+      }
+      case 'ResumePoint': {
+        const func = notUndefined(functions.get(value.address.funcId));
         functionIsReachable(func);
         break;
       }
@@ -2511,9 +3443,8 @@ function garbageCollect({
       case 'EphemeralFunctionValue':
       case 'EphemeralObjectValue':
       case 'ProgramAddressValue':
-      case 'StackDepthValue':
+      case 'NoOpFunction':
         break;
-
 
       default: assertUnreachable(value);
     }
@@ -2527,8 +3458,19 @@ function garbageCollect({
     }
     reachableAllocations.add(allocation);
     switch (allocation.type) {
-      case 'ArrayAllocation': return allocation.items.forEach(markValueIsReachable);
-      case 'ObjectAllocation': return [...Object.values(allocation.properties)].forEach(markValueIsReachable);
+      case 'ArrayAllocation': {
+        builtinIsReachable('arrayPrototype');
+        return allocation.items.forEach(markValueIsReachable);
+      }
+      case 'ObjectAllocation': {
+        for (const propValue of Object.values(allocation.properties)) {
+          markValueIsReachable(propValue);
+        }
+        for (const internalSlotValue of Object.values(allocation.internalSlots)) {
+          markValueIsReachable(internalSlotValue);
+        }
+        return;
+      }
       case 'Uint8ArrayAllocation': return; // Entries are POD bytes
       case 'ClosureAllocation': return allocation.slots.forEach(markValueIsReachable);
       default: return assertUnreachable(allocation);
@@ -2564,9 +3506,24 @@ function garbageCollect({
           const [valueOperand] = op.operands;
           if (valueOperand.type !== 'LiteralOperand') return unexpected();
           markValueIsReachable(valueOperand.literal);
+        } else if (op.opcode === 'ArrayNew') {
+          builtinIsReachable('arrayPrototype');
+        } else if (op.opcode === 'AsyncStart' || op.opcode === 'AsyncResume') {
+          builtinIsReachable('asyncCatchBlock');
+          builtinIsReachable('asyncContinue');
+          builtinIsReachable('promisePrototype');
+          builtinIsReachable('asyncHostCallback');
+        } else if (op.opcode === 'AsyncReturn') {
+          builtinIsReachable('asyncContinue');
+          builtinIsReachable('promisePrototype');
         }
       }
     }
+  }
+
+  function builtinIsReachable(builtinKey: keyof SnapshotIL['builtins']) {
+    const builtin = builtins[builtinKey];
+    markValueIsReachable(builtin);
   }
 }
 

@@ -85,7 +85,7 @@ suite('getting-started', function () {
 
   test('3.script.mvm.js', () => {
     const result = runMicroviumCLI('script.mvm.js');
-    assert.deepEqual(result.stderr.trim(), 'Output generated: script.mvm-bc\n150 bytes');
+    assert.deepEqual(result.stderr.trim(), 'Output generated: script.mvm-bc\n116 bytes');
     assert.deepEqual(result.stdout.trim(), '');
   });
 

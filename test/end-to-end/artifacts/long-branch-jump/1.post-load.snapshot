@@ -2,20 +2,6 @@ export 0 = &function run;
 
 slot ['global:print'] = host function 1;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 // ---
 description: >
   Tests various branching instructions
@@ -33,16 +19,14 @@ function run() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '#1: This is the consequent');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     Jump(@block3);
   block2:
     Nop(count 200);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '#1: This is the alternate');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     Jump(@block3);
   block3:
     Literal(lit true);
@@ -52,22 +36,17 @@ function run() {
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '#2: This is the consequent');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     Jump(@block6);
   block5:
     Nop(count 200);
     LoadGlobal(name 'global:print');
     Literal(lit undefined);
     Literal(lit '#2: This is the alternate');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     Jump(@block6);
   block6:
     Literal(lit undefined);
     Return();
 }
 
-allocation 5 = {
-  push: &function Array_push,
-};

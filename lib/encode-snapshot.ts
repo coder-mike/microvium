@@ -3,33 +3,22 @@
 
 import * as IL from './il';
 import * as VM from './virtual-machine-types';
-import { notImplemented, assertUnreachable, hardAssert, notUndefined, unexpected, invalidOperation, entries, stringifyIdentifier, todo, stringifyStringLiteral } from './utils';
+import { assertUnreachable, hardAssert, notUndefined, unexpected, invalidOperation } from './utils';
 import * as _ from 'lodash';
-import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, UInt8, UInt4, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, isSInt8, isUInt8, SInt8, isSInt16, UInt16, SInt16, isUInt14, mvm_TeError, mvm_TeBytecodeSection, mvm_TeBuiltins  } from './runtime-types';
-import { stringifyOperation } from './stringify-il';
-import { BinaryRegion, Future, FutureLike, Labelled } from './binary-region';
-import { HTML, Format, BinaryData } from './visual-buffer';
+import { vm_Reference, mvm_Value, vm_TeWellKnownValues, TeTypeCode, UInt8, isUInt12, isSInt14, isSInt32, isUInt16, isUInt4, UInt16, isUInt14, mvm_TeBytecodeSection, mvm_TeBuiltins  } from './runtime-types';
+import { BinaryRegion, Future, FutureLike } from './binary-region';
+import { HTML, BinaryData } from './visual-buffer';
 import * as formats from './snapshot-binary-html-formats';
-import escapeHTML from 'escape-html';
 import { SnapshotClass } from './snapshot';
-import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx2, vm_TeOpcodeEx3, vm_TeSmallLiteralValue, vm_TeNumberOp, vm_TeBitwiseOp, vm_TeOpcodeEx4 } from './bytecode-opcodes';
 import { SnapshotIL, validateSnapshotBinary, ENGINE_MAJOR_VERSION, ENGINE_MINOR_VERSION } from './snapshot-il';
+import { vm_TeOpcode, vm_TeOpcodeEx1, vm_TeOpcodeEx3 } from './bytecode-opcodes';
 import { crc16ccitt } from 'crc';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
 import { stringifyValue } from './stringify-il';
+import { CallInfo, InstructionEmitContext, FutureInstructionSourceMapping, writeFunctionBody } from './encode-snapshot-function-body';
+import { SourceMap } from './source-map';
 
-type MemoryRegionID = 'bytecode' | 'gc' | 'globals';
-
-// A referenceable is something that can produce a reference pointer, if you
-// tell it where it's pointing from
-type Referenceable = {
-  debugName: string;
-  getPointer: (sourceRegion: MemoryRegionID, debugName: string) => Future<mvm_Value>;
-  // Offset in bytecode
-  offset: Future<number>;
-}
-
-export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean): {
+export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean, generateSourceMap: boolean): {
   snapshot: SnapshotClass,
   html?: HTML
 } {
@@ -87,6 +76,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   const importLookup = new Map<IL.HostFunctionID, number>();
   const strings = new Map<string, Future<vm_Reference>>();
   const globalSlotIndexMapping = new Map<VM.GlobalSlotID, number>();
+  const futureSourceMap: FutureInstructionSourceMapping[] = [];
 
   let importCount = 0;
 
@@ -125,6 +115,12 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
 
   const functionReferences = new Map([...snapshot.functions.keys()]
     .map(k => [k, new Future<Referenceable>()]));
+
+  // This isn't the most elegant, but it echos what we're doing with function
+  // references, where we build up the map of futures and the populate them
+  // later.
+  const addressableReferences = new Map([...enumerateAddressableReferences(snapshot)]
+    .map(address => [programAddressToKey(address), new Future<Referenceable>()] as const));
 
   const functionOffsets = new Map([...snapshot.functions.keys()]
     .map(k => [k, new Future()]));
@@ -194,17 +190,34 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   if (errInfo) {
     return unexpected('Failed to create snapshot binary: ' + errInfo.err);
   }
+
+  // Emit source map
+  let sourceMap: SourceMap | undefined;
+  if (generateSourceMap) {
+    sourceMap = {
+      operations: futureSourceMap.map(m => ({
+        start: m.start.lastValue ?? unexpected(),
+        end: m.end.lastValue ?? unexpected(),
+        source: m.source,
+        op: m.op,
+      }))
+    };
+  }
+
   return {
-    snapshot: new SnapshotClass(snapshotBuffer, { names }),
+    snapshot: new SnapshotClass(snapshotBuffer, { names }, sourceMap),
     html: generateDebugHTML ? bytecode.toHTML() : undefined
   };
 
-  function addName(offset: Future, name: string) {
+  function addName(offset: Future, type: string, name: string) {
     // The names are associations between a bytecode offset and the original
     // name/ID of the thing at that offset. The name table is mainly used for
     // testing purposes, since it allows us to reconstruct the snapshot IL with
     // the correct names from a bytecode image.
-    offset.once('resolve', offset => names[offset] = name);
+    offset.once('resolve', offset => {
+      names[type] ??= {};
+      names[type][offset] = name
+    });
   }
 
   function findStrings() {
@@ -242,10 +255,17 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   function writeBuiltins() {
     const builtinValues: Record<mvm_TeBuiltins, FutureLike<mvm_Value>> = {
       [mvm_TeBuiltins.BIN_ARRAY_PROTO]: encodeValue(snapshot.builtins.arrayPrototype, 'bytecode'),
+      [mvm_TeBuiltins.BIN_ASYNC_CATCH_BLOCK]: encodeValue(snapshot.builtins.asyncCatchBlock, 'bytecode'),
+      [mvm_TeBuiltins.BIN_ASYNC_CONTINUE]: encodeValue(snapshot.builtins.asyncContinue, 'bytecode'),
+      [mvm_TeBuiltins.BIN_ASYNC_HOST_CALLBACK]: encodeValue(snapshot.builtins.asyncHostCallback, 'bytecode'),
+      [mvm_TeBuiltins.BIN_PROMISE_PROTOTYPE]: encodeValue(snapshot.builtins.promisePrototype, 'bytecode'),
       [mvm_TeBuiltins.BIN_STR_PROTOTYPE]: getPrototypeStringBuiltin(),
       // This is just for the runtime-interned strings, so it starts off as null
       // but may not be null in successive snapshots.
       [mvm_TeBuiltins.BIN_INTERNED_STRINGS]: makeHandle(encodeValue(IL.undefinedValue, 'bytecode'), 'bytecode', 'gc', 'interned-strings'),
+
+
+      // Not a real builtin
       [mvm_TeBuiltins.BIN_BUILTIN_COUNT]: undefined as any
     };
 
@@ -282,7 +302,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const globalSlots = snapshot.globalSlots;
     const variablesInOrderOfIndex = _.sortBy([...globalSlotIndexMapping], ([_name, index]) => index);
     for (const [slotID] of variablesInOrderOfIndex) {
-      addName(bytecode.currentOffset, slotID);
+      addName(bytecode.currentOffset, 'global', slotID);
       writeValue(bytecode, notUndefined(globalSlots.get(slotID)).value, 'globals', slotID);
     }
     // The handles are part of globals section. These are RAM slots that can be
@@ -320,6 +340,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       case 'UndefinedValue': return vm_TeWellKnownValues.VM_VALUE_UNDEFINED;
       case 'BooleanValue': return value.value ? vm_TeWellKnownValues.VM_VALUE_TRUE : vm_TeWellKnownValues.VM_VALUE_FALSE;
       case 'NullValue': return vm_TeWellKnownValues.VM_VALUE_NULL;
+      case 'NoOpFunction': return vm_TeWellKnownValues.VM_VALUE_NO_OP_FUNC;
       case 'NumberValue': {
         if (isNaN(value.value)) return vm_TeWellKnownValues.VM_VALUE_NAN;
         if (Object.is(value.value, -0)) return vm_TeWellKnownValues.VM_VALUE_NEG_ZERO;
@@ -338,7 +359,10 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       }
       case 'FunctionValue': {
         const ref = functionReferences.get(value.value) ?? unexpected();
-        return resolveReferenceable(ref, slotRegion, `FunctionValue${value.value}`);
+        return resolveReferenceable(ref, slotRegion, `FunctionValue(${value.value})`);
+      }
+      case 'ResumePoint': {
+        return encodeProgramAddress(value.address, slotRegion, 'ResumePoint');
       }
       case 'ClassValue': {
         // Note: closure values are not interned because their final bytecode
@@ -374,15 +398,22 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         const referenceable = getDetachedEphemeralObject(value, debugName);
         return resolveReferenceable(referenceable, slotRegion, debugName);
       }
-      // These value are used on for exceptions and only on the stack. But since
-      // the encoding doesn't encode a call stack, we don't need to know how to
-      // encode these.
-      case 'ProgramAddressValue':
-      case 'StackDepthValue':
-        return unexpected();
-
+      case 'ProgramAddressValue': {
+        // ProgramAddressValue is only used for exceptions when we push the
+        // catch target to the stack. These can land up encoded in the case of
+        // async functions which preserve the stack to the closure when they
+        // suspend.
+        return encodeProgramAddress(value, slotRegion, 'ProgramAddress');
+      }
       default: return assertUnreachable(value);
     }
+  }
+
+  function encodeProgramAddress(address: IL.ProgramAddressValue, slotRegion: MemoryRegionID, debugType: string): Future<mvm_Value> {
+    const { funcId, blockId, operationIndex } = address;
+    const key = programAddressToKey(address);
+    const ref = addressableReferences.get(key) ?? unexpected();
+    return resolveReferenceable(ref, slotRegion, `${debugType}(${funcId}, ${blockId}, ${operationIndex})`);
   }
 
   function getDetachedEphemeralFunction(sourceSlotRegion: MemoryRegionID): Future<mvm_Value> {
@@ -407,9 +438,9 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     let target = detachedEphemeralObjects.get(ephemeralObjectID);
     if (!target) {
       // Create an empty object representing the detached ephemeral
-      const referenceable = writeObject(detachedEphemeralObjectBytecode, IL.nullValue, {}, 'bytecode', debugName);
+      const referenceable = writeObject(detachedEphemeralObjectBytecode, IL.nullValue, {}, [IL.deletedValue, IL.deletedValue], 'bytecode', debugName);
       target = referenceable;
-      addName(referenceable.offset, ephemeralObjectID.toString());
+      addName(referenceable.offset, 'allocation', ephemeralObjectID.toString());
       detachedEphemeralObjects.set(ephemeralObjectID, target);
     }
     return target;
@@ -421,13 +452,14 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     // This is a stub function that just throws an MVM_E_DETACHED_EPHEMERAL
     // error when called
     const maxStackDepth = 0;
-    const startAddress = new Future();
-    const endAddress = new Future();
 
     const name = 'Detached func';
-    addName(startAddress, name);
-    writeFunctionHeader(output, maxStackDepth, startAddress, endAddress, name);
-    addName(output.currentOffset, 'Detached func entry');
+    writeFunctionHeader(output, maxStackDepth, name);
+    const startAddress = output.currentOffset;
+    addName(startAddress, 'allocation', name);
+
+    addName(startAddress, 'block', name + '-entry');
+
     // TODO: Test this
     output.append(errorMessage.map(errorMessage => ({
       binary: BinaryData([
@@ -438,7 +470,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
       ]),
       html: 'return undefined'
     })), undefined, formats.preformatted1);
-    endAddress.assign(output.currentOffset);
+
     return startAddress;
   }
 
@@ -646,7 +678,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         assertUnreachable(targetRegion);
 
       const referenceable = writeAllocation(binaryRegion, allocation, targetRegionCode);
-      addName(referenceable.offset, allocation.allocationID.toString());
+      addName(referenceable.offset, 'allocation', allocation.allocationID.toString());
       reference.assign(referenceable);
     }
   }
@@ -659,7 +691,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     const debugName = allocation.allocationID.toString();
     switch (allocation.type) {
       case 'ArrayAllocation': return writeArray(region, allocation, memoryRegion, debugName);
-      case 'ObjectAllocation': return writeObject(region, allocation.prototype, allocation.properties, memoryRegion, debugName);
+      case 'ObjectAllocation': return writeObject(region, allocation.prototype, allocation.properties, allocation.internalSlots, memoryRegion, debugName);
       case 'Uint8ArrayAllocation': return writeUint8Array(region, allocation, memoryRegion, debugName);
       case 'ClosureAllocation': return writeClosure(region, allocation, memoryRegion, debugName);
       default: return assertUnreachable(allocation);
@@ -675,17 +707,30 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
     return size | (typeCode << 12);
   }
 
-  function writeObject(region: BinaryRegion, prototype: IL.Value, properties: IL.ObjectProperties, memoryRegion: MemoryRegionID, debugName: string): Referenceable {
+  function writeObject(region: BinaryRegion, prototype: IL.Value, properties: IL.ObjectProperties, internalSlots: IL.Value[], memoryRegion: MemoryRegionID, debugName: string): Referenceable {
     // See TsPropertyList2
     const typeCode = TeTypeCode.TC_REF_PROPERTY_LIST;
     const keys = Object.keys(properties);
-    const size = 4 + keys.length * 4; // Each key-value pair is 4 bytes
+
+    hardAssert(internalSlots.length >= 2); // The first two internal slots are reserved
+    hardAssert(internalSlots[0].type === 'DeletedValue');
+    hardAssert(internalSlots[1].type === 'DeletedValue');
+
+    const size = (internalSlots.length * 2 - 4) + 4 + keys.length * 4; // Each key-value pair is 4 bytes
     const headerWord = makeHeaderWord(size, typeCode);
     padToNextAddressable(region, { headerSize: 2 });
     region.append(headerWord, 'TsPropertyList.[header]', formats.uHex16LERow);
     const objectOffset = region.currentOffset;
     region.append(vm_TeWellKnownValues.VM_VALUE_NULL, 'TsPropertyList.dpNext', formats.uHex16LERow);
     writeValue(region, prototype, memoryRegion, `TsPropertyList.dpProto`);
+
+    for (const [i, slot] of internalSlots.entries()) {
+      if (i < 2) continue; // Skip the first two internal slots which represent the dpNext and dpProto
+      // Even-valued internal slots must be negative int14 because these
+      // overload the property key positions.
+      if (i % 2 === 0) hardAssert(slot.type === 'NumberValue' && isSInt14(slot.value) && slot.value < 0);
+      writeValue(region, slot, memoryRegion, `TsPropertyList.internalSlots[${i}]`);
+    }
 
     for (const [i, k] of keys.entries()) {
       writeValue(region, { type: 'StringValue' , value: k }, memoryRegion, `TsPropertyList.keys[${i}]`);
@@ -889,11 +934,15 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
         index = shortCallTable.length;
         shortCallTable.push(Object.freeze(callInfo));
         return index;
+      },
+
+      sourceMapAdd: !generateSourceMap ? undefined : (mapping: FutureInstructionSourceMapping) => {
+        futureSourceMap.push(mapping);
       }
     };
 
     for (const [name, func] of snapshot.functions.entries()) {
-      const { functionOffset } = writeFunction(output, func, ctx);
+      const { functionOffset } = writeFunction(output, func, ctx, addressableReferences);
       const offset = notUndefined(functionOffsets.get(name));
       offset.assign(functionOffset);
       const ref = notUndefined(functionReferences.get(name));
@@ -919,1038 +968,67 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean)
   }
 }
 
-function writeFunction(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext) {
-  const startAddress = new Future();
-  const endAddress = new Future();
-  const functionOffset = writeFunctionHeader(output, func.maxStackDepth, startAddress, endAddress, func.id);
-  ctx.addName(functionOffset, func.id);
-  writeFunctionBody(output, func, ctx);
-  endAddress.assign(output.currentOffset);
+function writeFunction(
+  output: BinaryRegion,
+  func: IL.Function,
+  ctx: InstructionEmitContext,
+  addressableReferences: Map<string, Future<Referenceable>>
+) {
+  writeFunctionHeader(output, func.maxStackDepth, func.id);
+  const functionOffset = output.currentOffset;
+  ctx.addName(functionOffset, 'allocation', func.id);
+  writeFunctionBody(output, func, ctx, addressableReferences);
   return { functionOffset };
 }
 
-function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, startAddress: Future<number>, endAddress: Future<number>, funcId: string) {
-  const size = endAddress.subtract(startAddress);
+function writeFunctionHeader(output: BinaryRegion, maxStackDepth: number, funcId: string) {
   const typeCode = TeTypeCode.TC_REF_FUNCTION;
-  const headerWord = size.map(size => {
-    hardAssert(isUInt12(size));
-    return size | (typeCode << 12);
-  });
+  const continuationFlag: 0 | 1 = 0;
+  // Allocation headers on functions are different. Nothing needs the allocation
+  // size specifically, so the 12 size bits are repurposed.
+  const headerWord = UInt8(maxStackDepth) | (continuationFlag << 11) | (typeCode << 12);
   output.padToQuad(formats.paddingRow, 2);
   output.append(headerWord, `Func alloc header (${funcId})`, formats.uHex16LERow);
-  startAddress.assign(output.currentOffset);
-  // Pointers to the function will point to the address after the header word but before the stack depth
-  const functionAddress = output.currentOffset;
-  output.append(maxStackDepth, 'maxStackDepth', formats.uInt8Row);
-  return functionAddress;
 }
 
-function writeFunctionBody(output: BinaryRegion, func: IL.Function, ctx: InstructionEmitContext): void {
-  const emitter = new InstructionEmitter();
+type MemoryRegionID = 'bytecode' | 'gc' | 'globals';
 
-  interface OperationMeta {
-    op: IL.Operation; // For debug purposes
-    addressEstimate: number;
-    address: number;
-    sizeEstimate: number;
-    size: number;
-    emitPass2: EmitPass2;
-    emitPass3: EmitPass3;
-  };
+// A referenceable is something that can produce a reference pointer, if you
+// tell it where it's pointing from
+export type Referenceable = {
+  debugName: string;
+  getPointer: (sourceRegion: MemoryRegionID, debugName: string) => Future<mvm_Value>;
+  // Offset in bytecode
+  offset: Future<number>;
+}
 
-  interface BlockMeta {
-    addressEstimate: number;
-    address: number; // Address relative to function body
-    padStart?: boolean;
-  }
 
-  const functionBodyStart = output.currentOffset.map(o => o - 1); // The -1 corresponds to excluding the `maxStackDepth` field
-  // functionBodyStart.map(o => console.log(`functionBodyStart of ${func.id} at absolute address ${o}`))
-
-  const metaByOperation = new Map<IL.Operation, OperationMeta>();
-  const metaByBlock = new Map<IL.BlockID, BlockMeta>();
-  const blockOutputOrder: string[] = []; // Will be filled in the first pass
-  const requireBlockAlignment = new Map<IL.BlockID, '2-byte'>();
-
-  ctx.requireBlockToBeAligned = (blockId, alignment) => {
-    alignment === '2-byte' || unexpected();
-
-    // This is a bit of a hack. So far, we're only using the required alignment
-    // for the case of try-catch, where catch blocks need to be 2-byte aligned
-    // in order for us to safely store a reference on the stack. Try-catch
-    // blocks also have the property that the catch comes *later* than the
-    // *try*, so we will encounter the first pass of the `StartTry` before
-    // getting the address estimate of the catch block. This just saves us doing
-    // an extra pass, but would break if we every required alignment on
-    // backreferences.
-    !metaByBlock.get(blockId) || unexpected();
-
-    requireBlockAlignment.set(blockId, alignment);
-  };
-
-  pass1();
-
-  // Run a second pass to refine the estimates
-  pass2();
-
-  // Run the second pass again to refine the layout further. This is
-  // particularly for the case of forward jumps, which were previously estimated
-  // based on the maximum size of future operations but can now be based on a
-  // better estimate of future operations
-  for (const m of metaByOperation.values()) {
-    m.addressEstimate = m.address;
-    m.sizeEstimate = m.size;
-  }
-  for (const m of metaByBlock.values()) {
-    m.padStart = false;
-    m.addressEstimate = m.address;
-  }
-  pass2();
-
-  // Output pass to generate bytecode
-  outputPass();
-
-  ctx.requireBlockToBeAligned = undefined; // Outside the function, this doesn't make sense
-
-  function pass1() {
-    const blockQueue = Object.keys(func.blocks);
-    ctx.preferBlockToBeNext = nextBlockID => {
-      const originalIndex = blockQueue.indexOf(nextBlockID);
-      if (originalIndex === - 1) {
-        // The block position has already been secured, and can't be changed
-        return;
-      }
-      // Move it to the beginning of the queue
-      blockQueue.splice(originalIndex, 1);
-      blockQueue.unshift(nextBlockID);
-    };
-    // The entry must be first
-    ctx.preferBlockToBeNext(func.entryBlockID);
-
-    // In a first pass, we estimate the layout based on the maximum possible size
-    // of each instruction. Instructions such as JUMP can take different forms
-    // depending on the distance of the jump, and the distance of the JUMP in turn
-    // depends on size of other instructions in between the jump origin and
-    // target, which may include other jumps etc.
-    let addressEstimate = 0;
-
-    while (blockQueue.length) {
-      const blockId = blockQueue.shift()!;
-      const block = func.blocks[blockId];
-      blockOutputOrder.push(blockId); // The same order will be used for subsequent passes
-
-      switch (requireBlockAlignment.get(blockId)) {
-        case undefined: break;
-        // We don't know how much padding will be required, but it could be up to 1 byte.
-        case '2-byte': addressEstimate += 1; break;
-        default: unexpected();
-      }
-
-      // Within the context of this block, operations can request that certain other blocks should be next
-      metaByBlock.set(blockId, {
-        addressEstimate,
-        address: undefined as any
-      });
-      for (const op of block.operations) {
-        const { maxSize, emitPass2 } = emitPass1(emitter, ctx, op);
-        const operationMeta: OperationMeta = {
-          op,
-          addressEstimate,
-          address: undefined as any,
-          sizeEstimate: maxSize,
-          size: undefined as any,
-          emitPass2,
-          emitPass3: undefined as any
-        };
-        metaByOperation.set(op, operationMeta);
-        addressEstimate += maxSize;
-      }
-    }
-    // After this pass, the order is fixed
-    ctx.preferBlockToBeNext = undefined;
-  }
-
-  function pass2() {
-    // Pass2 is where we calculate the final block addresses
-
-    let currentOperationMeta: OperationMeta;
-    const ctx: Pass2Context = {
-      tentativeOffsetOfBlock: (blockId: IL.BlockID) => {
-        const targetBlock = notUndefined(metaByBlock.get(blockId));
-        const blockAddress = targetBlock.addressEstimate;
-        const operationAddress = currentOperationMeta.addressEstimate;
-        const operationSize = currentOperationMeta.sizeEstimate;
-        const jumpFrom = operationAddress + operationSize;
-        // The jump offset is measured from the end of the current operation, but
-        // we don't know exactly how big it is so we take the worst case distance
-        let maxOffset = (blockAddress >= jumpFrom
-          ? blockAddress - jumpFrom
-          : blockAddress - (jumpFrom - operationSize));
-        return maxOffset;
-      }
-    };
-
-    // Addresses are relative to the function allocation. The first byte of the
-    // function allocation is the max stack size, so the address starts at `1`
-    // after that. More practically, this needs to be odd because the alignment
-    // in bytecode is odd and that allows us to correctly calculate alignment of
-    // instructions when necessary. In particular, catch blocks need to be
-    // 2-byte aligned.
-    let address = 1;
-    for (const blockId  of blockOutputOrder) {
-      const block = func.blocks[blockId];
-      const blockMeta = notUndefined(metaByBlock.get(blockId));
-      blockMeta.padStart = false;
-
-      switch (requireBlockAlignment.get(blockId)) {
-        case undefined: break;
-        // Here we know exactly how much padding to add
-        case '2-byte': {
-          if ((address & 1) === 1) {
-            address += 1;
-            blockMeta.padStart = true;
-          }
-          break;
+function* enumerateAddressableReferences(snapshot: SnapshotIL): IterableIterator<IL.ProgramAddressValue> {
+  for (const [funcId, func] of snapshot.functions.entries()) {
+    for (const [blockId, block] of Object.entries(func.blocks)) {
+      for (const [operationIndex, op] of block.operations.entries()) {
+        if (op.opcode === 'AsyncResume') {
+          yield { type: 'ProgramAddressValue', funcId, blockId, operationIndex }
         }
-        default: unexpected();
-      }
-
-      blockMeta.address = address;
-      // console.log(`${func.id} ${blockId} at relative address ${blockMeta.address}`)
-
-      for (const op of block.operations) {
-        const opMeta = notUndefined(metaByOperation.get(op));
-        currentOperationMeta = opMeta;
-        const pass2Output = opMeta.emitPass2(ctx);
-        opMeta.emitPass3 = pass2Output.emitPass3;
-        opMeta.size = pass2Output.size;
-        opMeta.address = address;
-        address += pass2Output.size;
-      }
-    }
-  }
-
-  function outputPass() {
-    let currentOperationMeta: OperationMeta;
-    const innerCtx: Pass3Context = {
-      region: output,
-      offsetOfBlock(blockId: string): number {
-        const targetBlock = notUndefined(metaByBlock.get(blockId));
-        const blockAddress = targetBlock.address;
-        const operationAddress = currentOperationMeta.address;
-        const operationSize = currentOperationMeta.size;
-        const jumpFrom = operationAddress + operationSize;
-        const offset = blockAddress - jumpFrom;
-        return offset;
-      },
-
-      addressOfBlock(blockId: string): Future<number> {
-        const targetBlock = notUndefined(metaByBlock.get(blockId));
-        const blockAddress = targetBlock.address;
-        // The addresses here are actually relative to the function start
-        return functionBodyStart.map(functionBodyStart => functionBodyStart + blockAddress);
-      }
-    };
-
-    for (const blockId of blockOutputOrder) {
-      const block = func.blocks[blockId];
-      const blockMeta = metaByBlock.get(blockId) ?? unexpected();
-
-      switch (requireBlockAlignment.get(blockId)) {
-        case undefined: break;
-        case '2-byte': {
-          if (blockMeta.padStart) {
-            output.append(1, 'pad-to-even', formats.paddingRow);
-          }
-          output.currentOffset.map(o => hardAssert(o % 2 === 0));
-          break;
-        }
-        default: unexpected();
-      }
-
-      // output.currentOffset.map(o => console.log(`${func.id} ${blockId} at absolute address ${o}`))
-
-      // Assert that the address we're actually putting the block at matches what we calculated
-      output.currentOffset.map(o => functionBodyStart.map(s => o - s === blockMeta.address))
-
-      ctx.addName(output.currentOffset, blockId);
-
-      for (const op of block.operations) {
-        const opMeta = notUndefined(metaByOperation.get(op));
-        currentOperationMeta = opMeta;
-        const offsetBefore = output.currentOffset;
-        opMeta.emitPass3(innerCtx);
-        const offsetAfter = output.currentOffset;
-        offsetBefore.bind(offsetBefore => offsetAfter.map(offsetAfter => {
-          const measuredSize = offsetAfter - offsetBefore;
-          hardAssert(measuredSize === opMeta.size, `Operation changed from committed size of ${opMeta.size} to ${measuredSize}. at ${offsetBefore}, ${op}, ${output}`);
-        }));
-      }
-    }
-  }
-}
-
-function emitPass1(emitter: InstructionEmitter, ctx: InstructionEmitContext, op: IL.Operation): InstructionWriter {
-  const operationMeta = IL.opcodes[op.opcode];
-  if (!operationMeta) {
-    return invalidOperation(`Unknown opcode "${op.opcode}".`);
-  }
-  const operands = op.operands.map((o, i) =>
-    resolveOperand(o, operationMeta.operands[i] as IL.OperandType));
-
-  const method = emitter[`operation${op.opcode}`];
-  if (!method) {
-    return notImplemented(`Opcode not implemented in bytecode emitter: "${op.opcode}"`)
-  }
-  if (method.length === 0) {
-    return notImplemented('Implement opcode emitter: ' + op.opcode);
-  }
-  if (operands.length !== method.length - 2) {
-    return unexpected();
-  }
-
-  return method.call(emitter, ctx, op, ...operands);
-}
-
-function resolveOperand(operand: IL.Operand, expectedType: IL.OperandType) {
-  switch (expectedType) {
-    case 'LabelOperand':
-      if (operand.type !== 'LabelOperand') {
-        return invalidOperation('Expected label operand');
-      }
-      return operand.targetBlockId;
-    case 'CountOperand':
-      if (operand.type !== 'CountOperand') {
-        return invalidOperation('Expected count operand');
-      }
-      return operand.count;
-    case 'IndexOperand':
-      if (operand.type !== 'IndexOperand') {
-        return invalidOperation('Expected index operand');
-      }
-      return operand.index;
-    case 'NameOperand':
-      if (operand.type !== 'NameOperand') {
-        return invalidOperation('Expected name operand');
-      }
-      return operand.name;
-    case 'LiteralOperand':
-      if (operand.type !== 'LiteralOperand') {
-        return invalidOperation('Expected literal operand');
-      }
-      return operand.literal;
-    case 'OpOperand':
-      if (operand.type !== 'OpOperand') {
-        return invalidOperation('Expected sub-operation operand');
-      }
-      return operand.subOperation;
-    default: assertUnreachable(expectedType);
-  }
-}
-
-type CallInfo = {
-  type: 'InternalFunction'
-  functionID: IL.FunctionID,
-  argCount: UInt8
-} | {
-  type: 'HostFunction'
-  hostFunctionIndex: HostFunctionIndex,
-  argCount: UInt8
-};
-
-type HostFunctionIndex = number;
-
-interface InstructionEmitContext {
-  getShortCallIndex(callInfo: CallInfo): number;
-  offsetOfFunction: (id: IL.FunctionID) => Future<number>;
-  indexOfGlobalSlot: (globalSlotID: VM.GlobalSlotID) => number;
-  getImportIndexOfHostFunctionID: (hostFunctionID: IL.HostFunctionID) => HostFunctionIndex;
-  encodeValue: (value: IL.Value) => FutureLike<mvm_Value>;
-  preferBlockToBeNext?: (blockId: IL.BlockID) => void;
-  addName(offset: Future, name: string): void;
-  requireBlockToBeAligned?: (blockId: IL.BlockID, alignment: '2-byte') => void;
-}
-
-class InstructionEmitter {
-  operationArrayNew(_ctx: InstructionEmitContext, op: IL.ArrayNewOperation) {
-    return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_ARRAY_NEW, (op.staticInfo && op.staticInfo.minCapacity) || 0, op);
-  }
-
-  operationBinOp(_ctx: InstructionEmitContext, op: IL.OtherOperation, param: IL.BinOpCode) {
-    const [opcode1, opcode2] = ilBinOpCodeToVm[param];
-    return instructionPrimary(opcode1, opcode2, op);
-  }
-
-  operationBranch(
-    ctx: InstructionEmitContext,
-    op: IL.Operation,
-    consequentTargetBlockID: string,
-    alternateTargetBlockID: string
-  ): InstructionWriter {
-    ctx.preferBlockToBeNext!(alternateTargetBlockID);
-    // Note: branch IL instructions are a bit more complicated than most because
-    // they consist of two bytecode instructions
-    return {
-      maxSize: 6,
-      emitPass2: ctx => {
-        let tentativeConseqOffset = ctx.tentativeOffsetOfBlock(consequentTargetBlockID);
-        /* 😨😨😨 The offset is measured from the end of the bytecode
-         * instruction, but since this is a composite instruction, we need to
-         * compensate for the fact that we're branching from halfway through the
-         * composite instruction.
-         */
-        if (tentativeConseqOffset < 0) {
-          tentativeConseqOffset += 3; // 3 is the max size of the jump part of the composite instruction
-        }
-
-        const tentativeConseqOffsetIsFar = !isSInt8(tentativeConseqOffset);
-        const sizeOfBranchInstr = tentativeConseqOffsetIsFar ? 3 : 2;
-
-        const tentativeAltOffset = ctx.tentativeOffsetOfBlock(alternateTargetBlockID);
-        const tentativeAltOffsetDistance = getJumpDistance(tentativeAltOffset);
-        const sizeOfJumpInstr =
-          tentativeAltOffsetDistance === 'far' ? 3 :
-          tentativeAltOffsetDistance === 'close' ? 2 :
-          tentativeAltOffsetDistance === 'zero' ? 0 :
-          unexpected();
-
-        const size = sizeOfBranchInstr + sizeOfJumpInstr;
-
-        return {
-          size,
-          emitPass3: ctx => {
-            let label = '';
-            let binary: UInt8[] = [];
-            const finalOffsetOfConseq = ctx.offsetOfBlock(consequentTargetBlockID) + sizeOfJumpInstr;
-            const finalOffsetOfAlt = ctx.offsetOfBlock(alternateTargetBlockID);
-
-            // Stick to our committed shape for the BRANCH instruction
-            if (tentativeConseqOffsetIsFar) {
-              label += `VM_OP3_BRANCH_2(0x${finalOffsetOfConseq.toString(16)})`;
-              binary.push(
-                (vm_TeOpcode.VM_OP_EXTENDED_3 << 4) | vm_TeOpcodeEx3.VM_OP3_BRANCH_2,
-                finalOffsetOfConseq & 0xFF,
-                (finalOffsetOfConseq >> 8) & 0xFF
-              )
-            } else {
-              label += `VM_OP2_BRANCH_1(0x${finalOffsetOfConseq.toString(16)})`;
-              binary.push(
-                (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | vm_TeOpcodeEx2.VM_OP2_BRANCH_1,
-                finalOffsetOfConseq & 0xFF
-              )
-            }
-
-            // Stick to our committed shape for the JUMP instruction
-            switch (tentativeAltOffsetDistance) {
-              case 'zero': break; // No instruction at all
-              case 'close': {
-                label += `, VM_OP2_JUMP_1(0x${finalOffsetOfAlt.toString(16)})`;
-                binary.push(
-                  (vm_TeOpcode.VM_OP_EXTENDED_2 << 4) | vm_TeOpcodeEx2.VM_OP2_JUMP_1,
-                  finalOffsetOfAlt & 0xFF
-                )
-                break;
-              }
-              case 'far': {
-                label += `, VM_OP3_JUMP_2(0x${finalOffsetOfAlt.toString(16)})`;
-                binary.push(
-                  (vm_TeOpcode.VM_OP_EXTENDED_3 << 4) | vm_TeOpcodeEx3.VM_OP3_JUMP_2,
-                  finalOffsetOfAlt & 0xFF,
-                  (finalOffsetOfAlt >> 8) & 0xFF
-                )
-                break;
-              }
-              default: assertUnreachable(tentativeAltOffsetDistance);
-            }
-
-            const html = escapeHTML(stringifyOperation(op));
-            ctx.region.append({ binary: BinaryData(binary), html }, label, formats.preformatted2);
+        if (op.opcode === 'StartTry') {
+          const target = op.operands[0] as IL.LabelOperand;
+          yield {
+            type: 'ProgramAddressValue',
+            funcId,
+            blockId: target.targetBlockId,
+            operationIndex: 0
           }
         }
       }
     }
   }
-
-  operationClosureNew(ctx: InstructionEmitContext, op: IL.Operation) {
-    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_CLOSURE_NEW, op);
-  }
-
-  operationCall(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number) {
-    const staticInfo = op.staticInfo;
-    if (staticInfo?.target) {
-      const target = staticInfo.target;
-      if (target.type === 'FunctionValue') {
-        const functionID = target.value;
-        if (staticInfo.shortCall) {
-          // Short calls are single-byte instructions that use a nibble to
-          // reference into the short-call table, which provides the information
-          // about the function target and argument count
-          const shortCallIndex = ctx.getShortCallIndex({ type: 'InternalFunction', functionID: target.value, argCount });
-          return instructionPrimary(vm_TeOpcode.VM_OP_CALL_1, shortCallIndex, op);
-        } else {
-          if (argCount <= 15) {
-            const targetOffset = ctx.offsetOfFunction(functionID);
-            return customInstruction(op, vm_TeOpcode.VM_OP_CALL_5, argCount, {
-              type: 'UInt16',
-              value: targetOffset
-            });
-          } else {
-            /* Fall back to dynamic call */
-          }
-        }
-      } else if (target.type === 'HostFunctionValue') {
-        const hostFunctionID = target.value;
-        const hostFunctionIndex = ctx.getImportIndexOfHostFunctionID(hostFunctionID);
-        if (staticInfo.shortCall) {
-          // Short calls are single-byte instructions that use a nibble to
-          // reference into the short-call table, which provides the information
-          // about the function target and argument count
-          const shortCallIndex = ctx.getShortCallIndex({ type: 'HostFunction', hostFunctionIndex, argCount });
-          return instructionPrimary(vm_TeOpcode.VM_OP_CALL_1, shortCallIndex, op);
-        } else {
-          return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_HOST, hostFunctionIndex, op);
-        }
-      } else {
-        return invalidOperation('Static call target can only be a function');
-      }
-    }
-
-    return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_CALL_3, argCount, op);
-  }
-
-  operationNew(ctx: InstructionEmitContext, op: IL.CallOperation, argCount: number) {
-    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_NEW, {
-      type: 'UInt8', value: UInt8(argCount)
-    });
-  }
-
-  operationJump(ctx: InstructionEmitContext, op: IL.Operation, targetBlockId: string): InstructionWriter {
-    ctx.preferBlockToBeNext!(targetBlockId);
-    return {
-      maxSize: 3,
-      emitPass2: ctx => {
-        const tentativeOffset = ctx.tentativeOffsetOfBlock(targetBlockId);
-        const distance = getJumpDistance(tentativeOffset);
-        const size = distance === 'zero' ? 0 :
-          distance === 'close' ? 2 :
-          distance === 'far' ? 3 :
-          unexpected();
-        return {
-          size,
-          emitPass3: ctx => {
-            const offset = ctx.offsetOfBlock(targetBlockId);
-            // Stick to our committed shape
-            switch (distance) {
-              case 'zero': return; // Jumping to where we are already, so no instruction required
-              case 'close': appendInstructionEx2Signed(ctx.region, vm_TeOpcodeEx2.VM_OP2_JUMP_1, offset, op); break;
-              case 'far': appendInstructionEx3Signed(ctx.region, vm_TeOpcodeEx3.VM_OP3_JUMP_2, offset, op); break;
-              default: return assertUnreachable(distance);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  operationScopePush(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
-    return customInstruction(op,
-      vm_TeOpcode.VM_OP_EXTENDED_2,
-      vm_TeOpcodeEx2.VM_OP2_EXTENDED_4,
-      { type: 'UInt8', value: vm_TeOpcodeEx4.VM_OP4_SCOPE_PUSH },
-      { type: 'UInt8', value: count },
-    );
-  }
-
-  operationStartTry(ctx: InstructionEmitContext, op: IL.Operation, catchBlockId: string): InstructionWriter {
-    ctx.requireBlockToBeAligned!(catchBlockId, '2-byte');
-    // The StartTry instruction is always 4 bytes
-    const size = 4;
-    return {
-      maxSize: size,
-      emitPass2: () => ({
-        size,
-        emitPass3: ctx => {
-          const address = ctx.addressOfBlock(catchBlockId);
-          // We already signalled above that the catch block must be 2-byte aligned
-          address.map(address => hardAssert((address & 1) === 0));
-
-          appendCustomInstruction(ctx.region, op, vm_TeOpcode.VM_OP_EXTENDED_2, vm_TeOpcodeEx2.VM_OP2_EXTENDED_4, {
-            type: 'UInt8',
-            value: vm_TeOpcodeEx4.VM_OP4_START_TRY
-          }, {
-            type: 'UInt16',
-            value: address.map(address => address + 1) // Encode with a +1 so that when we push to the stack the GC will ignore it
-          })
-        }
-      })
-    }
-  }
-
-  operationEndTry(ctx: InstructionEmitContext, op: IL.Operation): InstructionWriter {
-    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_END_TRY, op);
-  }
-
-  operationScopeClone(ctx: InstructionEmitContext, op: IL.Operation) {
-    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_CLONE);
-  }
-
-  operationScopeDiscard(ctx: InstructionEmitContext, op: IL.Operation) {
-    return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_SCOPE_DISCARD);
-  }
-
-  operationScopeNew(ctx: InstructionEmitContext, op: IL.Operation, count: number) {
-    return customInstruction(op,
-      vm_TeOpcode.VM_OP_EXTENDED_1,
-      vm_TeOpcodeEx1.VM_OP1_SCOPE_NEW,
-      { type: 'UInt8', value: count },
-    );
-  }
-
-  operationScopePop(ctx: InstructionEmitContext, op: IL.Operation) {
-    return customInstruction(op,
-      vm_TeOpcode.VM_OP_EXTENDED_2,
-      vm_TeOpcodeEx2.VM_OP2_EXTENDED_4,
-      { type: 'UInt8', value: vm_TeOpcodeEx4.VM_OP4_SCOPE_POP }
-    );
-  }
-
-  operationClassCreate(ctx: InstructionEmitContext, op: IL.Operation) {
-    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_CLASS_CREATE, op);
-  }
-
-  operationTypeCodeOf(ctx: InstructionEmitContext, op: IL.Operation) {
-    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_TYPE_CODE_OF, op);
-  }
-
-  operationLiteral(ctx: InstructionEmitContext, op: IL.Operation, param: IL.Value) {
-    const smallLiteralCode = tryGetSmallLiteralCode(param);
-    if (smallLiteralCode !== undefined) {
-      return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL, smallLiteralCode, op);
-    } else {
-      return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_LITERAL, ctx.encodeValue(param), op);
-    }
-
-    function tryGetSmallLiteralCode(param: IL.Value): vm_TeSmallLiteralValue | undefined {
-      switch (param.type) {
-        case 'NullValue': return vm_TeSmallLiteralValue.VM_SLV_NULL;
-        case 'UndefinedValue': return vm_TeSmallLiteralValue.VM_SLV_UNDEFINED;
-        case 'NumberValue':
-          if (Object.is(param.value, -0)) return undefined;
-          switch (param.value) {
-            case -1: return vm_TeSmallLiteralValue.VM_SLV_INT_MINUS_1;
-            case 0: return vm_TeSmallLiteralValue.VM_SLV_INT_0;
-            case 1: return vm_TeSmallLiteralValue.VM_SLV_INT_1;
-            case 2: return vm_TeSmallLiteralValue.VM_SLV_INT_2;
-            case 3: return vm_TeSmallLiteralValue.VM_SLV_INT_3;
-            case 4: return vm_TeSmallLiteralValue.VM_SLV_INT_4;
-            case 5: return vm_TeSmallLiteralValue.VM_SLV_INT_5;
-            default: return undefined;
-          }
-        case 'StringValue':
-          return undefined;
-        case 'BooleanValue':
-          return param.value
-            ? vm_TeSmallLiteralValue.VM_SLV_TRUE
-            : vm_TeSmallLiteralValue.VM_SLV_FALSE;
-        case 'EphemeralFunctionValue':
-        case 'EphemeralObjectValue':
-        case 'ClassValue':
-        case 'FunctionValue':
-        case 'HostFunctionValue':
-        case 'DeletedValue':
-        case 'ReferenceValue':
-        case 'StackDepthValue':
-        case 'ProgramAddressValue':
-          return undefined;
-        default:
-          return assertUnreachable(param);
-      }
-    }
-  }
-
-  operationLoadArg(_ctx: InstructionEmitContext, op: IL.Operation, index: number) {
-    if (isUInt4(index)) {
-      return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_ARG_1, index, op);
-    } else {
-      hardAssert(isUInt8(index));
-      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_ARG_2, index, op);
-    }
-  }
-
-  operationLoadGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
-    const slotIndex = ctx.indexOfGlobalSlot(globalSlotID);
-    return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_GLOBAL_3, slotIndex, op);
-  }
-
-  operationArrayGet(_ctx: InstructionEmitContext, _op: IL.Operation) {
-    // The ArrayGet operation can only really be emitted by an optimizer,
-    // otherwise normal functioning will just use `ObjectGet`. So we
-    // don't support this yet.
-    return notImplemented();
-  }
-
-  operationArraySet(_ctx: InstructionEmitContext, _op: IL.Operation) {
-    // The ArraySet operation can only really be emitted by an optimizer,
-    // otherwise normal functioning will just use `ObjectSet`. So we
-    // don't support this yet.
-    return notImplemented();
-  }
-
-  operationLoadScoped(ctx: InstructionEmitContext, op: IL.Operation, index: number) {
-    if (isUInt4(index)) {
-      return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_SCOPED_1, index, op);
-    } else if (isUInt8(index)) {
-      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_SCOPED_2, index, op);
-    } else if (isUInt16(index)) {
-      return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_LOAD_SCOPED_3, index, op);
-    } else {
-      return unexpected();
-    }
-  }
-
-  operationLoadVar(ctx: InstructionEmitContext, op: IL.Operation, index: number) {
-    // In the IL, the index is relative to the stack base, while in the
-    // bytecode, it's relative to the stack pointer
-    const positionRelativeToSP = op.stackDepthBefore - index - 1;
-    if (isUInt4(positionRelativeToSP)) {
-      return instructionPrimary(vm_TeOpcode.VM_OP_LOAD_VAR_1, positionRelativeToSP, op);
-    } if (isUInt8(positionRelativeToSP)) {
-      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_LOAD_VAR_2, positionRelativeToSP, op);
-    } else {
-      return invalidOperation('Variable index out of bounds: ' + index);
-    }
-  }
-
-  operationLoadReg(ctx: InstructionEmitContext, op: IL.Operation, name: string) {
-    switch (name) {
-      case 'closure': return instructionEx4(vm_TeOpcodeEx4.VM_OP4_LOAD_REG_CLOSURE, op);
-      default: unexpected();
-    }
-  }
-
-  operationNop(_ctx: InstructionEmitContext, op: IL.Operation, nopSize: number) {
-    if (nopSize < 2) return invalidOperation('Cannot have less than 2-byte NOP instruction');
-    return fixedSizeInstruction(nopSize, region => {
-      if (nopSize === 2) {
-        // JUMP (0)
-        appendInstructionEx2Signed(region, vm_TeOpcodeEx2.VM_OP2_JUMP_1, 0, op);
-        return;
-      }
-      // JUMP
-      const offset = nopSize - 3; // The nop size less the size of the jump
-      hardAssert(isSInt16(offset));
-      const label = `VM_OP3_JUMP_2(${offset})`;
-      const value = Future.map(offset, offset => {
-        const html = escapeHTML(stringifyOperation(op));
-        const binary = [
-          (vm_TeOpcode.VM_OP_EXTENDED_3 << 4) | vm_TeOpcodeEx3.VM_OP3_JUMP_2,
-          offset & 0xFF,
-          (offset >> 8) & 0xFF
-        ];
-        while (binary.length < nopSize) binary.push(0);
-        return { html, binary };
-      });
-      region.append(value, label, formats.preformatted3);
-    });
-  }
-
-  operationObjectGet(_ctx: InstructionEmitContext, op: IL.Operation) {
-    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_OBJECT_GET_1, op);
-  }
-
-  operationObjectNew(_ctx: InstructionEmitContext, op: IL.Operation) {
-    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_OBJECT_NEW, op);
-  }
-
-  operationObjectSet(_ctx: InstructionEmitContext, op: IL.Operation) {
-    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_OBJECT_SET_1, op);
-  }
-
-  operationPop(_ctx: InstructionEmitContext, op: IL.Operation, count: number) {
-    if (count > 1) {
-      return customInstruction(op, vm_TeOpcode.VM_OP_EXTENDED_3, vm_TeOpcodeEx3.VM_OP3_POP_N, { type: 'UInt8', value: count })
-    } else {
-      return instructionEx1(vm_TeOpcodeEx1.VM_OP1_POP, op);
-    }
-  }
-
-  operationReturn(_ctx: InstructionEmitContext, op: IL.Operation) {
-    if (op.opcode !== 'Return') return unexpected();
-    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_RETURN, op);
-  }
-
-  operationThrow(_ctx: InstructionEmitContext, op: IL.Operation) {
-    if (op.opcode !== 'Throw') return unexpected();
-    return instructionEx1(vm_TeOpcodeEx1.VM_OP1_THROW, op);
-  }
-
-  operationObjectKeys(_ctx: InstructionEmitContext, op: IL.Operation) {
-    if (op.opcode !== 'ObjectKeys') return unexpected();
-    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_OBJECT_KEYS, op);
-  }
-
-  operationUint8ArrayNew(_ctx: InstructionEmitContext, op: IL.Operation) {
-    if (op.opcode !== 'Uint8ArrayNew') return unexpected();
-    return instructionEx4(vm_TeOpcodeEx4.VM_OP4_UINT8_ARRAY_NEW, op);
-  }
-
-  operationStoreGlobal(ctx: InstructionEmitContext, op: IL.Operation, globalSlotID: VM.GlobalSlotID) {
-    const index = ctx.indexOfGlobalSlot(globalSlotID);
-    hardAssert(isUInt16(index));
-    return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_STORE_GLOBAL_3, index, op);
-  }
-
-  operationStoreScoped(ctx: InstructionEmitContext, op: IL.Operation, index: number) {
-    if (isUInt4(index)) {
-      return instructionPrimary(vm_TeOpcode.VM_OP_STORE_SCOPED_1, index, op);
-    } else if (isUInt8(index)) {
-      return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_STORE_SCOPED_2, index, op);
-    } else {
-      hardAssert(isUInt16(index));
-      return instructionEx3Unsigned(vm_TeOpcodeEx3.VM_OP3_STORE_SCOPED_3, index, op);
-    }
-  }
-
-  operationStoreVar(_ctx: InstructionEmitContext, op: IL.OtherOperation, index: number) {
-    // Note: the index is relative to the stack depth _after_ popping
-    const indexRelativeToSP = op.stackDepthBefore - 2 - index;
-    if (isUInt4(indexRelativeToSP)) {
-      return instructionPrimary(vm_TeOpcode.VM_OP_STORE_VAR_1, indexRelativeToSP, op)
-    }
-    if (!isUInt8(indexRelativeToSP)) {
-      return invalidOperation('Too many stack variables');
-    }
-    return instructionEx2Unsigned(vm_TeOpcodeEx2.VM_OP2_STORE_VAR_2, indexRelativeToSP, op)
-  }
-
-  operationUnOp(_ctx: InstructionEmitContext, op: IL.OtherOperation, param: IL.UnOpCode) {
-    const [opcode1, opcode2] = ilUnOpCodeToVm[param];
-    return instructionPrimary(opcode1, opcode2, op);
-  }
 }
 
-interface InstructionWriter {
-  maxSize: number;
-  requireAlignment?: '2-byte';
-  emitPass2: EmitPass2;
-}
-
-type EmitPass2 = (ctx: Pass2Context) => EmitPass2Output;
-
-interface EmitPass2Output {
-  size: number;
-  emitPass3: EmitPass3;
-}
-
-type EmitPass3 = (ctx: Pass3Context) => void;
-
-interface Pass2Context {
-  tentativeOffsetOfBlock(blockId: string): number;
-}
-
-interface Pass3Context {
-  region: BinaryRegion;
-  // Offset relative to address after the current operation
-  offsetOfBlock(blockId: string): number;
-  // Absolute address of the target block as a 16-bit unsigned number
-  addressOfBlock(blockId: string): Future<number>;
-}
-
-function instructionPrimary(opcode: vm_TeOpcode, param: UInt4, op: IL.Operation): InstructionWriter {
-  hardAssert(isUInt4(opcode));
-  hardAssert(isUInt4(param));
-  const label = `${vm_TeOpcode[opcode]}(0x${param.toString(16)})`;
-  const html = escapeHTML(stringifyOperation(op));
-  const binary = BinaryData([(opcode << 4) | param]);
-  return fixedSizeInstruction(1, r => r.append({ binary, html }, label, formats.preformatted1));
-}
-
-function instructionEx1(opcode: vm_TeOpcodeEx1, op: IL.Operation): InstructionWriter {
-  return fixedSizeInstruction(1, r => appendInstructionEx1(r, opcode, op));
-}
-
-function appendInstructionEx1(region: BinaryRegion, opcode: vm_TeOpcodeEx1, op: IL.Operation): void {
-  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_1, opcode);
-}
-
-function instructionEx2Unsigned(opcode: vm_TeOpcodeEx2, param: UInt8, op: IL.Operation): InstructionWriter {
-  return fixedSizeInstruction(2, r => appendInstructionEx2Unsigned(r, opcode, param, op));
-}
-
-function appendInstructionEx2Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: SInt8, op: IL.Operation) {
-  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_2, opcode, { type: 'SInt8', value: param });
-}
-
-function appendInstructionEx2Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx2, param: UInt8, op: IL.Operation) {
-  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_2, opcode, { type: 'UInt8', value: param });
-}
-
-function instructionEx3Unsigned(opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>, op: IL.Operation): InstructionWriter {
-  return fixedSizeInstruction(3, r => appendInstructionEx3Unsigned(r, opcode, param, op));
-}
-
-function appendInstructionEx3Signed(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: SInt16, op: IL.Operation) {
-  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_3, opcode, { type: 'SInt16', value: param });
-}
-
-function appendInstructionEx3Unsigned(region: BinaryRegion, opcode: vm_TeOpcodeEx3, param: FutureLike<UInt16>, op: IL.Operation) {
-  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_3, opcode, { type: 'UInt16', value: param });
-}
-
-function appendInstructionEx4(region: BinaryRegion, opcode: vm_TeOpcodeEx4, op: IL.Operation) {
-  appendCustomInstruction(region, op, vm_TeOpcode.VM_OP_EXTENDED_2, vm_TeOpcodeEx2.VM_OP2_EXTENDED_4, {
-    type: 'UInt8',
-    value: opcode
-  })
-}
-
-function instructionEx4(opcode: vm_TeOpcodeEx4, op: IL.Operation): InstructionWriter {
-  return fixedSizeInstruction(2, r => appendInstructionEx4(r, opcode, op));
-}
-
-type InstructionPayloadPart =
-  | { type: 'UInt8', value: FutureLike<number> }
-  | { type: 'SInt8', value: FutureLike<number> }
-  | { type: 'UInt16', value: FutureLike<number> }
-  | { type: 'SInt16', value: FutureLike<number> }
-
-export function customInstruction(op: IL.Operation, nibble1: vm_TeOpcode, nibble2: UInt4, ...payload: InstructionPayloadPart[]): InstructionWriter {
-  let size: number = 1;
-  for (const payloadPart of payload) {
-    switch (payloadPart.type) {
-      case 'UInt8': size += 1; break;
-      case 'SInt8': size += 1; break;
-      case 'UInt16': size += 2; break;
-      case 'SInt16': size += 2; break;
-      default: return assertUnreachable(payloadPart);
-    }
-  }
-  return fixedSizeInstruction(size, r => appendCustomInstruction(r, op, nibble1, nibble2, ...payload));
-}
-
-export function appendCustomInstruction(region: BinaryRegion, op: IL.Operation, nibble1: vm_TeOpcode, nibble2: UInt4, ...payload: InstructionPayloadPart[]) {
-  hardAssert(isUInt4(nibble1));
-  hardAssert(isUInt4(nibble2));
-  let nibble1Label = vm_TeOpcode[nibble1];
-  let nibble2Label: string;
-  switch (nibble1) {
-    case vm_TeOpcode.VM_OP_EXTENDED_1: nibble2Label = vm_TeOpcodeEx1[nibble2]; break;
-    case vm_TeOpcode.VM_OP_EXTENDED_2: nibble2Label = vm_TeOpcodeEx2[nibble2]; break;
-    case vm_TeOpcode.VM_OP_EXTENDED_3: nibble2Label = vm_TeOpcodeEx3[nibble2]; break;
-    case vm_TeOpcode.VM_OP_BIT_OP: nibble2Label = vm_TeBitwiseOp[nibble2]; break;
-    case vm_TeOpcode.VM_OP_NUM_OP: nibble2Label = vm_TeNumberOp[nibble2]; break;
-    case vm_TeOpcode.VM_OP_LOAD_SMALL_LITERAL: nibble2Label = vm_TeSmallLiteralValue[nibble2]; break;
-    default: nibble2Label = `0x${nibble2.toString(16)}`; break;
-  }
-
-  const label = `${nibble1Label}(${nibble2Label})`;
-  let size: number = 1;
-  for (const payloadPart of payload) {
-    switch (payloadPart.type) {
-      case 'UInt8': size += 1; break;
-      case 'SInt8': size += 1; break;
-      case 'UInt16': size += 2; break;
-      case 'SInt16': size += 2; break;
-      default: return assertUnreachable(payloadPart);
-    }
-  }
-
-  const html = escapeHTML(stringifyOperation(op));
-  let binary: FutureLike<BinaryData> = [(UInt4(nibble1) << 4) | UInt4(nibble2)];
-
-  for (const payloadPart of payload) {
-    binary = Future.bind(binary, binary => {
-      const binaryPart = instructionPartToBinary(payloadPart);
-      return Future.bind(binaryPart, binaryPart => [...binary, ...binaryPart])
-    })
-  }
-
-  const value = Future.map(binary, binary => ({ html, binary }));
-
-  region.append(value, label, formats.preformatted(size));
-
-  function instructionPartToBinary(part: InstructionPayloadPart): FutureLike<BinaryData> {
-    return Future.map(part.value, partValue => {
-      switch (part.type) {
-        case 'UInt8': return formats.binaryFormats.uInt8(partValue);
-        case 'SInt8': return formats.binaryFormats.sInt8(partValue);
-        case 'UInt16': return formats.binaryFormats.uInt16LE(partValue);
-        case 'SInt16': return formats.binaryFormats.sInt16LE(partValue);
-        default: return assertUnreachable(part);
-      }
-    })
-  }
-}
-
-function fixedSizeInstruction(size: number, write: (region: BinaryRegion) => void): InstructionWriter {
-  return {
-    maxSize: size,
-    emitPass2: () => ({
-      size,
-      emitPass3: ctx => write(ctx.region)
-    })
-  }
+export function programAddressToKey({ funcId, blockId, operationIndex }: IL.ProgramAddressValue): string {
+  return JSON.stringify([funcId, blockId, operationIndex]);
 }
 
 const assertUInt16 = Future.lift((v: number) => hardAssert(isUInt16(v)));
 const assertUInt14 = Future.lift((v: number) => hardAssert(isUInt14(v)));
 const assertIsEven = (v: Future<number>, msg: string) => v.map(v => hardAssert(v % 2 === 0, msg));
 
-const instructionNotImplemented: InstructionWriter = {
-  maxSize: 1,
-  emitPass2: () => ({
-    size: 1,
-    emitPass3: ctx => ctx.region.append(undefined, undefined, instructionNotImplementedFormat)
-  })
-}
-
-const instructionNotImplementedFormat: Format<Labelled<undefined>> = {
-  binaryFormat: () => [0],
-  htmlFormat: formats.tableRow(() => 'Instruction not implemented')
-}
-
-const ilUnOpCodeToVm: Record<IL.UnOpCode, [vm_TeOpcode, vm_TeOpcodeEx1 | vm_TeNumberOp | vm_TeBitwiseOp]> = {
-  ["-"]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_NEGATE    ],
-  ["+"]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_UNARY_PLUS],
-  ["!"]: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_LOGICAL_NOT ],
-  ["~"]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_NOT      ],
-  ["typeof"]: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_TYPEOF],
-  ["typeCodeOf"]: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_TYPE_CODE_OF],
-}
-
-const ilBinOpCodeToVm: Record<IL.BinOpCode, [vm_TeOpcode, vm_TeOpcodeEx1 | vm_TeNumberOp | vm_TeBitwiseOp]> = {
-  // Polymorphic ops
-  ['+'  ]: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_ADD              ],
-  ['===']: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_EQUAL            ],
-  ['!==']: [vm_TeOpcode.VM_OP_EXTENDED_1, vm_TeOpcodeEx1.VM_OP1_NOT_EQUAL        ],
-
-  // Number ops
-  ['-'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_SUBTRACT       ],
-  ['/'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_DIVIDE         ],
-  ['DIVIDE_AND_TRUNC']: [vm_TeOpcode.VM_OP_NUM_OP, vm_TeNumberOp.VM_NUM_OP_DIVIDE_AND_TRUNC],
-  ['%'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_REMAINDER      ],
-  ['*'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_MULTIPLY       ],
-  ['**' ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_POWER          ],
-  ['<'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_LESS_THAN      ],
-  ['>'  ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_GREATER_THAN   ],
-  ['<=' ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_LESS_EQUAL     ],
-  ['>=' ]: [vm_TeOpcode.VM_OP_NUM_OP    , vm_TeNumberOp.VM_NUM_OP_GREATER_EQUAL  ],
-
-  // Bitwise ops
-  ['>>' ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHR_ARITHMETIC],
-  ['>>>']: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHR_LOGICAL   ],
-  ['<<' ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_SHL           ],
-  ['&'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_AND           ],
-  ['|'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_OR            ],
-  ['^'  ]: [vm_TeOpcode.VM_OP_BIT_OP    , vm_TeBitwiseOp.VM_BIT_OP_XOR           ],
-
-  // Note: Logical AND and OR are implemented via the BRANCH opcode
-}
-
-function getJumpDistance(offset: SInt16) {
-  const distance: 'zero' | 'close' | 'far' =
-    offset === 0 ? 'zero' :
-    isSInt8(offset) ? 'close' :
-    'far';
-  return distance;
-}

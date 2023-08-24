@@ -1,0 +1,1374 @@
+export 0 = &function run;
+
+slot Error = class (&function Error, &allocation 10);
+slot ['global:Promise'] = class (&function promiseConstructor, &allocation 2);
+slot ['global:Reflect'] = &allocation 3;
+slot ['global:assert'] = host function 2;
+slot ['global:assertEqual'] = host function 3;
+slot ['global:asyncTestComplete'] = host function 6;
+slot myAsyncFunc = &function myAsyncFunc;
+slot myAsyncFuncReject = &function myAsyncFuncReject;
+slot runAsync = &function runAsync;
+slot test_asyncReturnsPromise = &function test_asyncReturnsPromise;
+slot test_augmentingPromisePrototype = &function test_augmentingPromisePrototype;
+slot test_awaitBeforeAndAfterResolved = &function test_awaitBeforeAndAfterResolved;
+slot test_awaitMustBeAsynchronous = &function test_awaitMustBeAsynchronous;
+slot test_awaitUnrejected = &function test_awaitUnrejected;
+slot test_immediatelyRejectedPromise = &function test_immediatelyRejectedPromise;
+slot test_promiseAwait = &function test_promiseAwait;
+slot test_promiseAwaitReject = &function test_promiseAwaitReject;
+slot test_promiseConstructor = &function test_promiseConstructor;
+slot test_promiseKeys = &function test_promiseKeys;
+slot test_unresolvedPromise1Subscriber = &function test_unresolvedPromise1Subscriber;
+slot test_unresolvedPromise2Subscribers = &function test_unresolvedPromise2Subscribers;
+slot test_unresolvedPromise3Subscribers = &function test_unresolvedPromise3Subscribers;
+
+function Array_push() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    LoadArg(index 0);
+    Literal(lit 'length');
+    ObjectGet();
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function Error() {
+  entry:
+    LoadArg(index 1);
+    LoadArg(index 0);
+    Literal(lit 'message');
+    LoadVar(index 0);
+    ObjectSet();
+    Pop(count 1);
+    LoadArg(index 0);
+    Return();
+}
+
+function ['Reflect.ownKeys']() {
+  entry:
+    LoadArg(index 1);
+    ObjectKeys();
+    Return();
+}
+
+function anonymous() {
+  entry:
+    LoadArg(index 1);
+    Literal(lit undefined);
+    Literal(lit 42);
+    Call(count 2, flag true);
+    Literal(lit undefined);
+    Return();
+}
+
+function anonymous1() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    StoreScoped(index 8);
+    Return();
+}
+
+function anonymous2() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    StoreScoped(index 10);
+    Return();
+}
+
+function anonymous3() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    StoreScoped(index 12);
+    Return();
+}
+
+function anonymous4() {
+  entry:
+    LoadArg(index 1);
+    LoadVar(index 0);
+    StoreScoped(index 10);
+    Return();
+}
+
+function anonymous5() {
+  entry:
+    LoadArg(index 2);
+    LoadVar(index 0);
+    StoreScoped(index 8);
+    Return();
+}
+
+function anonymous6() {
+  entry:
+    LoadArg(index 2);
+    Literal(lit undefined);
+    LoadGlobal(name 'Error');
+    Literal(lit undefined);
+    Literal(lit 'dummy error');
+    New(count 2);
+    Call(count 2, flag false);
+    Return();
+}
+
+function anonymous7() {
+  entry:
+    LoadArg(index 0);
+    Literal(lit 'x');
+    ObjectGet();
+    Return();
+}
+
+function anonymous8() {
+  entry:
+    LoadArg(index 2);
+    Literal(lit undefined);
+    LoadGlobal(name 'Error');
+    Literal(lit undefined);
+    Literal(lit 'dummy error');
+    New(count 2);
+    Call(count 2, flag false);
+    Return();
+}
+
+function asyncCatchBlock() {
+  entry:
+    Literal(lit false);
+    AsyncComplete();
+}
+
+function asyncContinue() {
+  entry:
+    LoadScoped(index 1);
+    Literal(lit undefined);
+    LoadScoped(index 2);
+    LoadScoped(index 3);
+    Call(count 3, flag false);
+    Return();
+}
+
+function asyncHostCallback() {
+  entry:
+    Literal(lit undefined);
+    LoadArg(index 2);
+    LoadArg(index 1);
+    AsyncComplete();
+}
+
+function inner() {
+  entry:
+    AsyncStart(count 4, flag true);
+    Literal(lit deleted);
+    LoadGlobal(name 'myAsyncFunc');
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 3);
+    LoadScoped(index 10);
+    Literal(lit '; Before await');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 10);
+    Pop(count 1);
+    LoadVar(index 3);
+    Await();
+    AsyncResume(count 1, count 3);
+    Pop(count 1);
+    LoadScoped(index 10);
+    Literal(lit '; After await');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 10);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function myAsync() {
+  entry:
+    AsyncStart(count 2, flag false);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function myAsyncFunc() {
+  entry:
+    AsyncStart(count 2, flag false);
+    Literal(lit 42);
+    AsyncReturn();
+}
+
+function myAsyncFuncReject() {
+  entry:
+    AsyncStart(count 2, flag false);
+    LoadGlobal(name 'Error');
+    Literal(lit undefined);
+    Literal(lit '42');
+    New(count 2);
+    Throw();
+}
+
+function promiseConstructor() {
+  entry:
+    LoadArg(index 1);
+    Literal(lit undefined);
+    ScopeNew(count 2);
+    Literal(lit &function promiseResolve);
+    StoreScoped(index 0);
+    LoadArg(index 0);
+    StoreScoped(index 1);
+    ScopeSave();
+    ScopeNew(count 2);
+    Literal(lit &function promiseReject);
+    StoreScoped(index 0);
+    LoadArg(index 0);
+    StoreScoped(index 1);
+    ScopeSave();
+    Call(count 3, flag true);
+    LoadArg(index 0);
+    Return();
+}
+
+function promiseReject() {
+  entry:
+    Literal(lit undefined);
+    LoadArg(index 1);
+    Literal(lit false);
+    AsyncComplete();
+}
+
+function promiseResolve() {
+  entry:
+    Literal(lit undefined);
+    LoadArg(index 1);
+    Literal(lit true);
+    AsyncComplete();
+}
+
+function run() {
+  entry:
+    // Void-call async function
+    LoadGlobal(name 'runAsync');
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    Literal(lit undefined);
+    Return();
+}
+
+function runAsync() {
+  entry:
+    AsyncStart(count 4, flag false);
+    StartTry(@block1);
+    LoadGlobal(name 'test_asyncReturnsPromise');
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    LoadGlobal(name 'test_promiseKeys');
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    LoadGlobal(name 'test_promiseAwait');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_promiseAwaitReject');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_awaitMustBeAsynchronous');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_promiseConstructor');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_unresolvedPromise1Subscriber');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_unresolvedPromise2Subscribers');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_unresolvedPromise3Subscribers');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_awaitBeforeAndAfterResolved');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_awaitUnrejected');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_immediatelyRejectedPromise');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'test_augmentingPromisePrototype');
+    Literal(lit undefined);
+    AwaitCall(count 1);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:asyncTestComplete');
+    Literal(lit undefined);
+    Literal(lit true);
+    Literal(lit undefined);
+    Call(count 3, flag true);
+    EndTry();
+    Jump(@block2);
+  block1:
+    LoadGlobal(name 'global:asyncTestComplete');
+    Literal(lit undefined);
+    Literal(lit false);
+    LoadVar(index 3);
+    Call(count 3, flag true);
+    Pop(count 1);
+    Jump(@block2);
+  block2:
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber1() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    Literal(lit deleted);
+    LoadScoped(index 12);
+    Literal(lit '; Subscriber 1 started');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 12);
+    Pop(count 1);
+    LoadScoped(index 3);
+    Await();
+    AsyncResume(count 1, count 3);
+    StoreVar(index 3);
+    LoadScoped(index 12);
+    Literal(lit '; Subscriber 1 finished with ');
+    LoadVar(index 3);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 12);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber10() {
+  entry:
+    AsyncStart(count 6, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 4);
+    LoadScoped(index 13);
+    Literal(lit '; Subscriber 1 started');
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 13);
+    Pop(count 1);
+    StartTry(@block7);
+    LoadScoped(index 4);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadScoped(index 13);
+    Literal(lit '; should not get here');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 13);
+    Pop(count 1);
+    EndTry();
+    Jump(@block8);
+  block7:
+    LoadScoped(index 13);
+    Literal(lit '; Subscriber 1 rejected with ');
+    LoadVar(index 3);
+    Literal(lit 'message');
+    ObjectGet();
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 13);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block8);
+  block8:
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber2() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    Literal(lit deleted);
+    LoadScoped(index 14);
+    Literal(lit '; Subscriber 1 started');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 14);
+    Pop(count 1);
+    LoadScoped(index 3);
+    Await();
+    AsyncResume(count 1, count 3);
+    StoreVar(index 3);
+    LoadScoped(index 14);
+    Literal(lit '; Subscriber 1 finished with ');
+    LoadVar(index 3);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 14);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber3() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    Literal(lit deleted);
+    LoadScoped(index 14);
+    Literal(lit '; Subscriber 2 started');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 14);
+    Pop(count 1);
+    LoadScoped(index 3);
+    Await();
+    AsyncResume(count 1, count 3);
+    StoreVar(index 3);
+    LoadScoped(index 14);
+    Literal(lit '; Subscriber 2 finished with ');
+    LoadVar(index 3);
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 14);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber4() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    Literal(lit deleted);
+    LoadScoped(index 16);
+    Literal(lit '; Subscriber 1 started');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 16);
+    Pop(count 1);
+    LoadScoped(index 3);
+    Await();
+    AsyncResume(count 1, count 3);
+    StoreVar(index 3);
+    LoadScoped(index 16);
+    Literal(lit '; Subscriber 1 finished with ');
+    LoadVar(index 3);
+    Literal(lit 'message');
+    ObjectGet();
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 16);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber5() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    Literal(lit deleted);
+    LoadScoped(index 16);
+    Literal(lit '; Subscriber 2 started');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 16);
+    Pop(count 1);
+    LoadScoped(index 3);
+    Await();
+    AsyncResume(count 1, count 3);
+    StoreVar(index 3);
+    LoadScoped(index 16);
+    Literal(lit '; Subscriber 2 finished with ');
+    LoadVar(index 3);
+    Literal(lit 'message');
+    ObjectGet();
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 16);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber6() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    Literal(lit deleted);
+    LoadScoped(index 16);
+    Literal(lit '; Subscriber 3 started');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 16);
+    Pop(count 1);
+    LoadScoped(index 3);
+    Await();
+    AsyncResume(count 1, count 3);
+    StoreVar(index 3);
+    LoadScoped(index 16);
+    Literal(lit '; Subscriber 3 finished with ');
+    LoadVar(index 3);
+    Literal(lit 'message');
+    ObjectGet();
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 16);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber7() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    Literal(lit deleted);
+    LoadScoped(index 14);
+    Literal(lit '; Subscriber 1 started');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 14);
+    Pop(count 1);
+    LoadScoped(index 3);
+    Await();
+    AsyncResume(count 1, count 3);
+    StoreVar(index 3);
+    LoadScoped(index 14);
+    Literal(lit '; Subscriber 1 finished with ');
+    LoadVar(index 3);
+    Literal(lit 0);
+    ObjectGet();
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 14);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber8() {
+  entry:
+    AsyncStart(count 5, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 3);
+    Literal(lit deleted);
+    LoadScoped(index 14);
+    Literal(lit '; Subscriber 2 started');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 14);
+    Pop(count 1);
+    LoadScoped(index 3);
+    Await();
+    AsyncResume(count 1, count 3);
+    StoreVar(index 3);
+    LoadScoped(index 14);
+    Literal(lit '; Subscriber 2 finished with ');
+    LoadVar(index 3);
+    Literal(lit 0);
+    ObjectGet();
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 14);
+    Pop(count 1);
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function subscriber9() {
+  entry:
+    AsyncStart(count 6, flag true);
+    LoadArg(index 1);
+    StoreScoped(index 4);
+    LoadScoped(index 13);
+    Literal(lit '; Subscriber 1 started');
+    BinOp(op '+');
+    LoadVar(index 3);
+    StoreScoped(index 13);
+    Pop(count 1);
+    StartTry(@block5);
+    LoadScoped(index 4);
+    Await();
+    AsyncResume(count 2, count 2);
+    Pop(count 1);
+    LoadScoped(index 13);
+    Literal(lit '; should not get here');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 13);
+    Pop(count 1);
+    EndTry();
+    Jump(@block6);
+  block5:
+    LoadScoped(index 13);
+    Literal(lit '; Subscriber 1 rejected with ');
+    LoadVar(index 3);
+    Literal(lit 'message');
+    ObjectGet();
+    BinOp(op '+');
+    BinOp(op '+');
+    LoadVar(index 4);
+    StoreScoped(index 13);
+    Pop(count 1);
+    Pop(count 1);
+    Jump(@block6);
+  block6:
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_asyncReturnsPromise() {
+  entry:
+    Literal(lit deleted);
+    LoadGlobal(name 'myAsyncFunc');
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 0);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit '__proto__');
+    ObjectGet();
+    LoadGlobal(name 'global:Promise');
+    Literal(lit 'prototype');
+    ObjectGet();
+    BinOp(op '===');
+    Call(count 2, flag true);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function test_augmentingPromisePrototype() {
+  entry:
+    AsyncStart(count 5, flag false);
+    Literal(lit &function myAsync);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 5);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit 'prototype');
+    ObjectGet();
+    Literal(lit 'x');
+    LoadVar(index 6);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit &function anonymous7);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit 'prototype');
+    ObjectGet();
+    Literal(lit 'f');
+    LoadVar(index 6);
+    ObjectSet();
+    Pop(count 1);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous8);
+    New(count 2);
+    StoreVar(index 4);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 5);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 4);
+    LoadVar(index 9);
+    Literal(lit 'f');
+    ObjectGet();
+    StoreVar(index 8);
+    Call(count 1, flag false);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    LoadVar(index 9);
+    Literal(lit 'f');
+    ObjectGet();
+    StoreVar(index 8);
+    Call(count 1, flag false);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadVar(index 5);
+    Await();
+    AsyncResume(count 3, count 5);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    LoadVar(index 9);
+    Literal(lit 'f');
+    ObjectGet();
+    StoreVar(index 8);
+    Call(count 1, flag false);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    Literal(lit 10);
+    LoadVar(index 5);
+    Literal(lit 'x');
+    LoadVar(index 6);
+    ObjectSet();
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 'x');
+    ObjectGet();
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    LoadVar(index 9);
+    Literal(lit 'f');
+    ObjectGet();
+    StoreVar(index 8);
+    Call(count 1, flag false);
+    Literal(lit 10);
+    Call(count 3, flag true);
+    Pop(count 3);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_awaitBeforeAndAfterResolved() {
+  entry:
+    AsyncStart(count 9, flag false);
+    Literal(lit &function subscriber7);
+    ClosureNew();
+    Literal(lit &function subscriber8);
+    ClosureNew();
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    // The second subscriber only subscribes after the first promise has already
+    // transitioned to resolved.
+    Literal(lit 'Start');
+    StoreScoped(index 7);
+    Literal(lit undefined);
+    StoreScoped(index 8);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous4);
+    ClosureNew();
+    New(count 2);
+    StoreVar(index 5);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Call(count 2, flag false);
+    StoreVar(index 6);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 7);
+    Literal(lit 'Start; Subscriber 1 started');
+    Call(count 3, flag true);
+    LoadScoped(index 8);
+    Literal(lit undefined);
+    ArrayNew();
+    LoadVar(index 10);
+    Literal(lit 0);
+    Literal(lit 42);
+    ObjectSet();
+    Call(count 2, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 7);
+    Literal(lit 'Start; Subscriber 1 started');
+    Call(count 3, flag true);
+    LoadVar(index 6);
+    Await();
+    AsyncResume(count 5, count 7);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 7);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 1 finished with 42');
+    Call(count 3, flag true);
+    LoadVar(index 4);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Call(count 2, flag false);
+    StoreVar(index 7);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 7);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 1 finished with 42; Subscriber 2 started');
+    Call(count 3, flag true);
+    LoadVar(index 7);
+    Await();
+    AsyncResume(count 5, count 7);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 7);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 1 finished with 42; Subscriber 2 started; Subscriber 2 finished with 42');
+    Call(count 3, flag true);
+    Pop(count 5);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_awaitMustBeAsynchronous() {
+  entry:
+    AsyncStart(count 5, flag false);
+    Literal(lit &function inner);
+    ClosureNew();
+    Literal(lit deleted);
+    Literal(lit 'Start');
+    StoreScoped(index 4);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 4);
+    // No await - should not block
+    LoadScoped(index 4);
+    Literal(lit '; After inner()');
+    BinOp(op '+');
+    LoadVar(index 5);
+    StoreScoped(index 4);
+    Pop(count 1);
+    LoadVar(index 4);
+    Await();
+    AsyncResume(count 2, count 4);
+    Pop(count 1);
+    // The key here is that "After inner" should come before "After await",
+    // because even though myAsyncFunc resolves immediately, the continuation
+    // should be scheduled asynchronously.
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 4);
+    Literal(lit 'Start; Before await; After inner(); After await');
+    Call(count 3, flag true);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_awaitUnrejected() {
+  entry:
+    AsyncStart(count 7, flag false);
+    Literal(lit &function subscriber9);
+    ClosureNew();
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 'Start');
+    StoreScoped(index 5);
+    Literal(lit undefined);
+    StoreScoped(index 6);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous5);
+    ClosureNew();
+    New(count 2);
+    StoreVar(index 4);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Call(count 2, flag false);
+    StoreVar(index 5);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 'Start; Subscriber 1 started');
+    Call(count 3, flag true);
+    LoadScoped(index 6);
+    Literal(lit undefined);
+    LoadGlobal(name 'Error');
+    Literal(lit undefined);
+    Literal(lit 'dummy error');
+    New(count 2);
+    Call(count 2, flag true);
+    LoadVar(index 5);
+    Await();
+    AsyncResume(count 3, count 5);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 1 rejected with dummy error');
+    Call(count 3, flag true);
+    Pop(count 3);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_immediatelyRejectedPromise() {
+  entry:
+    AsyncStart(count 6, flag false);
+    Literal(lit &function subscriber10);
+    ClosureNew();
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 'Start');
+    StoreScoped(index 5);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous6);
+    New(count 2);
+    StoreVar(index 4);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Call(count 2, flag false);
+    StoreVar(index 5);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 'Start; Subscriber 1 started');
+    Call(count 3, flag true);
+    LoadVar(index 5);
+    Await();
+    AsyncResume(count 3, count 5);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 1 rejected with dummy error');
+    Call(count 3, flag true);
+    Pop(count 3);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_promiseAwait() {
+  entry:
+    AsyncStart(count 4, flag false);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'myAsyncFunc');
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 3);
+    LoadVar(index 3);
+    Await();
+    AsyncResume(count 2, count 4);
+    StoreVar(index 4);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 42);
+    Call(count 3, flag true);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_promiseAwaitReject() {
+  entry:
+    AsyncStart(count 5, flag false);
+    Literal(lit deleted);
+    LoadGlobal(name 'myAsyncFuncReject');
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 3);
+    StartTry(@block3);
+    LoadVar(index 3);
+    Await();
+    AsyncResume(count 3, count 2);
+    Pop(count 1);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    Literal(lit false);
+    Literal(lit 'promise should have rejected');
+    Call(count 3, flag true);
+    EndTry();
+    Jump(@block4);
+  block3:
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 'message');
+    ObjectGet();
+    Literal(lit '42');
+    Call(count 3, flag true);
+    Pop(count 1);
+    Jump(@block4);
+  block4:
+    Pop(count 1);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_promiseConstructor() {
+  entry:
+    AsyncStart(count 4, flag false);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous);
+    New(count 2);
+    StoreVar(index 3);
+    LoadVar(index 3);
+    Await();
+    AsyncResume(count 2, count 4);
+    StoreVar(index 4);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 42);
+    Call(count 3, flag true);
+    Pop(count 2);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_promiseKeys() {
+  entry:
+    AsyncStart(count 2, flag false);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    LoadGlobal(name 'myAsyncFunc');
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    StoreVar(index 3);
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Reflect');
+    LoadVar(index 7);
+    Literal(lit 'ownKeys');
+    ObjectGet();
+    StoreVar(index 6);
+    LoadVar(index 3);
+    Call(count 2, flag false);
+    StoreVar(index 4);
+    // Even though the promise has 2 internal slots, which occupy the first
+    // key-value pair slot, it should still have no own properties since the
+    // the key used for internal slots is not a valid property key.
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 0);
+    Call(count 3, flag true);
+    // Reflect.ownKeys is ignoring the internal slots but should not ignore the
+    // properties that follow the internal slots
+    Literal(lit 5);
+    LoadVar(index 3);
+    Literal(lit 'prop');
+    LoadVar(index 6);
+    ObjectSet();
+    Pop(count 1);
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Reflect');
+    LoadVar(index 7);
+    Literal(lit 'ownKeys');
+    ObjectGet();
+    StoreVar(index 6);
+    LoadVar(index 3);
+    Call(count 2, flag false);
+    StoreVar(index 5);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 1);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Literal(lit 0);
+    ObjectGet();
+    Literal(lit 'prop');
+    Call(count 3, flag true);
+    Pop(count 3);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_unresolvedPromise1Subscriber() {
+  entry:
+    AsyncStart(count 7, flag false);
+    Literal(lit &function subscriber1);
+    ClosureNew();
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit 'Start');
+    StoreScoped(index 5);
+    Literal(lit undefined);
+    StoreScoped(index 6);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous1);
+    ClosureNew();
+    New(count 2);
+    StoreVar(index 4);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    LoadVar(index 4);
+    Call(count 2, flag false);
+    StoreVar(index 5);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 'Start; Subscriber 1 started');
+    Call(count 3, flag true);
+    LoadScoped(index 6);
+    Literal(lit undefined);
+    Literal(lit 42);
+    Call(count 2, flag true);
+    LoadVar(index 5);
+    Await();
+    AsyncResume(count 3, count 5);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 5);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 1 finished with 42');
+    Call(count 3, flag true);
+    Pop(count 3);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_unresolvedPromise2Subscribers() {
+  entry:
+    AsyncStart(count 9, flag false);
+    Literal(lit &function subscriber2);
+    ClosureNew();
+    Literal(lit &function subscriber3);
+    ClosureNew();
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    // The second subscriber triggers a code path where the subscriber list is
+    // promoted from a closure to a list.
+    Literal(lit 'Start');
+    StoreScoped(index 7);
+    Literal(lit undefined);
+    StoreScoped(index 8);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous2);
+    ClosureNew();
+    New(count 2);
+    StoreVar(index 5);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Call(count 2, flag false);
+    StoreVar(index 6);
+    LoadVar(index 4);
+    Literal(lit undefined);
+    LoadVar(index 5);
+    Call(count 2, flag false);
+    StoreVar(index 7);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 7);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 2 started');
+    Call(count 3, flag true);
+    LoadScoped(index 8);
+    Literal(lit undefined);
+    Literal(lit 42);
+    Call(count 2, flag true);
+    LoadVar(index 6);
+    Await();
+    AsyncResume(count 5, count 7);
+    Pop(count 1);
+    LoadVar(index 7);
+    Await();
+    AsyncResume(count 5, count 7);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 7);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 2 started; Subscriber 1 finished with 42; Subscriber 2 finished with 42');
+    Call(count 3, flag true);
+    Pop(count 5);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+function test_unresolvedPromise3Subscribers() {
+  entry:
+    AsyncStart(count 11, flag false);
+    Literal(lit &function subscriber4);
+    ClosureNew();
+    Literal(lit &function subscriber5);
+    ClosureNew();
+    Literal(lit &function subscriber6);
+    ClosureNew();
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    Literal(lit deleted);
+    // Same as previous test but the subscriber list is already a list when
+    // subscriber 3 is added.
+    Literal(lit 'Start');
+    StoreScoped(index 9);
+    Literal(lit undefined);
+    StoreScoped(index 10);
+    LoadGlobal(name 'global:Promise');
+    Literal(lit undefined);
+    Literal(lit &function anonymous3);
+    ClosureNew();
+    New(count 2);
+    StoreVar(index 6);
+    LoadVar(index 3);
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Call(count 2, flag false);
+    StoreVar(index 7);
+    LoadVar(index 4);
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Call(count 2, flag false);
+    StoreVar(index 8);
+    LoadVar(index 5);
+    Literal(lit undefined);
+    LoadVar(index 6);
+    Call(count 2, flag false);
+    StoreVar(index 9);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 9);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 2 started; Subscriber 3 started');
+    Call(count 3, flag true);
+    LoadScoped(index 10);
+    Literal(lit undefined);
+    ObjectNew();
+    LoadVar(index 12);
+    Literal(lit 'message');
+    Literal(lit 'Hi');
+    ObjectSet();
+    Call(count 2, flag true);
+    LoadVar(index 7);
+    Await();
+    AsyncResume(count 7, count 9);
+    Pop(count 1);
+    LoadVar(index 8);
+    Await();
+    AsyncResume(count 7, count 9);
+    Pop(count 1);
+    LoadVar(index 9);
+    Await();
+    AsyncResume(count 7, count 9);
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadScoped(index 9);
+    Literal(lit 'Start; Subscriber 1 started; Subscriber 2 started; Subscriber 3 started; Subscriber 1 finished with Hi; Subscriber 2 finished with Hi; Subscriber 3 finished with Hi');
+    Call(count 3, flag true);
+    Pop(count 7);
+    Literal(lit undefined);
+    AsyncReturn();
+}
+
+allocation 1 = {
+};
+
+allocation 10 = {
+  prototype: &allocation 11,
+};
+
+allocation 11 = {
+};
+
+allocation 2 = {
+  prototype: &allocation 1,
+};
+
+allocation 3 = {
+  ownKeys: &function ['Reflect.ownKeys'],
+};
+
+allocation 7 = {
+  push: &function Array_push,
+};

@@ -2,6 +2,7 @@
 description: >
   Tests various object operations
 runExportedFunction: 0
+testOnly: false
 assertionCount: 16
 ---*/
 // TODO: Computed properties

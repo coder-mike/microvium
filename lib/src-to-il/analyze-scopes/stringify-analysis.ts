@@ -156,6 +156,7 @@ function renderPrologueStep(step: PrologueStep) {
     case 'DiscardCatchParam': return inline`Pop exception`
     case 'ScopePush': return inline`ScopePush(${step.slotCount})`
     case 'ScopeNew': return inline`ScopeNew(${step.slotCount})`
+    case 'AsyncStart': return inline`AsyncStart(${step.slotCount}, ${step.captureParent})`
     case 'StartTry': return inline`StartTry`
     case 'DummyPushException': return inline`Stack has exception`
     default: return assertUnreachable(step);

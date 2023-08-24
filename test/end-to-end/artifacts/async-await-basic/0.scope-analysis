@@ -1,0 +1,2003 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'asyncTestComplete'
+[free var] 'undefined'
+[free var] 'print'
+[free var] 'assertEqual'
+[free var] 'assert'
+[global slot] 'thisModule'
+[global slot] 'runAsync'
+[global slot] 'test_minimal'
+[global slot] 'test_awaitReturnValue'
+[global slot] 'test_asyncVariablesFromNested'
+[global slot] 'test_asyncInExpression'
+[global slot] 'test_asyncFunctionArguments'
+[global slot] 'test_asyncThisArgument'
+[global slot] 'test_asyncArrowFunctions'
+[global slot] 'test_implicitReturn'
+[global slot] 'test_asyncClosure'
+[global slot] 'test_syncClosureInAsync'
+[global slot] 'test_exceptionsBasic'
+[global slot] 'test_exceptionsNested'
+[global slot] 'test_multipleJobs'
+[global slot] 'test_nestedClosure'
+[global slot] 'test_awaitInsideCatch'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    function 'run' # binding_1 @ local[0];
+    function 'runAsync' # binding_2 @ global['runAsync'];
+    function 'test_minimal' # binding_3 @ global['test_minimal'];
+    function 'test_awaitReturnValue' # binding_4 @ global['test_awaitReturnValue'];
+    function 'test_asyncVariablesFromNested' # binding_5 @ global['test_asyncVariablesFromNested'];
+    function 'test_asyncInExpression' # binding_6 @ global['test_asyncInExpression'];
+    function 'test_asyncFunctionArguments' # binding_7 @ global['test_asyncFunctionArguments'];
+    function 'test_asyncThisArgument' # binding_8 @ global['test_asyncThisArgument'];
+    function 'test_asyncArrowFunctions' # binding_9 @ global['test_asyncArrowFunctions'];
+    function 'test_implicitReturn' # binding_10 @ global['test_implicitReturn'];
+    function 'test_asyncClosure' # binding_11 @ global['test_asyncClosure'];
+    function 'test_syncClosureInAsync' # binding_12 @ global['test_syncClosureInAsync'];
+    function 'test_exceptionsBasic' # binding_13 @ global['test_exceptionsBasic'];
+    function 'test_exceptionsNested' # binding_14 @ global['test_exceptionsNested'];
+    function 'test_multipleJobs' # binding_15 @ global['test_multipleJobs'];
+    function 'test_nestedClosure' # binding_16 @ global['test_nestedClosure'];
+    function 'test_awaitInsideCatch' # binding_17 @ global['test_awaitInsideCatch']
+  }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'runAsync' -> global['runAsync']
+    func 'test_minimal' -> global['test_minimal']
+    func 'test_awaitReturnValue' -> global['test_awaitReturnValue']
+    func 'test_asyncVariablesFromNested' -> global['test_asyncVariablesFromNested']
+    func 'test_asyncInExpression' -> global['test_asyncInExpression']
+    func 'test_asyncFunctionArguments' -> global['test_asyncFunctionArguments']
+    func 'test_asyncThisArgument' -> global['test_asyncThisArgument']
+    func 'test_asyncArrowFunctions' -> global['test_asyncArrowFunctions']
+    func 'test_implicitReturn' -> global['test_implicitReturn']
+    func 'test_asyncClosure' -> global['test_asyncClosure']
+    func 'test_syncClosureInAsync' -> global['test_syncClosureInAsync']
+    func 'test_exceptionsBasic' -> global['test_exceptionsBasic']
+    func 'test_exceptionsNested' -> global['test_exceptionsNested']
+    func 'test_multipleJobs' -> global['test_multipleJobs']
+    func 'test_nestedClosure' -> global['test_nestedClosure']
+    func 'test_awaitInsideCatch' -> global['test_awaitInsideCatch']
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_18 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references { runAsync @ binding_2 }
+    }
+  }
+
+  function runAsync as 'runAsync' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_19 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references {
+          test_minimal @ binding_3
+          test_awaitReturnValue @ binding_4
+          test_asyncVariablesFromNested @ binding_5
+          test_asyncInExpression @ binding_6
+          test_asyncFunctionArguments @ binding_7
+          test_asyncThisArgument @ binding_8
+          test_asyncArrowFunctions @ binding_9
+          test_implicitReturn @ binding_10
+          test_asyncClosure @ binding_11
+          test_syncClosureInAsync @ binding_12
+          test_exceptionsBasic @ binding_13
+          test_exceptionsNested @ binding_14
+          test_multipleJobs @ binding_15
+          test_nestedClosure @ binding_16
+          test_awaitInsideCatch @ binding_17
+          asyncTestComplete @ free asyncTestComplete
+          undefined @ free undefined
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings { catch-param 'e' # binding_20 @ local[3] }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          asyncTestComplete @ free asyncTestComplete
+          e @ binding_20
+        }
+      }
+    }
+  }
+
+  function test_minimal as 'test_minimal' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_21 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        function 'myAsyncFunc' # binding_22 @ local[0]
+      }
+
+      prologue { func 'myAsyncFunc' -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        print @ free print
+        myAsyncFunc @ binding_22
+        print @ free print
+      }
+
+      function myAsyncFunc as 'myAsyncFunc' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_23 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references { print @ free print }
+        }
+      }
+    }
+  }
+
+  function test_awaitReturnValue as 'test_awaitReturnValue' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_24 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'result' # binding_25 @ local[4];
+        function 'asyncFunction' # binding_26 @ local[3]
+      }
+
+      prologue {
+        func 'asyncFunction' -> local[3]
+        new let -> local[4]
+      }
+
+      epilogue { Pop(2) }
+
+      references {
+        asyncFunction @ binding_26
+        assertEqual @ free assertEqual
+        result @ binding_25
+      }
+
+      function asyncFunction as 'asyncFunction' {
+        [closure scope with 3 slots: async-continuation, async-callback, arg]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_27 @ arg[0];
+          param 'arg' # binding_28 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(3, false); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            arg @ binding_28 using relative slot index 2
+          }
+        }
+      }
+    }
+  }
+
+  function test_asyncVariablesFromNested as 'test_asyncVariablesFromNested' {
+    [closure scope with 5 slots: async-continuation, async-callback, nested2, x1, y1]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_29 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(5, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 'x1' # binding_30 @ scoped[!3];
+        writable let 'x2' # binding_31 @ local[3];
+        function 'nested2' # binding_32 @ scoped[!2]
+      }
+
+      prologue {
+        func 'nested2' -> scoped[+2] [non-embedded closure]
+        new let -> local[3]
+      }
+
+      epilogue { Pop(1) }
+
+      references {
+        assertEqual @ free assertEqual
+        x1 @ binding_30 using relative slot index 3
+        assertEqual @ free assertEqual
+        x2 @ binding_31
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {
+          writable let 'y1' # binding_33 @ scoped[!4];
+          writable let 'y2' # binding_34 @ local[7];
+          function 'nestedFunc' # binding_35 @ local[6]
+        }
+
+        prologue {
+          StartTry
+          func 'nestedFunc' -> local[6] [non-embedded closure]
+          new let -> local[7]
+        }
+
+        epilogue { !EndTry }
+
+        references {
+          nestedFunc @ binding_35
+          x1 @ binding_30 using relative slot index 3
+          y1 @ binding_33 using relative slot index 4
+          x2 @ binding_31
+          y2 @ binding_34
+          assertEqual @ free assertEqual
+          y1 @ binding_33 using relative slot index 4
+          assertEqual @ free assertEqual
+          y2 @ binding_34
+        }
+
+        closure function nestedFunc as 'nestedFunc' {
+          [closure scope with 3 slots: async-continuation,
+          async-callback,
+          parent-reference]
+          [0 var declarations]
+
+          bindings { this '#this' # binding_36 @ arg[0] }
+
+          No references
+
+          prologue { AsyncStart(3, true) }
+
+          block {
+            sameInstanceCountAsParent: true
+            [no closure scope]
+
+            bindings {  }
+
+            prologue {  }
+
+            epilogue {  }
+
+            references {
+              x1 @ binding_30 using relative slot index 8
+              y1 @ binding_33 using relative slot index 9
+              nested2 @ binding_32 using relative slot index 7
+              x1 @ binding_30 using relative slot index 8
+              y1 @ binding_33 using relative slot index 9
+            }
+          }
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue { Stack has exception; Pop exception }
+
+        epilogue {  }
+
+        references {
+          x1 @ binding_30 using relative slot index 3
+          x2 @ binding_31
+        }
+      }
+
+      closure function nested2 as 'nested2' {
+        [closure scope with 3 slots: async-continuation, async-callback, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_37 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(3, true) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            x1 @ binding_30 using relative slot index 8
+          }
+        }
+      }
+    }
+  }
+
+  function test_asyncInExpression as 'test_asyncInExpression' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_38 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'x' # binding_39 @ local[6];
+        readonly const 'y' # binding_40 @ local[7];
+        function 'nestedFunc' # binding_41 @ local[3];
+        function 'nestedFunc2' # binding_42 @ local[4];
+        function 'nestedFunc3' # binding_43 @ local[5]
+      }
+
+      prologue {
+        func 'nestedFunc1' -> local[3]
+        func 'nestedFunc2' -> local[4]
+        func 'nestedFunc3' -> local[5]
+        new let -> local[6]
+        new let -> local[7]
+      }
+
+      epilogue { Pop(5) }
+
+      references {
+        nestedFunc @ binding_41
+        nestedFunc2 @ binding_42
+        assertEqual @ free assertEqual
+        x @ binding_39
+        assertEqual @ free assertEqual
+        x @ binding_39
+        assertEqual @ free assertEqual
+        x @ binding_39
+        assertEqual @ free assertEqual
+        x @ binding_39
+        assertEqual @ free assertEqual
+        x @ binding_39
+        nestedFunc3 @ binding_43
+        nestedFunc @ binding_41
+        nestedFunc2 @ binding_42
+        assertEqual @ free assertEqual
+        y @ binding_40
+      }
+
+      function nestedFunc as 'nestedFunc1' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_44 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+
+      function nestedFunc2 as 'nestedFunc2' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_45 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+
+      function nestedFunc3 as 'nestedFunc3' {
+        [closure scope with 6 slots: async-continuation, async-callback, a, b, c, d]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_46 @ arg[0];
+          param 'a' # binding_47 @ scoped[!2];
+          param 'b' # binding_48 @ scoped[!3];
+          param 'c' # binding_49 @ scoped[!4];
+          param 'd' # binding_50 @ scoped[!5]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(6, false)
+          arg[1] -> scoped[+2]
+          arg[2] -> scoped[+3]
+          arg[3] -> scoped[+4]
+          arg[4] -> scoped[+5]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            a @ binding_47 using relative slot index 2
+            b @ binding_48 using relative slot index 3
+            c @ binding_49 using relative slot index 4
+            d @ binding_50 using relative slot index 5
+          }
+        }
+      }
+    }
+  }
+
+  function test_asyncFunctionArguments as 'test_asyncFunctionArguments' {
+    [closure scope with 3 slots: async-continuation, async-callback, nestedFunc2]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_51 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(3, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        function 'nestedFunc' # binding_52 @ local[3];
+        function 'nestedFunc2' # binding_53 @ scoped[!2]
+      }
+
+      prologue {
+        func 'nestedFunc4' -> local[3] [non-embedded closure]
+        func 'nestedFunc5' -> scoped[+2]
+      }
+
+      epilogue { Pop(1) }
+
+      references { nestedFunc @ binding_52 }
+
+      closure function nestedFunc as 'nestedFunc4' {
+        [closure scope with 6 slots: async-continuation,
+        async-callback,
+        a,
+        b,
+        c,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_54 @ arg[0];
+          param 'a' # binding_55 @ scoped[!2];
+          param 'b' # binding_56 @ scoped[!3];
+          param 'c' # binding_57 @ scoped[!4]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(6, true)
+          arg[1] -> scoped[+2]
+          arg[2] -> scoped[+3]
+          arg[3] -> scoped[+4]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            assertEqual @ free assertEqual
+            a @ binding_55 using relative slot index 2
+            assertEqual @ free assertEqual
+            b @ binding_56 using relative slot index 3
+            assertEqual @ free assertEqual
+            c @ binding_57 using relative slot index 4
+            nestedFunc2 @ binding_53 using relative slot index 10
+            assertEqual @ free assertEqual
+            a @ binding_55 using relative slot index 2
+            assertEqual @ free assertEqual
+            b @ binding_56 using relative slot index 3
+            assertEqual @ free assertEqual
+            c @ binding_57 using relative slot index 4
+          }
+        }
+      }
+
+      function nestedFunc2 as 'nestedFunc5' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_58 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_asyncThisArgument as 'test_asyncThisArgument' {
+    [closure scope with 3 slots: async-continuation, async-callback, nestedFunc2]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_59 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(3, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'obj' # binding_60 @ local[4];
+        function 'nestedFunc' # binding_61 @ local[3];
+        function 'nestedFunc2' # binding_62 @ scoped[!2]
+      }
+
+      prologue {
+        func 'nestedFunc6' -> local[3] [non-embedded closure]
+        func 'nestedFunc7' -> scoped[+2]
+        new let -> local[4]
+      }
+
+      epilogue { Pop(2) }
+
+      references {
+        nestedFunc @ binding_61; obj @ binding_60
+      }
+
+      closure function nestedFunc as 'nestedFunc6' {
+        [closure scope with 5 slots: async-continuation,
+        async-callback,
+        this,
+        c,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_63 @ scoped[!2];
+          param 'c' # binding_64 @ scoped[!3]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(5, true)
+          arg[0] as this -> scoped[+2]
+          arg[1] -> scoped[+3]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            assertEqual @ free assertEqual
+            '#this' @ binding_63 using relative slot index 2
+            assertEqual @ free assertEqual
+            '#this' @ binding_63 using relative slot index 2
+            assertEqual @ free assertEqual
+            c @ binding_64 using relative slot index 3
+            nestedFunc2 @ binding_62 using relative slot index 9
+            assertEqual @ free assertEqual
+            '#this' @ binding_63 using relative slot index 2
+            assertEqual @ free assertEqual
+            '#this' @ binding_63 using relative slot index 2
+            assertEqual @ free assertEqual
+            c @ binding_64 using relative slot index 3
+          }
+        }
+      }
+
+      function nestedFunc2 as 'nestedFunc7' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_65 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_asyncArrowFunctions as 'test_asyncArrowFunctions' {
+    [closure scope with 4 slots: async-continuation, async-callback, nestedFunc, c]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_66 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(4, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        let 'c' # binding_67 @ scoped[!3];
+        readonly const 'func' # binding_68 @ local[3];
+        readonly const 'result' # binding_69 @ local[4];
+        function 'nestedFunc' # binding_70 @ scoped[!2]
+      }
+
+      prologue {
+        func 'nestedFunc8' -> scoped[+2]
+        new let -> local[3]
+        new let -> local[4]
+      }
+
+      epilogue { Pop(2) }
+
+      references {
+        func @ binding_68
+        assertEqual @ free assertEqual
+        result @ binding_69
+      }
+
+      closure function '<anonymous>' as 'anonymous' {
+        [closure scope with 5 slots: async-continuation,
+        async-callback,
+        a,
+        b,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          param 'a' # binding_71 @ scoped[!2];
+          param 'b' # binding_72 @ scoped[!3]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(5, true)
+          arg[1] -> scoped[+2]
+          arg[2] -> scoped[+3]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            nestedFunc @ binding_70 using relative slot index 9
+            a @ binding_71 using relative slot index 2
+            b @ binding_72 using relative slot index 3
+            c @ binding_67 using relative slot index 10
+          }
+        }
+      }
+
+      function nestedFunc as 'nestedFunc8' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_73 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_implicitReturn as 'test_implicitReturn' {
+    [closure scope with 3 slots: async-continuation, async-callback, nestedFunc]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_74 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(3, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'result1' # binding_75 @ local[7];
+        readonly const 'result2' # binding_76 @ local[8];
+        readonly const 'result3' # binding_77 @ local[9];
+        readonly const 'result4' # binding_78 @ local[10];
+        function 'implicitReturn1' # binding_79 @ local[3];
+        function 'explicitReturn1' # binding_80 @ local[4];
+        function 'implicitReturn2' # binding_81 @ local[5];
+        function 'explicitReturn2' # binding_82 @ local[6];
+        function 'nestedFunc' # binding_83 @ scoped[!2]
+      }
+
+      prologue {
+        func 'implicitReturn1' -> local[3]
+        func 'explicitReturn1' -> local[4]
+        func 'implicitReturn2' -> local[5] [non-embedded closure]
+        func 'explicitReturn2' -> local[6] [non-embedded closure]
+        func 'nestedFunc9' -> scoped[+2]
+        new let -> local[7]
+        new let -> local[8]
+        new let -> local[9]
+        new let -> local[10]
+      }
+
+      epilogue { Pop(8) }
+
+      references {
+        implicitReturn1 @ binding_79
+        explicitReturn1 @ binding_80
+        implicitReturn2 @ binding_81
+        explicitReturn2 @ binding_82
+        assertEqual @ free assertEqual
+        result1 @ binding_75
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        result2 @ binding_76
+        assertEqual @ free assertEqual
+        result3 @ binding_77
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        result4 @ binding_78
+      }
+
+      function implicitReturn1 as 'implicitReturn1' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_84 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+
+      function explicitReturn1 as 'explicitReturn1' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_85 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+
+      closure function implicitReturn2 as 'implicitReturn2' {
+        [closure scope with 3 slots: async-continuation, async-callback, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_86 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(3, true) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            nestedFunc @ binding_83 using relative slot index 7
+          }
+        }
+      }
+
+      closure function explicitReturn2 as 'explicitReturn2' {
+        [closure scope with 3 slots: async-continuation, async-callback, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_87 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(3, true) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            nestedFunc @ binding_83 using relative slot index 7
+          }
+        }
+      }
+
+      function nestedFunc as 'nestedFunc9' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_88 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_asyncClosure as 'test_asyncClosure' {
+    [closure scope with 4 slots: async-continuation, async-callback, nestedFunc, c]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_89 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(4, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        let 'c' # binding_90 @ scoped[!3];
+        readonly const 'obj' # binding_91 @ local[4];
+        function 'method' # binding_92 @ local[3];
+        readonly const 'result' # binding_93 @ local[5];
+        function 'nestedFunc' # binding_94 @ scoped[!2]
+      }
+
+      prologue {
+        func 'method' -> local[3] [non-embedded closure]
+        func 'nestedFunc10' -> scoped[+2]
+        new let -> local[4]
+        new let -> local[5]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        method @ binding_92
+        obj @ binding_91
+        assertEqual @ free assertEqual
+        result @ binding_93
+      }
+
+      closure function method as 'method' {
+        [closure scope with 3 slots: embedded-closure:anonymous, this, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_95 @ scoped[!1] }
+
+        No references
+
+        prologue {
+          ScopePush(3); arg[0] as this -> scoped[+1]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+
+          embedded closure function '<anonymous>' as 'anonymous1' {
+            [closure scope with 5 slots: async-continuation,
+            async-callback,
+            a,
+            b,
+            parent-reference]
+            [0 var declarations]
+
+            bindings {
+              param 'a' # binding_96 @ scoped[!2];
+              param 'b' # binding_97 @ scoped[!3]
+            }
+
+            No references
+
+            prologue {
+              AsyncStart(5, true)
+              arg[1] -> scoped[+2]
+              arg[2] -> scoped[+3]
+            }
+
+            block {
+              sameInstanceCountAsParent: true
+              [no closure scope]
+
+              bindings { let 'e' # binding_98 @ local[3] }
+
+              prologue { new let -> local[3] }
+
+              epilogue { Pop(1) }
+
+              references {
+                nestedFunc @ binding_94 using relative slot index 12
+                a @ binding_96 using relative slot index 2
+                b @ binding_97 using relative slot index 3
+                c @ binding_90 using relative slot index 13
+                '#this' @ binding_95 using relative slot index 6
+                e @ binding_98
+              }
+            }
+          }
+        }
+      }
+
+      function nestedFunc as 'nestedFunc10' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_99 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_syncClosureInAsync as 'test_syncClosureInAsync' {
+    [closure scope with 3 slots: async-continuation, async-callback, c]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_100 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(3, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        let 'c' # binding_101 @ scoped[!2];
+        readonly const 'obj' # binding_102 @ local[5];
+        function 'method' # binding_103 @ local[3];
+        readonly const 'f' # binding_104 @ local[6];
+        function 'nestedFunc' # binding_105 @ local[4]
+      }
+
+      prologue {
+        func 'method1' -> local[3] [non-embedded closure]
+        func 'nestedFunc11' -> local[4]
+        new let -> local[5]
+        new let -> local[6]
+      }
+
+      epilogue { Pop(4) }
+
+      references {
+        method @ binding_103
+        assertEqual @ free assertEqual
+        obj @ binding_102
+        obj @ binding_102
+        nestedFunc @ binding_105
+        assertEqual @ free assertEqual
+        obj @ binding_102
+        assertEqual @ free assertEqual
+        f @ binding_104
+      }
+
+      closure function method as 'method1' {
+        [closure scope with 3 slots: embedded-closure:anonymous, this, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_106 @ scoped[!1] }
+
+        No references
+
+        prologue {
+          ScopePush(3); arg[0] as this -> scoped[+1]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+
+          embedded closure function '<anonymous>' as 'anonymous2' {
+            [no closure scope]; [0 var declarations]
+
+            bindings {
+              param 'a' # binding_107 @ arg[1];
+              param 'b' # binding_108 @ arg[2]
+            }
+
+            No references
+
+            prologue {  }
+
+            block {
+              sameInstanceCountAsParent: true
+              [no closure scope]
+
+              bindings { let 'e' # binding_109 @ local[0] }
+
+              prologue { new let -> local[0] }
+
+              epilogue { Pop(1) }
+
+              references {
+                a @ binding_107
+                b @ binding_108
+                c @ binding_101 using relative slot index 7
+                '#this' @ binding_106 using relative slot index 1
+                e @ binding_109
+              }
+            }
+          }
+        }
+      }
+
+      function nestedFunc as 'nestedFunc11' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_110 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_exceptionsBasic as 'test_exceptionsBasic' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_111 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        function 'nestedFunc' # binding_112 @ local[3]
+      }
+
+      prologue { func 'nestedFunc12' -> local[3] }
+
+      epilogue { Pop(1) }
+
+      No references
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references {
+          nestedFunc @ binding_112; assert @ free assert
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {
+          catch-param 'e' # binding_113 @ local[4]
+        }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          assertEqual @ free assertEqual; e @ binding_113
+        }
+      }
+
+      function nestedFunc as 'nestedFunc12' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_114 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_exceptionsNested as 'test_exceptionsNested' {
+    [closure scope with 3 slots: async-continuation, async-callback, nestedFunc2]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_115 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(3, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 'x' # binding_116 @ local[4];
+        function 'nestedFunc' # binding_117 @ local[3];
+        function 'nestedFunc2' # binding_118 @ scoped[!2]
+      }
+
+      prologue {
+        func 'nestedFunc13' -> local[3] [non-embedded closure]
+        func 'nestedFunc14' -> scoped[+2]
+        new let -> local[4]
+      }
+
+      epilogue { Pop(2) }
+
+      references {
+        assertEqual @ free assertEqual; x @ binding_116
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings { let 'y' # binding_119 @ local[7] }
+
+        prologue { StartTry; new let -> local[7] }
+
+        epilogue { !EndTry }
+
+        No references
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue { StartTry }
+
+          epilogue { !EndTry }
+
+          references {
+            x @ binding_116
+            y @ binding_119
+            x @ binding_116
+            nestedFunc @ binding_117
+          }
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            catch-param 'e' # binding_120 @ local[8]
+          }
+
+          prologue { Stack has exception }
+
+          epilogue { Pop(1) }
+
+          references {
+            x @ binding_116
+            e @ binding_120
+            x @ binding_116
+            y @ binding_119
+          }
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {
+          catch-param 'e' # binding_121 @ local[5]
+        }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references { x @ binding_116; e @ binding_121 }
+      }
+
+      closure function nestedFunc as 'nestedFunc13' {
+        [closure scope with 3 slots: async-continuation, async-callback, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_122 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(3, true) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+
+          block {
+            sameInstanceCountAsParent: true
+            [no closure scope]
+
+            bindings {  }
+
+            prologue { StartTry }
+
+            epilogue { !EndTry }
+
+            references {
+              nestedFunc2 @ binding_118 using relative slot index 7
+            }
+          }
+
+          block {
+            sameInstanceCountAsParent: true
+            [no closure scope]
+
+            bindings {
+              catch-param 'e' # binding_123 @ local[3]
+            }
+
+            prologue { Stack has exception }
+
+            epilogue { Pop(1) }
+
+            references { e @ binding_123 }
+          }
+        }
+      }
+
+      function nestedFunc2 as 'nestedFunc14' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_124 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_multipleJobs as 'test_multipleJobs' {
+    [closure scope with 4 slots: async-continuation, async-callback, nestedFunc, s]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_125 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(4, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 's' # binding_126 @ scoped[!3];
+        function 'task1' # binding_127 @ local[3];
+        function 'task2' # binding_128 @ local[4];
+        function 'nestedFunc' # binding_129 @ scoped[!2]
+      }
+
+      prologue {
+        func 'task1' -> local[3] [non-embedded closure]
+        func 'task2' -> local[4] [non-embedded closure]
+        func 'nestedFunc15' -> scoped[+2]
+      }
+
+      epilogue { Pop(2) }
+
+      references {
+        task1 @ binding_127
+        task2 @ binding_128
+        s @ binding_126 using relative slot index 3
+        nestedFunc @ binding_129 using relative slot index 2
+        assertEqual @ free assertEqual
+        s @ binding_126 using relative slot index 3
+      }
+
+      closure function task1 as 'task1' {
+        [closure scope with 3 slots: async-continuation, async-callback, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_130 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(3, true) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            nestedFunc @ binding_129 using relative slot index 7
+            s @ binding_126 using relative slot index 8
+          }
+        }
+      }
+
+      closure function task2 as 'task2' {
+        [closure scope with 3 slots: async-continuation, async-callback, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_131 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(3, true) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            nestedFunc @ binding_129 using relative slot index 7
+            s @ binding_126 using relative slot index 8
+          }
+        }
+      }
+
+      function nestedFunc as 'nestedFunc15' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_132 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_nestedClosure as 'test_nestedClosure' {
+    [closure scope with 4 slots: async-continuation, async-callback, nestedFunc, x]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_133 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(4, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 'x' # binding_134 @ scoped[!3];
+        function 'func1' # binding_135 @ local[3];
+        function 'nestedFunc' # binding_136 @ scoped[!2]
+      }
+
+      prologue {
+        func 'func1' -> local[3] [non-embedded closure]
+        func 'nestedFunc16' -> scoped[+2]
+      }
+
+      epilogue { Pop(1) }
+
+      references {
+        func1 @ binding_135
+        assertEqual @ free assertEqual
+        x @ binding_134 using relative slot index 3
+      }
+
+      closure function func1 as 'func1' {
+        [closure scope with 3 slots: async-continuation, async-callback, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_137 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(3, true) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            function 'func2' # binding_138 @ local[3]
+          }
+
+          prologue {
+            func 'func2' -> local[3] [non-embedded closure]
+          }
+
+          epilogue { Pop(1) }
+
+          references {
+            func2 @ binding_138
+            nestedFunc @ binding_136 using relative slot index 7
+            func2 @ binding_138
+          }
+
+          closure function func2 as 'func2' {
+            [closure scope with 3 slots: async-continuation,
+            async-callback,
+            parent-reference]
+            [0 var declarations]
+
+            bindings { this '#this' # binding_139 @ arg[0] }
+
+            No references
+
+            prologue { AsyncStart(3, true) }
+
+            block {
+              sameInstanceCountAsParent: true
+              [no closure scope]
+
+              bindings {
+                function 'func3' # binding_140 @ local[3]
+              }
+
+              prologue {
+                func 'func3' -> local[3] [non-embedded closure]
+              }
+
+              epilogue { Pop(1) }
+
+              references {
+                func3 @ binding_140
+                nestedFunc @ binding_136 using relative slot index 12
+                func3 @ binding_140
+              }
+
+              closure function func3 as 'func3' {
+                [closure scope with 3 slots: async-continuation,
+                async-callback,
+                parent-reference]
+                [0 var declarations]
+
+                bindings {
+                  this '#this' # binding_141 @ arg[0]
+                }
+
+                No references
+
+                prologue { AsyncStart(3, true) }
+
+                block {
+                  sameInstanceCountAsParent: true
+                  [no closure scope]
+
+                  bindings {  }
+
+                  prologue {  }
+
+                  epilogue {  }
+
+                  references {
+                    x @ binding_134 using relative slot index 18
+                    nestedFunc @ binding_136 using relative slot index 17
+                    x @ binding_134 using relative slot index 18
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      function nestedFunc as 'nestedFunc16' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_142 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+
+  function test_awaitInsideCatch as 'test_awaitInsideCatch' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_143 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        function 'nestedFunc' # binding_144 @ local[3];
+        function 'nestedFunc2' # binding_145 @ local[4];
+        function 'nestedFunc3' # binding_146 @ local[5]
+      }
+
+      prologue {
+        func 'nestedFunc17' -> local[3]
+        func 'nestedFunc18' -> local[4]
+        func 'nestedFunc19' -> local[5]
+      }
+
+      epilogue { Pop(3) }
+
+      No references
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        No references
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue { StartTry }
+
+          epilogue { !EndTry }
+
+          references {
+            nestedFunc @ binding_144; assert @ free assert
+          }
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            catch-param 'e' # binding_147 @ local[8]
+          }
+
+          prologue { Stack has exception }
+
+          epilogue { Pop(1) }
+
+          references {
+            assertEqual @ free assertEqual
+            e @ binding_147
+            nestedFunc2 @ binding_145
+          }
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {
+          catch-param 'e' # binding_148 @ local[6]
+        }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          assertEqual @ free assertEqual
+          e @ binding_148
+          nestedFunc3 @ binding_146
+          assertEqual @ free assertEqual
+          e @ binding_148
+        }
+      }
+
+      function nestedFunc as 'nestedFunc17' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_149 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+
+      function nestedFunc2 as 'nestedFunc18' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_150 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+
+      function nestedFunc3 as 'nestedFunc19' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_151 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+}

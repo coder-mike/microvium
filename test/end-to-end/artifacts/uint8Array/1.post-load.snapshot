@@ -1,34 +1,13 @@
 export 0 = &function run;
 
-slot buf1 = &allocation 8;
-slot ['global:Microvium'] = &allocation 2;
+slot buf1 = &allocation 10;
+slot ['global:Microvium'] = &allocation 4;
 slot ['global:assertEqual'] = host function 3;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
-function Reflect_ownKeys1() {
+function ['Microvium.newUint8Array']() {
   entry:
     LoadArg(index 1);
     Uint8ArrayNew();
-    Return();
-}
-
-function Reflect_ownKeys2() {
-  entry:
-    LoadArg(index 1);
-    TypeCodeOf();
     Return();
 }
 
@@ -42,32 +21,28 @@ function run() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'buf1');
     Literal(lit 0);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'buf1');
     Literal(lit 4);
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'buf1');
     Literal(lit 5);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Mutating compile-time Uint8Array at runtime
     Literal(lit 42);
     LoadGlobal(name 'buf1');
@@ -81,17 +56,16 @@ function run() {
     Literal(lit 2);
     ObjectGet();
     Literal(lit 42);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Creating Uint8Array at runtime
+    Literal(lit undefined);
     LoadGlobal(name 'global:Microvium');
-    LoadVar(index 1);
+    LoadVar(index 2);
     Literal(lit 'newUint8Array');
     ObjectGet();
-    LoadVar(index 1);
-    Literal(lit 3);
-    Call(count 2);
     StoreVar(index 1);
+    Literal(lit 3);
+    Call(count 2, flag false);
     StoreVar(index 0);
     Literal(lit deleted);
     Literal(lit 0);
@@ -131,52 +105,52 @@ function run() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 0);
     ObjectGet();
     Literal(lit 100);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 1);
     ObjectGet();
     Literal(lit 101);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 2);
     ObjectGet();
     Literal(lit 102);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 3);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
 }
 
-allocation 2 = {
-  newUint8Array: &function Reflect_ownKeys1,
-  typeCodeOf: &function Reflect_ownKeys2,
-};
+function typeCodeOf() {
+  entry:
+    LoadArg(index 1);
+    TypeCodeOf();
+    Return();
+}
 
-allocation 5 = {
-  push: &function Array_push,
-};
+allocation 10 = Uint8Array { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-allocation 8 = Uint8Array { 0x01, 0x02, 0x03, 0x04, 0x05 };
+allocation 4 = {
+  isMicrovium: true,
+  newUint8Array: &function ['Microvium.newUint8Array'],
+  noOpFunction: no-op-function,
+  typeCodeOf: &function typeCodeOf,
+};

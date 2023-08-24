@@ -536,6 +536,23 @@ typedef MVM_LONG_PTR_TYPE LongPtr;
 #define MVM_CASE(value) case value
 #endif
 
+#ifndef MVM_DEBUG_UTILS
+#define MVM_DEBUG_UTILS 0
+#endif
+
+// Allocation headers on functions are different. Nothing needs the allocation
+// size specifically, so the 12 size bits are repurposed.
+/** Flag bit to indicate continuation vs normal func. (1 = continuation) */
+#define VM_FUNCTION_HEADER_CONTINUATION_FLAG 0x0800
+/** (Continuations only) Mask of number of quad-words that the continuation is
+ * behind its containing function */
+#define VM_FUNCTION_HEADER_BACK_POINTER_MASK 0x07FF
+/** (Normal funcs only) Mask of required stack height in words */
+#define VM_FUNCTION_HEADER_STACK_HEIGHT_MASK 0x00FF
+
+// Minimum number of items to have in an array when expanding it
+#define VM_ARRAY_INITIAL_CAPACITY 4
+
 /**
  * Type code indicating the type of data.
  *
@@ -637,6 +654,17 @@ typedef enum TeTypeCode {
   TC_VAL_STR_LENGTH         = 0x18, // The string "length"
   TC_VAL_STR_PROTO          = 0x19, // The string "__proto__"
 
+  /**
+   * TC_VAL_NO_OP_FUNC
+   *
+   * Represents a function that does nothing and returns undefined.
+   *
+   * This is required by async-await for the case where you void-call an async
+   * function and it needs to synthesize a dummy callback that does nothing,
+   * particularly for a host async function to call back.
+   */
+  TC_VAL_NO_OP_FUNC         = 0x1A,
+
   TC_END,
 } TeTypeCode;
 
@@ -647,8 +675,42 @@ typedef enum TeTypeCode {
 // Note: the `(... << 2) | 1` is so that these values don't overlap with the
 // ShortPtr or BytecodeMappedPtr address spaces.
 
+// Indexes of internal slots for objects. Note that even-valued indexed slots
+// can only hold negative int14 values since those slots are overloading
+// property key slots. The slot indexes can only start at 2 because the first 2
+// "slots" are the dpNext and dpProto of TsPropertyList.
+typedef enum vm_TeObjectInternalSlots {
+  VM_OIS_NEXT = 0,
+  VM_OIS_PROTO = 1,
+
+  VM_OIS_PROTO_SLOT_MAGIC_KEY = 2,
+  VM_OIS_PROTO_SLOT_COUNT = 3,
+
+  VM_OIS_PROMISE_STATUS = 2, // vm_TePromiseStatus
+  VM_OIS_PROMISE_OUT = 3, // Result if resolved, error if rejected, undefined or subscriber or subscriber-list if pending
+} vm_TeObjectInternalSlots;
+
+#define VIRTUAL_INT14_ENCODE(i) ((uint16_t)(((unsigned int)(i) << 2) | 3))
+
+// Note: these values must be negative int14 values
+typedef enum vm_TePromiseStatus {
+  VM_PROMISE_STATUS_PENDING = VIRTUAL_INT14_ENCODE(-1),
+  VM_PROMISE_STATUS_RESOLVED = VIRTUAL_INT14_ENCODE(-2),
+  VM_PROMISE_STATUS_REJECTED = VIRTUAL_INT14_ENCODE(-3),
+} vm_TePromiseStatus;
+
+#define VM_PROTO_SLOT_MAGIC_KEY_VALUE VIRTUAL_INT14_ENCODE(-0x2000)
+
 // Some well-known values
 typedef enum vm_TeWellKnownValues {
+  // Note: well-known values share the bytecode address space, so we can't have
+  // too many here before user-defined allocations start to become unreachable.
+  // The first addressable user allocation in a bytecode image is around address
+  // 0x2C (measured empirically -- see test `1.empty-export`) if the image has
+  // one export and one string in the string table, which means the largest
+  // well-known-value can be the prior address `0x2C-4=0x28` (encoded as a
+  // bytecode pointer will be 0x29), corresponding to type-code 0x1B.
+
   VM_VALUE_UNDEFINED     = (((int)TC_VAL_UNDEFINED - 0x11) << 2) | 1, // = 1
   VM_VALUE_NULL          = (((int)TC_VAL_NULL - 0x11) << 2) | 1,
   VM_VALUE_TRUE          = (((int)TC_VAL_TRUE - 0x11) << 2) | 1,
@@ -658,11 +720,10 @@ typedef enum vm_TeWellKnownValues {
   VM_VALUE_DELETED       = (((int)TC_VAL_DELETED - 0x11) << 2) | 1,
   VM_VALUE_STR_LENGTH    = (((int)TC_VAL_STR_LENGTH - 0x11) << 2) | 1,
   VM_VALUE_STR_PROTO     = (((int)TC_VAL_STR_PROTO - 0x11) << 2) | 1,
+  VM_VALUE_NO_OP_FUNC    = (((int)TC_VAL_NO_OP_FUNC - 0x11) << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END,
 } vm_TeWellKnownValues;
-
-#define VIRTUAL_INT14_ENCODE(i) ((uint16_t)(((unsigned int)(i) << 2) | 3))
 
 typedef struct TsArray {
  /*
@@ -834,7 +895,7 @@ typedef struct TsBucket {
 
 typedef struct TsBreakpoint {
   struct TsBreakpoint* next;
-  uint16_t bytecodeAddress;
+  int bytecodeAddress;
 } TsBreakpoint;
 
 /*
@@ -895,25 +956,38 @@ typedef struct TsInternedStringCell {
 
 // Possible values for the `flags` machine register
 typedef enum vm_TeActivationFlags {
-  // Note: these flags start at bit 8 because they use the same word as the argument count
+  // This is not an activation flag, but I'm putting it in this enum because it
+  // shares the same bit space as the flags.
+  AF_ARG_COUNT_MASK = 0x7F,
+
+  // Note: these flags start at bit 8 because they use the same word as the
+  // argument count and the high byte is used for flags, with the exception of
+  // AF_VOID_CALLED which is in the first byte because the flag is bundled with
+  // the argument count during a call operation.
+
+  // Set to 1 in the current activation frame if the caller call site is a void
+  // call (does not use the response). Note: this flag is in the high bit of the
+  // first byte, unlike the other bits which are in the second byte. See above
+  // for description.
+  AF_VOID_CALLED = 1 << 7,
 
   // Flag to indicate if the most-recent CALL operation involved a stack-based
   // function target (as opposed to a literal function target). If this is set,
   // then the next RETURN instruction will also pop the function reference off
   // the stack.
-  AF_PUSHED_FUNCTION = 1 << 9,
+  AF_PUSHED_FUNCTION = 1 << 8,
 
   // Flag to indicate that returning from the current frame should return to the host
-  AF_CALLED_FROM_HOST = 1 << 10,
+  AF_CALLED_FROM_HOST = 1 << 9,
 
   // Only used by mvm_callEx to indicate that the `this` value is already on the stack
-  AF_OVERRIDE_THIS = 1 << 11,
+  AF_OVERRIDE_THIS = 1 << 10,
 } vm_TeActivationFlags;
 
 /**
  * This struct is malloc'd from the host when the host calls into the VM
  */
-typedef struct vm_TsRegisters { // 24 B on 32-bit machine
+typedef struct vm_TsRegisters { // 28 B on 32-bit machine
   uint16_t* pFrameBase;
   uint16_t* pStackPointer;
   LongPtr lpProgramCounter;
@@ -922,9 +996,37 @@ typedef struct vm_TsRegisters { // 24 B on 32-bit machine
   // state (i.e. 3 words). But now that distance is dynamic, so we need and
   // explicit register.
   Value* pArgs;
+  uint16_t* pCatchTarget; // NULL if no catch block, otherwise points to catch block
   uint16_t argCountAndFlags; // Lower 8 bits are argument count, upper 8 bits are vm_TeActivationFlags
-  Value closure; // Closure scope
-  uint16_t catchTarget; // 0 if no catch block
+  Value closure; // Closure scope or VM_VALUE_UNDEFINED
+
+  /**
+   * Contains the asynchronous callback for the call of the current activation
+   * record.
+   *
+   * - VM_VALUE_UNDEFINED - Normal call (no callback)
+   * - VM_VALUE_DELETED - (poison value) value no longer holds the callback for
+   *   the current activation (value has been trashed or consumed)
+   * - Pointer to function - Directly after AsyncCall operation
+   */
+  Value cpsCallback;
+
+  /**
+   * The (promise) job queue, for scheduling async callbacks. One of 4 states:
+   *
+   *   - Unallocated (no registers) - no jobs
+   *   - `undefined` means there are no promise jobs enqueued. The reason not to
+   *     use `NULL` (0) is because this value is reachable by the garbage
+   *     collector and so making it a consistent JavaScript value makes sense.
+   *   - A function value: indicates there is only one job in the queue, and the
+   *     `jobQueue` register points directly to it.
+   *   - A fixed-length array of 3 values: a tuple of `[prev, job, next]` as a
+   *     doubly-linked list node. Except that instead of a list, it forms a
+   *     cycle, so that the back of the "list" can be reached in `O(1)` time as
+   *     as the `prev` of the first item, without needing a second register to
+   *     point to the back of the list.
+   */
+  Value jobQueue;
 
   #if MVM_SAFE_MODE
   // This will be true if the VM is operating on the local variables rather
@@ -982,6 +1084,25 @@ typedef struct gc_TsGCCollectionState {
   uint16_t* lastBucketEndCapacity;
 } gc_TsGCCollectionState;
 
+typedef struct mvm_TsCallStackFrame {
+  uint16_t programCounter;
+  Value* frameBase;
+  int frameDepth; // Number of variables
+  Value* args;
+  int argCount;
+  Value* closure;
+  int closureSlotCount;
+} mvm_TsCallStackFrame;
+
+typedef struct mvm_TsHeapAllocationInfo {
+  // Note: the short names are because they display better in the debugger
+  uint16_t a; // Lower 16-bits of address
+  TeTypeCode t; // type code
+  uint16_t s; // size
+  uint16_t offset; // What the address would be if serialized in a snapshot
+  Value* address;
+} mvm_TsHeapAllocationInfo;
+
 #define TOMBSTONE_HEADER ((TC_REF_TOMBSTONE << 12) | 2)
 
 // A CALL instruction saves the current registers to the stack. I'm calling this
@@ -1012,7 +1133,7 @@ static TeError toPropertyName(VM* vm, Value* value);
 static void toInternedString(VM* vm, Value* pValue);
 static uint16_t vm_stringSizeUtf8(VM* vm, Value str);
 static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str);
-static TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result);
+static TeError toInt32Internal(mvm_VM* vm, Value value, int32_t* out_result);
 static inline uint16_t vm_getAllocationSizeExcludingHeaderFromHeaderWord(uint16_t headerWord);
 static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset);
 static inline uint16_t LongPtr_read2_aligned(LongPtr lp);
@@ -1025,11 +1146,11 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr);
 static inline int16_t LongPtr_sub(LongPtr lp1, LongPtr lp2);
 static inline uint16_t readAllocationHeaderWord(void* pAllocation);
 static inline uint16_t readAllocationHeaderWord_long(LongPtr pAllocation);
-static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
+static inline void* mvm_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader);
 static inline uint16_t vm_makeHeaderWord(VM* vm, TeTypeCode tc, uint16_t size);
 static int memcmp_long(LongPtr p1, LongPtr p2, size_t size);
 static LongPtr getBytecodeSection(VM* vm, mvm_TeBytecodeSection id, LongPtr* out_end);
-static inline void* LongPtr_truncate(LongPtr lp);
+static inline void* LongPtr_truncate(VM* vm, LongPtr lp);
 static inline LongPtr LongPtr_new(void* p);
 static inline uint16_t* getBottomOfStack(vm_TsStack* stack);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
@@ -1041,41 +1162,68 @@ static Value vm_newStringFromCStrNT(VM* vm, const char* s);
 static TeError vm_validatePortFileMacros(MVM_LONG_PTR_TYPE lpBytecode, mvm_TsBytecodeHeader* pHeader, void* context);
 static LongPtr vm_toStringUtf8_long(VM* vm, Value value, size_t* out_sizeBytes);
 static LongPtr vm_findScopedVariable(VM* vm, uint16_t index);
+static inline Value vm_readScopedFromThisClosure(VM* vm, uint16_t varIndex);
+static inline void vm_writeScopedToThisClosure(VM* vm, uint16_t varIndex, Value value);
 static Value vm_cloneContainer(VM* vm, Value* pArr);
 static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr);
 static LongPtr vm_getStringData(VM* vm, Value value);
 static inline VirtualInt14 VirtualInt14_encode(VM* vm, int16_t i);
+static inline int16_t VirtualInt14_decode(VM* vm, VirtualInt14 viInt);
 static inline TeTypeCode vm_getTypeCodeFromHeaderWord(uint16_t headerWord);
 static bool DynamicPtr_isRomPtr(VM* vm, DynamicPtr dp);
-static inline void vm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber);
+static inline void mvm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber);
 static inline uint16_t vm_getAllocationSize(void* pAllocation);
 static inline uint16_t vm_getAllocationSize_long(LongPtr lpAllocation);
+static inline TeTypeCode vm_getAllocationType(void* pAllocation);
 static inline mvm_TeBytecodeSection vm_sectionAfter(VM* vm, mvm_TeBytecodeSection section);
 static void* ShortPtr_decode(VM* vm, ShortPtr shortPtr);
 static TeError vm_newError(VM* vm, TeError err);
 static void* vm_malloc(VM* vm, size_t size);
 static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
-static inline Value* getHandleTargetOrNull(VM* vm, Value value);
+static Value* vm_getHandleTargetOrNull(VM* vm, Value value);
+static Value vm_resolveIndirections(VM* vm, Value value);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
+static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent);
+static inline Value vm_encodeBytecodeOffsetAsPointer(VM* vm, uint16_t offset);
+static void vm_enqueueJob(VM* vm, Value jobClosure);
+static Value vm_dequeueJob(VM* vm);
+static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr);
+static mvm_Value* vm_push(mvm_VM* vm, mvm_Value value);
+static Value vm_pop(mvm_VM* vm);
+static Value vm_asyncStartUnsafe(mvm_VM* vm, Value* out_result);
+static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount);
+static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess, Value resultOrError);
+static Value vm_newArray(VM* vm, uint16_t capacity);
+static void vm_arrayPush(VM* vm, Value* pvArr, Value* pvItem);
+static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapacity);
 
 #if MVM_SUPPORT_FLOAT
-MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, mvm_Value value);
+MVM_FLOAT64 mvm_toFloat64(mvm_VM* vm, Value value);
 #endif // MVM_SUPPORT_FLOAT
 
 // The MVM_HIDDEN functions are not exposed by default but can be linked to if
 // needed. This is currently used by the WASM wrapper to get low-level access to
 // some features.
 MVM_HIDDEN TeError vm_objectKeys(VM* vm, Value* pObject);
-MVM_HIDDEN void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
+MVM_HIDDEN void* mvm_mvm_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 MVM_HIDDEN TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
 MVM_HIDDEN TeError setProperty(VM* vm, Value* pObject, Value* pPropertyName, Value* pPropertyValue);
-
+MVM_HIDDEN void* mvm_allocate(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
+MVM_HIDDEN void mvm_subscribeToPromise(VM* vm, Value vPromise, Value vCallback);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
 #endif // MVM_SAFE_MODE
+
+#if MVM_DEBUG_UTILS
+void mvm_checkHeap(mvm_VM* vm);
+int mvm_readHeapCount(VM* vm);
+void mvm_checkValue(mvm_VM* vm, Value value);
+mvm_TsCallStackFrame* mvm_readCallStack(VM* vm, int* out_frameCount);
+mvm_TsHeapAllocationInfo* mvm_readHeap(VM* vm, int* out_count);
+#endif
 
 static const Value smallLiterals[] = {
   /* VM_SLV_UNDEFINED */    VM_VALUE_DELETED,
@@ -1144,13 +1292,25 @@ static const uint8_t typeByTC[TC_END] = {
   VM_T_UNDEFINED,   /* TC_VAL_DELETED            */
   VM_T_STRING,      /* TC_VAL_STR_LENGTH         */
   VM_T_STRING,      /* TC_VAL_STR_PROTO          */
+  VM_T_FUNCTION,    /* TC_VAL_NO_OP_FUNC         */
 };
 
 #define GC_ALLOCATE_TYPE(vm, type, typeCode) \
-  (type*)gc_allocateWithConstantHeader(vm, vm_makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))
+  (type*)mvm_allocateWithConstantHeader(vm, vm_makeHeaderWord(vm, typeCode, sizeof (type)), 2 + sizeof (type))
 
 #if MVM_SUPPORT_FLOAT
 static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
+#endif
+
+#if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+  #define VM_POTENTIAL_GC_POINT(vm) do { \
+    mvm_runGC(vm, false); \
+    VM_EXEC_SAFE_MODE(vm->gc_potentialCycleNumber++;) \
+  } while (0)
+#else
+  #define VM_POTENTIAL_GC_POINT(vm) do { \
+    VM_EXEC_SAFE_MODE(vm->gc_potentialCycleNumber++;) \
+  } while (0)
 #endif
 
 // MVM_LOCAL declares a local variable whose value would become invalidated if
@@ -1159,7 +1319,7 @@ static int32_t mvm_float64ToInt32(MVM_FLOAT64 value);
 // might hold a pointer.
 #if MVM_SAFE_MODE
 #define MVM_LOCAL(type, varName, initial) type varName ## Value = initial; uint8_t _ ## varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
-#define MVM_GET_LOCAL(varName) (vm_checkValueAccess(vm, _ ## varName ## PotentialCycleNumber), varName ## Value)
+#define MVM_GET_LOCAL(varName) (mvm_checkValueAccess(vm, _ ## varName ## PotentialCycleNumber), varName ## Value)
 #define MVM_SET_LOCAL(varName, value) varName ## Value = value; _ ## varName ## PotentialCycleNumber = vm->gc_potentialCycleNumber
 #else
 #define MVM_LOCAL(type, varName, initial) type varName = initial

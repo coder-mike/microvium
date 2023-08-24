@@ -65,6 +65,7 @@ export function traverseChildren<TContext = unknown>(
     case 'TemplateLiteral': return n.expressions.forEach(f);
     case 'TryStatement': return f(n.block), n.handler && f(n.handler), n.finalizer && f(n.finalizer);
     case 'CatchClause': return f(n.body);
+    case 'AwaitExpression': return f(n.argument);
 
     case 'ImportDeclaration': return;
     case 'Identifier': return;
@@ -148,4 +149,3 @@ export function traverseChildren<TContext = unknown>(
   }
 }
 
-let context: undefined;

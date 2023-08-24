@@ -24,10 +24,17 @@ async function run() {
     ...glob.sync('./test/**/*.ts'),
     ...glob.sync('./test/**/*.test.mvm.js'),
     ...glob.sync('./lib/**/*.ts'),
-    ...glob.sync('./native-vm/**/*.{c,h}')
+    ...glob.sync('./native-vm/**/*.{c,h}'),
+    ...glob.sync('./doc/**/*.md')
   ];
+
+  const exclude = new Set([
+    'doc/contribute.md' // The contribute file describes the wip process so it includes the word wip
+  ].map(f => fs.realpathSync(f)));
+
   const throttleWindow: Promise<any>[] = [];
   for (const filename of files) {
+    if (exclude.has(fs.realpathSync(filename))) continue;
     if (throttleWindow.length > 20) await throttleWindow.shift();
     throttleWindow.push(checkFile(filename));
   }

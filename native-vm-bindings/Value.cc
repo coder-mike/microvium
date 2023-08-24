@@ -13,7 +13,7 @@ void VM::Value::Init(Napi::Env env, Napi::Object exports) {
     VM::Value::InstanceMethod("toNumber", &VM::Value::toNumber),
     VM::Value::InstanceMethod("uint8ArrayToBytes", &VM::Value::uint8ArrayToBytes),
     VM::Value::InstanceAccessor("type", &VM::Value::getType, nullptr),
-    VM::Value::InstanceAccessor("value", &VM::Value::getValue, nullptr)
+    VM::Value::InstanceAccessor("raw", &VM::Value::getRaw, nullptr)
   });
   constructor = Napi::Persistent(ctr);
   constructor.SuppressDestruct();
@@ -103,6 +103,6 @@ Napi::Value VM::Value::getType(const Napi::CallbackInfo& info) {
   return Napi::Number::New(info.Env(), type);
 }
 
-Napi::Value VM::Value::getValue(const Napi::CallbackInfo& info) {
+Napi::Value VM::Value::getRaw(const Napi::CallbackInfo& info) {
   return Napi::Number::New(info.Env(), _handle._value);
 }

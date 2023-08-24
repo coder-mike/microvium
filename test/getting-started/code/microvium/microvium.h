@@ -3,7 +3,7 @@
 /*
  * Microvium Bytecode Interpreter
  *
- * Version: 7.8.0
+ * Version: 8.0.0
  *
  * This is the main header for the Microvium bytecode interpreter. Latest source
  * available at https://microvium.com. Raise issues at
@@ -15,8 +15,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define MVM_ENGINE_MAJOR_VERSION 7  /* aka MVM_BYTECODE_VERSION */
-#define MVM_ENGINE_MINOR_VERSION 8  /* aka MVM_ENGINE_VERSION */
+#define MVM_ENGINE_MAJOR_VERSION 8  /* aka MVM_BYTECODE_VERSION */
+#define MVM_ENGINE_MINOR_VERSION 0  /* aka MVM_ENGINE_VERSION */
 
 typedef uint16_t mvm_Value;
 typedef uint16_t mvm_VMExportID;
@@ -75,6 +75,12 @@ typedef enum mvm_TeError {
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
   /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
   /* 51 */ MVM_E_INSTRUCTION_COUNT_REACHED, // The instruction count set by `mvm_stopAfterNInstructions` has been reached
+  /* 52 */ MVM_E_REQUIRES_ACTIVE_VM, // The given operation requires that the VM has active calls on the stack
+  /* 53 */ MVM_E_ASYNC_START_ERROR, // mvm_asyncStart must be called exactly once at the beginning of a host function that is called from JS
+  /* 54 */ MVM_E_ASYNC_WITHOUT_AWAIT, // mvm_asyncStart can only be used with a script that has await points. Add at least one (reachable) await point to the script.
+  /* 55 */ MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE, // Can only await a promise in Microvium
+  /* 56 */ MVM_E_HEAP_CORRUPT, // Microvium's internal heap is not in a consistent state
+  /* 57 */ MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT, // The prototype property of a class must be null or a plain object
 } mvm_TeError;
 
 typedef enum mvm_TeType {
@@ -405,6 +411,44 @@ MVM_EXPORT uint16_t mvm_getCurrentAddress(mvm_VM* vm);
  */
 MVM_EXPORT void mvm_getMemoryStats(mvm_VM* vm, mvm_TsMemoryStats* out_stats);
 
+
+/**
+ * Call this at the beginning of an asynchronous host function. It accepts a
+ * pointer to the synchronous result and returns a callback function that can be
+ * used to set the asynchronous result.
+ *
+ * @param out_result The result pointer that was passed to the host function.
+ *                   mvm_asyncStart will set the result. The host must not set
+ *                   or use the result field.
+ *
+ * @returns A JavaScript callback function accepting arguments (isSuccess,
+ * value)
+ *
+ * This function sets the synchronous result `*out_result` to a promise object
+ * (or this promise value may be optimized away in certain cases), and returns a
+ * JavaScript callback function that represents the caller continuation.
+ *
+ * If the asynchronous operation ends successfully, call the callback with
+ * arguments (true, result). If the asynchronous operation fails, call the
+ * callback with arguments (false, error).
+ *
+ * Note: The callback will not invoke the continuation immediately but will
+ * schedule it on Microvium's job queue.
+ *
+ * Note: mvm_asyncStart does not do anything regarding threading. It's up to the
+ * host to promptly return from the host function and to call the callback
+ * later.
+ *
+ * @warning The returned mvm_Value is subject to garbage collection and the host
+ * should keep it in a handle until it's ready to call it.
+ *
+ * @warning The host must call `mvm_asyncStart` right at the beginning of the
+ * host function, before doing anything else, since this accesses an internal
+ * register that is not preserved across function calls.
+ */
+mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result);
+
+
 #if MVM_INCLUDE_SNAPSHOT_CAPABILITY
 /**
  * Create a snapshot of the VM
@@ -432,6 +476,8 @@ MVM_EXPORT void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
 /**
  * Set a breakpoint on the given bytecode address.
  *
+ * Use (-1) to break on every instruction.
+ *
  * Whenever the VM executes the instruction at the given bytecode address, the
  * VM will invoke the breakpoint callback (see mvm_dbg_setBreakpointCallback).
  *
@@ -446,7 +492,7 @@ MVM_EXPORT void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size);
  * Setting a breakpoint a second time on the same address of an existing active
  * breakpoint will have no effect.
  */
-MVM_EXPORT void mvm_dbg_setBreakpoint(mvm_VM* vm, uint16_t bytecodeAddress);
+MVM_EXPORT void mvm_dbg_setBreakpoint(mvm_VM* vm, int bytecodeAddress);
 
 /**
  * Remove a breakpoint added by mvm_dbg_setBreakpoint

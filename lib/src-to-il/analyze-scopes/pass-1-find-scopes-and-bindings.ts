@@ -61,6 +61,8 @@ export function pass1_findScopesAndBindings({
       case 'AssignmentExpression': return handleAssignmentExpression(node);
       case 'UpdateExpression': return handleUpdateExpression(node);
 
+      case 'AwaitExpression': return handleAwaitExpression(node);
+
       default:
         traverseChildren(cur, node, traverse);
     }
@@ -88,7 +90,8 @@ export function pass1_findScopesAndBindings({
     }
 
     function traverseFunctionDeclarationScope(node: B.FunctionDeclaration | B.ClassMethod, className?: string) {
-      const scope = pushFunctionScope(node, true, className);
+      const isAsync = node.async === true;
+      const scope = pushFunctionScope(node, true, isAsync, className);
 
       registerWithEmbeddingLocation(cur, scope);
 
@@ -157,7 +160,7 @@ export function pass1_findScopesAndBindings({
 
       // Pass 3: non-static property initializers. These are evaluated in a
       // scope where `this` refers to the class instance.
-      classScope.physicalConstructorScope = createFunctionScope(undefined, true, className);
+      classScope.physicalConstructorScope = createFunctionScope(undefined, true, false, className);
       pushScope(classScope.physicalConstructorScope)
       for (const decl of fields) {
         if (!decl.static && decl.type === 'ClassProperty' && decl.value) {
@@ -190,7 +193,8 @@ export function pass1_findScopesAndBindings({
 
     function traverseFunctionExpressionScope(cur: SourceCursor, node: B.ArrowFunctionExpression | B.FunctionExpression) {
       const hasThisBinding = node.type === 'FunctionExpression';
-      const scope = pushFunctionScope(node, hasThisBinding);
+      const isAsync = node.async === true;
+      const scope = pushFunctionScope(node, hasThisBinding, isAsync);
 
       registerWithEmbeddingLocation(cur, scope);
 
@@ -326,6 +330,15 @@ export function pass1_findScopesAndBindings({
       handleMutationToVariable(node.argument);
     }
 
+    function handleAwaitExpression(node: B.AwaitExpression) {
+      traverseChildren(cur, node, traverse);
+      const currentFunction = containingFunction(currentScope()) ?? unexpected();
+      if (currentFunction.type === 'ModuleScope') {
+        return compileError(cur, 'Await expressions are not supported at the top level');
+      }
+      currentFunction.awaitExpressions.push(node);
+    }
+
     function handleMutationToVariable(expr: B.LVal | B.Expression) {
       // This is basically to determine which slots need to be mutable. The main
       // reason for this is to decide which parameters need to be copied into
@@ -352,6 +365,8 @@ export function pass1_findScopesAndBindings({
         const currentFunction = containingFunction(currentScope());
         const bindingFunction = containingFunction(binding.scope);
         const isInLocalFunction = bindingFunction === currentFunction;
+
+        binding.isUsed = true;
 
         // Note that this includes block-scoped variables for blocks at the root level
         const mustBeClosureAllocated = !isInLocalFunction;
@@ -452,9 +467,9 @@ export function pass1_findScopesAndBindings({
     // Returns the innermost function containing or equal to the given scope,
     // or undefined if the given scope is not within a function (e.g. it's at
     // the model level)
-    function containingFunction(scope: Scope): FunctionScope | undefined {
+    function containingFunction(scope: Scope): FunctionScope | ModuleScope | undefined {
       let current: Scope | undefined = scope;
-      while (current !== undefined && current.type !== 'FunctionScope')
+      while (current !== undefined && current.type !== 'FunctionScope' && current.type !== 'ModuleScope')
         current = current.parent;
       return current;
     }
@@ -650,7 +665,9 @@ export function pass1_findScopesAndBindings({
     }
   }
 
-  function pushModuleScope(node: ScopeNode) {
+  function pushModuleScope(node: B.Program) {
+    // Top-level-await (not really supported yet)
+    const isAsyncFunction = node.body.some(n => containsAwait(cur, n));
     const scope: ModuleScope = {
       type: 'ModuleScope',
       node,
@@ -668,14 +685,16 @@ export function pass1_findScopesAndBindings({
       embeddingCandidates: [],
       functionIsClosure: false,
       sameInstanceCountAsParent: false,
+      isAsyncFunction,
+      awaitExpressions: [],
     };
     scopes.set(node, scope);
     pushScope(scope);
     return scope;
   }
 
-  function pushFunctionScope(node: B.SupportedFunctionNode, hasThisBinding: boolean, className?: string) {
-    const scope = createFunctionScope(node, hasThisBinding, className)
+  function pushFunctionScope(node: B.SupportedFunctionNode, hasThisBinding: boolean, isAsync: boolean, className?: string) {
+    const scope = createFunctionScope(node, hasThisBinding, isAsync, className)
 
     model.functions.push(scope);
     scopes.set(node, scope);
@@ -684,7 +703,7 @@ export function pass1_findScopesAndBindings({
     return scope;
   }
 
-  function createFunctionScope(node: B.SupportedFunctionNode | undefined, hasThisBinding: boolean, className?: string): FunctionScope {
+  function createFunctionScope(node: B.SupportedFunctionNode | undefined, hasThisBinding: boolean, isAsyncFunction: boolean, className?: string): FunctionScope {
     const name =
       node ?
         node.type === 'FunctionDeclaration' ? node.id?.name :
@@ -702,13 +721,13 @@ export function pass1_findScopesAndBindings({
 
     const scope: FunctionScope = {
       type: 'FunctionScope',
-      ...createBaseScope(node, false),
+      ...createBaseScope(node, false, isAsyncFunction),
       node,
       ilFunctionId,
       funcName: name,
       // Assume the function is not a closure until we find a free variable
       // that references the outer scope
-      functionIsClosure: false,
+      functionIsClosure: false
     };
 
     if (hasThisBinding) {
@@ -726,7 +745,7 @@ export function pass1_findScopesAndBindings({
 
     const scope: ClassScope = {
       type: 'ClassScope',
-      ...createBaseScope(node, true),
+      ...createBaseScope(node, true, false),
       className: name,
       // These will be populated later
       physicalConstructorScope: undefined as any,
@@ -749,11 +768,11 @@ export function pass1_findScopesAndBindings({
   function createBlockScope(node: ScopeNode | undefined, sameInstanceCountAsParent: boolean): BlockScope {
     return {
       type: 'BlockScope',
-      ...createBaseScope(node, sameInstanceCountAsParent)
+      ...createBaseScope(node, sameInstanceCountAsParent, false)
     };
   }
 
-  function createBaseScope(node: ScopeNode | undefined, sameInstanceCountAsParent: boolean): ScopeBase {
+  function createBaseScope(node: ScopeNode | undefined, sameInstanceCountAsParent: boolean, isAsyncFunction: boolean): ScopeBase {
     return {
       node,
       bindings: Object.create(null),
@@ -770,6 +789,8 @@ export function pass1_findScopesAndBindings({
       parameterBindings: [], //
       nestedFunctionDeclarations: [],
       closureSlots: undefined,
+      isAsyncFunction,
+      awaitExpressions: [],
     }
   }
 
@@ -862,6 +883,7 @@ export function pass1_findScopesAndBindings({
       isWrittenTo: false,
       // Assuming not closure allocated until we detect otherwise
       isAccessedByNestedFunction: false,
+      isUsed: false,
     };
 
     scopeBindings[name] = binding;
@@ -901,4 +923,28 @@ function checkNoThis(cur: SourceCursor, node: B.Node, context: string) {
     }
     traverseChildren(cur, node, inner)
   }
+}
+
+// Checks for `await` expressions in a given statement or expression, ignoring
+// the body of nested functions.
+function containsAwait(cur: SourceCursor, node: B.Node) {
+  let containsAwait = false;
+  inner(node);
+  return containsAwait;
+
+  function inner(node: B.Node) {
+    if (node.type === 'FunctionDeclaration' ||
+      node.type === 'FunctionExpression' ||
+      node.type === 'ArrowFunctionExpression' ||
+      node.type === 'ClassMethod'
+    ) {
+      /* Do not traverse into nested functions */
+    } else if (node.type === 'AwaitExpression') {
+      containsAwait = true;
+    } else {
+      traverseChildren(cur, node, inner);
+    }
+  }
+
+
 }

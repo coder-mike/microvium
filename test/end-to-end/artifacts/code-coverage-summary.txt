@@ -1,1 +1,5 @@
+<<<<<<< HEAD
+microvium.c code coverage: 644 of 862 (74.7%)
+=======
 microvium.c code coverage: 565 of 786 (71.9%)
+>>>>>>> main

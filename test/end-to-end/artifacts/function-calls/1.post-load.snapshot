@@ -5,20 +5,6 @@ slot concat = &function concat;
 slot foo = &function foo;
 slot ['global:print'] = host function 1;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 function bar() {
   entry:
     LoadArg(index 1);
@@ -26,8 +12,7 @@ function bar() {
     Literal(lit 'bar ');
     LoadArg(index 2);
     BinOp(op '+');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -53,8 +38,7 @@ function foo() {
     Literal(lit 'foo ');
     LoadArg(index 1);
     BinOp(op '+');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -73,33 +57,27 @@ function run() {
     LoadGlobal(name 'foo');
     Literal(lit undefined);
     Literal(lit 'a');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     // Higher-order function
     LoadGlobal(name 'bar');
     Literal(lit undefined);
     LoadGlobal(name 'foo');
     Literal(lit 'b');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Arguments and return value
     LoadGlobal(name 'concat');
     Literal(lit undefined);
     Literal(lit 'a');
     Literal(lit 'b');
     Literal(lit 'c');
-    Call(count 4);
+    Call(count 4, flag false);
     StoreVar(index 0);
     LoadGlobal(name 'foo');
     Literal(lit undefined);
     LoadVar(index 0);
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
 }
 
-allocation 5 = {
-  push: &function Array_push,
-};

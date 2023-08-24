@@ -3,8 +3,8 @@ export 0 = &function run;
 slot basics = &function basics;
 slot closureOperations = &function closureOperations;
 slot differentVariableTypes = &function differentVariableTypes;
-slot f = &allocation 8;
-slot ['global:Number'] = &allocation 4;
+slot f = &allocation 10;
+slot ['global:Number'] = &allocation 6;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot makeIncrementorA = &function makeIncrementorA;
@@ -18,26 +18,13 @@ slot v1 = 1;
 slot v2 = 2;
 slot v4 = 4;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 function Number_isNaN() {
   entry:
     // NaN is the only value that is not equal to itself
     LoadArg(index 1);
     LoadArg(index 1);
     BinOp(op '!==');
+    // NaN is the only value that is not equal to itself
     Return();
 }
 
@@ -223,6 +210,7 @@ function anonymous7() {
     Literal(lit &function anonymous8);
     StoreScoped(index 0);
     LoadReg(name 'closure');
+    // let
     Return();
 }
 
@@ -259,6 +247,7 @@ function anonymous8() {
     Literal(lit &function anonymous9);
     StoreScoped(index 0);
     LoadReg(name 'closure');
+    // let
     Return();
 }
 
@@ -414,108 +403,98 @@ function basics() {
     Literal(lit deleted);
     LoadGlobal(name 'makeIncrementorA');
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     StoreVar(index 0);
     LoadGlobal(name 'makeIncrementorA');
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     StoreVar(index 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'makeIncrementorA2');
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     StoreVar(index 2);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'makeIncrementorB');
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     StoreVar(index 3);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 3);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 3);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'makeIncrementorC');
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     StoreVar(index 4);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 4);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 4);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 5);
     Literal(lit undefined);
     Return();
@@ -536,32 +515,28 @@ function closureOperations() {
     LoadVar(index 0);
     BinOp(op '===');
     Literal(lit true);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     LoadVar(index 1);
     BinOp(op '===');
     Literal(lit false);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     LoadVar(index 0);
     BinOp(op '!==');
     Literal(lit false);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     LoadVar(index 1);
     BinOp(op '!==');
     Literal(lit true);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Other operations
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -569,21 +544,19 @@ function closureOperations() {
     Literal(lit 0);
     BinOp(op '|');
     Literal(lit 0);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadGlobal(name 'global:Number');
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'isNaN');
     ObjectGet();
-    LoadVar(index 4);
+    StoreVar(index 4);
     LoadVar(index 0);
     UnOp(op '+');
-    Call(count 2);
-    StoreVar(index 4);
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag false);
+    Call(count 2, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -602,21 +575,21 @@ function differentVariableTypes() {
     Literal(lit 1);
     Literal(lit 2);
     Literal(lit 3);
-    Call(count 4);
+    Call(count 4, flag false);
     StoreVar(index 1);
     LoadVar(index 1);
     Literal(lit undefined);
     Literal(lit 4);
     Literal(lit 5);
     Literal(lit 6);
-    Call(count 4);
+    Call(count 4, flag false);
     StoreVar(index 2);
     LoadVar(index 1);
     Literal(lit undefined);
     Literal(lit 7);
     Literal(lit 8);
     Literal(lit 9);
-    Call(count 4);
+    Call(count 4, flag false);
     StoreVar(index 3);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -625,10 +598,9 @@ function differentVariableTypes() {
     Literal(lit 10);
     Literal(lit 11);
     Literal(lit 12);
-    Call(count 4);
+    Call(count 4, flag false);
     Literal(lit 2971);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
@@ -636,10 +608,9 @@ function differentVariableTypes() {
     Literal(lit 13);
     Literal(lit 14);
     Literal(lit 15);
-    Call(count 4);
+    Call(count 4, flag false);
     Literal(lit 3415);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
@@ -647,10 +618,9 @@ function differentVariableTypes() {
     Literal(lit 16);
     Literal(lit 17);
     Literal(lit 19);
-    Call(count 4);
+    Call(count 4, flag false);
     Literal(lit 3918);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 3);
@@ -658,10 +628,9 @@ function differentVariableTypes() {
     Literal(lit 19);
     Literal(lit 20);
     Literal(lit 21);
-    Call(count 4);
+    Call(count 4, flag false);
     Literal(lit 3838);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 3);
@@ -669,10 +638,9 @@ function differentVariableTypes() {
     Literal(lit 22);
     Literal(lit 23);
     Literal(lit 24);
-    Call(count 4);
+    Call(count 4, flag false);
     Literal(lit 4282);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 3);
@@ -680,10 +648,9 @@ function differentVariableTypes() {
     Literal(lit 25);
     Literal(lit 26);
     Literal(lit 27);
-    Call(count 4);
+    Call(count 4, flag false);
     Literal(lit 4726);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 4);
     Literal(lit undefined);
     Return();
@@ -736,6 +703,7 @@ function makeIncrementorA() {
     Literal(lit &function anonymous);
     StoreScoped(index 0);
     LoadReg(name 'closure');
+    // Arrow function
     Return();
 }
 
@@ -748,6 +716,7 @@ function makeIncrementorA2() {
     Literal(lit &function anonymous1);
     StoreScoped(index 0);
     LoadReg(name 'closure');
+    // Function expression (note that we do not support named function expressions, yet)
     Return();
 }
 
@@ -774,6 +743,8 @@ function makeIncrementorC() {
     Literal(lit &function anonymous2);
     StoreScoped(index 0);
     LoadReg(name 'closure');
+    // The inner-most function doesn't access its direct outer scope. It accesses
+    // its grandparent scope.
     Return();
 }
 
@@ -815,50 +786,44 @@ function nestedLexicalScopes() {
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 50);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 51);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 100);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 101);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 3);
     Literal(lit undefined);
     Return();
@@ -878,26 +843,23 @@ function rootScope() {
     Literal(lit undefined);
     LoadGlobal(name 'f');
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 1234);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'f');
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 2345);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'f');
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 3456);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -906,28 +868,22 @@ function run() {
   entry:
     LoadGlobal(name 'basics');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'nestedLexicalScopes');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'differentVariableTypes');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'closureOperations');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'thisCapturing');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'rootScope');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -956,76 +912,68 @@ function thisCapturing() {
     Literal(lit 'obj1');
     ObjectSet();
     StoreVar(index 1);
+    Literal(lit undefined);
     LoadVar(index 1);
-    LoadVar(index 3);
+    LoadVar(index 4);
     Literal(lit 'getObj2');
     ObjectGet();
-    LoadVar(index 3);
-    Call(count 1);
     StoreVar(index 3);
+    Call(count 1, flag false);
     StoreVar(index 2);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 1);
-    LoadVar(index 5);
+    LoadVar(index 6);
     Literal(lit 'printMe1');
     ObjectGet();
-    LoadVar(index 5);
-    Call(count 1);
     StoreVar(index 5);
+    Call(count 1, flag false);
     Literal(lit 'obj1');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 2);
-    LoadVar(index 5);
+    LoadVar(index 6);
     Literal(lit 'printMe1');
     ObjectGet();
-    LoadVar(index 5);
-    Call(count 1);
     StoreVar(index 5);
+    Call(count 1, flag false);
     Literal(lit 'obj2');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 2);
-    LoadVar(index 5);
+    LoadVar(index 6);
     Literal(lit 'printMe2');
     ObjectGet();
-    LoadVar(index 5);
-    Call(count 1);
     StoreVar(index 5);
+    Call(count 1, flag false);
     Literal(lit 'obj1');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 2);
-    LoadVar(index 5);
+    LoadVar(index 6);
     Literal(lit 'printMe3');
     ObjectGet();
-    LoadVar(index 5);
-    Call(count 1);
     StoreVar(index 5);
+    Call(count 1, flag false);
     Literal(lit 'obj2');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 3);
     Literal(lit undefined);
     Return();
 }
 
-allocation 4 = {
-  isNaN: &function Number_isNaN,
-};
-
-allocation 5 = {
-  push: &function Array_push,
-};
-
-allocation 8 = Closure [
+allocation 10 = Closure [
   &function anonymous14,
   3,
 ];
+
+allocation 6 = {
+  isNaN: &function Number_isNaN,
+};

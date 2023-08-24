@@ -71,9 +71,8 @@ export interface Microvium extends MicroviumNativeSubset {
   readonly globalThis: any;
 
   createSnapshot(opts?: SnapshottingOptions): Snapshot;
-  importHostFunction(hostFunctionID: IL.HostFunctionID): Function;
   vmExport(exportID: ExportID, value: any): void;
-  vmImport(importID: ExportID, compileTimeImplementation: any): void;
+  vmImport(importID: ExportID, defaultImplementation?: any): void;
   newObject(): any;
   newArray(): any;
   createSnapshotIL(): SnapshotIL;
@@ -153,6 +152,7 @@ export interface SnapshottingOptions {
   // the snapshotting will also output an IL file
   outputSnapshotIL?: boolean;
   snapshotILFilename?: string;
+  generateSourceMap?: boolean;
 }
 
 export interface ModuleSource {

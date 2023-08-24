@@ -37,6 +37,8 @@ typedef enum mvm_TeBytecodeSection {
   /**
    * Builtins
    *
+   * See `mvm_TeBuiltins`
+   *
    * Table of `Value`s that need to be directly identifiable by the engine, such
    * as the Array prototype.
    *
@@ -103,6 +105,10 @@ typedef enum mvm_TeBytecodeSection {
    *
    * The handles appear as the *last* global slots, and will generally not be
    * referenced by `LOAD_GLOBAL` instructions.
+   *
+   * WARNING: the globals section is the last section before the heap, so no ROM
+   * pointer should point after the globals section. Some functions (e.g.
+   * vm_getHandleTargetOrNull) assume this to be true.
    */
   BCS_GLOBALS,
 
@@ -127,12 +133,16 @@ typedef enum mvm_TeBuiltins {
   BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
   BIN_STR_PROTOTYPE, // If the string "prototype" is interned, this builtin points to it.
+  BIN_ASYNC_CONTINUE, // A function used to construct a closure for the job queue to complete async operations
+  BIN_ASYNC_CATCH_BLOCK, // A block, bundled as a function, for the root try-catch in async functions
+  BIN_ASYNC_HOST_CALLBACK, // Bytecode to use as the callback for host async operations
+  BIN_PROMISE_PROTOTYPE,
 
   BIN_BUILTIN_COUNT
 } mvm_TeBuiltins;
 
 // Minimal bytecode is 32 bytes (sizeof(mvm_TsBytecodeHeader) + BCS_SECTION_COUNT*2 + BIN_BUILTIN_COUNT*2)
-typedef struct mvm_TsBytecodeHeader {
+typedef struct mvm_TsBytecodeHeader { // Size = 12B + sectionOffsets
   uint8_t bytecodeVersion; // MVM_ENGINE_MAJOR_VERSION
   uint8_t headerSize;
   uint8_t requiredEngineVersion; // MVM_ENGINE_MINOR_VERSION
@@ -148,7 +158,7 @@ typedef struct mvm_TsBytecodeHeader {
   that the size of a section can be computed as the difference between the
   adjacent offsets. The last section runs up until the end of the bytecode.
   */
-  uint16_t sectionOffsets[BCS_SECTION_COUNT];
+  uint16_t sectionOffsets[BCS_SECTION_COUNT]; // 8 sections, 16B
 } mvm_TsBytecodeHeader;
 
 typedef enum mvm_TeFeatureFlags {
@@ -163,7 +173,7 @@ typedef struct vm_TsExportTableEntry {
 typedef struct vm_TsShortCallTableEntry {
   /* Note: the `function` field has been broken up into separate low and high
    * bytes, `functionL` and `functionH` respectively, for alignment purposes,
-   * since this is a 3-byte structure occuring in a packed table.
+   * since this is a 3-byte structure occurring in a packed table.
    *
    * `functionL` and `functionH` together make an `mvm_Value` which should be a
    * callable value (a pointer to a `TsBytecodeFunc`, `TsHostFunc`, or

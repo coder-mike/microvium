@@ -16,14 +16,19 @@ using namespace std;
 using namespace filesystem;
 
 // Set to the empty string "" if you want to run all tests
-const string runOnlyTest = "classes";
-//const string runOnlyTest = "";
+//const string runOnlyTest = "async-await-promise";
+const string runOnlyTest = "";
+
+vector<string> skipTests = {
+  "gc",
+};
 
 // Bytecode addresses to break on. To have no breakpoints, set to single value of { 0 }
 uint16_t breakpoints[] = {
   //0x193
   0
 };
+
 #define BREAKPOINT_COUNT (sizeof breakpoints / sizeof breakpoints[0])
 #define IS_ANY_BREAKPOINTS ((BREAKPOINT_COUNT > 1) || (breakpoints[0] != 0))
 
@@ -50,6 +55,7 @@ static mvm_TeError vmIsNaN(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Va
 static mvm_TeError vmGetHeapUsed(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError vmRunGC(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static mvm_TeError resolveImport(mvm_HostFunctionID hostFunctionID, void* context, mvm_TfHostFunction* out_hostFunction);
+static mvm_TeError asyncTestComplete(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount);
 static void breakpointCallback(mvm_VM* vm, uint16_t bytecodeAddress);
 static void check(mvm_TeError err);
 
@@ -59,6 +65,7 @@ const HostFunction hostFunctions[] = {
   { 3, vmAssertEqual },
   { 4, vmGetHeapUsed },
   { 5, vmRunGC },
+  { 6, asyncTestComplete },
   { 0xFFFD, vmIsNaN },
 };
 
@@ -87,6 +94,11 @@ int main()
         cout << "skipping" << endl;
         continue;
       }
+    }
+    // Check if skipTests vector contains this test
+    if (find(skipTests.begin(), skipTests.end(), testName) != skipTests.end()) {
+      cout << "skipping" << endl;
+      continue;
     }
 
     cout << "running" << endl;
@@ -127,15 +139,15 @@ int main()
     //mvm_createSnapshot(vm, NULL);
 
     // Set breakpoints
+    mvm_dbg_setBreakpointCallback(vm, breakpointCallback);
     if (IS_ANY_BREAKPOINTS) {
-      mvm_dbg_setBreakpointCallback(vm, breakpointCallback);
       for (int i = 0; i < BREAKPOINT_COUNT; i++)
         if (breakpoints[i])
           mvm_dbg_setBreakpoint(vm, breakpoints[i]);
     }
 
     // Run the garbage collector (shouldn't really change anything, since a collection was probably done before the snapshot was taken)
-    // mvm_runGC(vm);
+    // mvm_runGC(vm, false);
 
     if (meta["runExportedFunction"]) {
       uint16_t runExportedFunctionID = meta["runExportedFunction"].as<uint16_t>();
@@ -299,6 +311,10 @@ static mvm_TeError vmGetHeapUsed(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, 
 static mvm_TeError vmRunGC(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   bool strict = (argCount >= 1) && mvm_toBool(vm, args[0]);
   mvm_runGC(vm, strict);
+  return MVM_E_SUCCESS;
+}
+
+static mvm_TeError asyncTestComplete(mvm_VM* vm, mvm_HostFunctionID hostFunctionID, mvm_Value* result, mvm_Value* args, uint8_t argCount) {
   return MVM_E_SUCCESS;
 }
 

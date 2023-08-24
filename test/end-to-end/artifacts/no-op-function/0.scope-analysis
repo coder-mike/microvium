@@ -1,0 +1,67 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'Microvium'
+[free var] 'assertEqual'
+[free var] 'undefined'
+[free var] 'assert'
+[free var] 'Number'
+[global slot] 'thisModule'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings { function 'run' # binding_1 @ local[0] }
+
+  references { vmExport @ free vmExport; run @ binding_1 }
+
+  prologue { func 'run' -> local[0] }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_2 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'nof' # binding_3 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        Microvium @ free Microvium
+        assertEqual @ free assertEqual
+        nof @ binding_3
+        assertEqual @ free assertEqual
+        Microvium @ free Microvium
+        nof @ binding_3
+        assertEqual @ free assertEqual
+        nof @ binding_3
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        nof @ binding_3
+        undefined @ free undefined
+        assertEqual @ free assertEqual
+        nof @ binding_3
+        Microvium @ free Microvium
+        assertEqual @ free assertEqual
+        nof @ binding_3
+        nof @ binding_3
+        assertEqual @ free assertEqual
+        nof @ binding_3
+        nof @ binding_3
+        assert @ free assert
+        Number @ free Number
+        nof @ binding_3
+      }
+    }
+  }
+}

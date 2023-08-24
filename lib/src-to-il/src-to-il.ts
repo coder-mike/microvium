@@ -6,6 +6,7 @@ import { isUInt16 } from '../runtime-types';
 import { minOperandCount } from '../il-opcodes';
 import { analyzeScopes, AnalysisModel, SlotAccessInfo, PrologueStep, BlockScope, Scope } from './analyze-scopes';
 import { compileError, compileErrorIfReachable, featureNotSupported, internalCompileError, SourceCursor, visitingNode } from './common';
+import { formatSourceLoc } from '../stringify-il';
 
 const outputStackDepthComments = false;
 
@@ -18,13 +19,22 @@ interface Context {
   filename: string;
   nextBlockID: number; // Mutable counter for numbering blocks
   scopeAnalysis: AnalysisModel;
+  // Map from source location of `await` to the stack depth at that point
+  // (before awaiting), or undefined if that information is not yet known.
+  // Source location stored as `line:column` starting at 1:0 I think.
+  awaitStackDepths?: Map<string, number>;
 }
 
 interface ScopeStack {
   helper: ScopeHelper;
   scope: Scope;
   parent: ScopeStack | undefined;
+
+  // If the scope is a try block, the catchTarget is the corresponding catch
+  // block and the stackDepth is the depth before the try (i.e. the depth of the
+  // catch target in the stack)
   catchTarget?: IL.Block;
+  stackDepth?: number;
 }
 
 interface Cursor extends SourceCursor {
@@ -75,13 +85,23 @@ function moveCursor(cur: Cursor, toLocation: Cursor): void {
   Object.assign(cur, toLocation);
 }
 
-export function compileScript(filename: string, scriptText: string): {
+/**
+ * Compile the given source code.
+ *
+ * Note: if opts.awaitStackDepths is only used internally (this function
+ * recursively calls itself).
+ */
+export function compileScript(
+  filename: string,
+  scriptText: string,
+  opts?: { awaitStackDepths?: Map<string, number> }
+): {
   unit: IL.Unit,
   scopeAnalysis: AnalysisModel
 } {
   const file = parseToAst(filename, scriptText);
 
-  const scopeAnalysis = analyzeScopes(file, filename);
+  const scopeAnalysis = analyzeScopes(file, filename, opts?.awaitStackDepths);
 
   const ctx: Context = {
     filename,
@@ -89,7 +109,8 @@ export function compileScript(filename: string, scriptText: string): {
     // global, but I suspect one advantage is when looking at the IL, it's easy
     // to jump to a label
     nextBlockID: 1,
-    scopeAnalysis: scopeAnalysis
+    scopeAnalysis: scopeAnalysis,
+    awaitStackDepths: opts?.awaitStackDepths,
   };
 
   const unit: IL.Unit = {
@@ -133,7 +154,32 @@ export function compileScript(filename: string, scriptText: string): {
 
   // Entry function
   const entryFunc = compileEntryFunction(cur, file.program);
-  unit.entryFunctionID = entryFunc.id
+  unit.entryFunctionID = entryFunc.id;
+
+  // If there was no stack depth information for the await points, we can now
+  // calculate it by walking the emitted IL
+  if (!opts?.awaitStackDepths) {
+    const awaitPoints = findAwaitPoints(unit);
+    // If there are no await points, then the resulting IL is synchronous and so
+    // the fact that we didn't have await stack depths is not a problem.
+    // Otherwise, we run the whole compiler again with the await stack depths.
+    // It's kinda ridiculous to run the compiler twice on the same unit but it's
+    // a quick and reliable way to get to MVP and we can optimize later.
+    if (awaitPoints.length !== 0) {
+      const awaitStackDepths = new Map<string, number>();
+      for (const awaitPoint of awaitPoints) {
+        // Note: the location is not unique across multiple files, but we're
+        // only using it as a key within a single file here. It's an awkward key
+        // to use but it's the only thing in the output that currently
+        // identifies which await point we're talking about.
+        const loc = awaitPoint.sourceLoc ?? unexpected();
+        const locStr = `${loc.line}:${loc.column + 1}`;
+        const stackDepth = awaitPoint.stackDepthBefore ?? unexpected();
+        awaitStackDepths.set(locStr, stackDepth);
+      }
+      return compileScript(filename, scriptText, { awaitStackDepths });
+    }
+  }
 
   return { unit, scopeAnalysis };
 }
@@ -351,9 +397,13 @@ export function compileFunction(cur: Cursor, func: B.SupportedFunctionNode): IL.
   if (body.type === 'BlockStatement') {
     compileBlockStatement(bodyCur, body);
     addOp(bodyCur, 'Literal', literalOperand(undefined));
-    addOp(bodyCur, 'Return');
   } else {
     compileExpression(bodyCur, body);
+  }
+
+  if (funcInfo.isAsyncFunction) {
+    addOp(bodyCur, 'AsyncReturn');
+  } else {
     addOp(bodyCur, 'Return');
   }
 
@@ -373,6 +423,10 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
       }
       case 'ScopeNew': {
         addOp(cur, 'ScopeNew', countOperand(step.slotCount));
+        break;
+      }
+      case 'AsyncStart': {
+        addOp(cur, 'AsyncStart', countOperand(step.slotCount), flagOperand(step.captureParent));
         break;
       }
       case 'InitFunctionDeclaration': {
@@ -472,6 +526,17 @@ export function compilePrologue(cur: Cursor, prolog: PrologueStep[]) {
 }
 
 export function compileExpressionStatement(cur: Cursor, statement: B.ExpressionStatement): void {
+  // Special case: a function call as a statement is compiled as a void call, so
+  // that the result is never pushed in the first place. Apart from saving on
+  // the Pop instruction, the runtime can perform other optimizations if it
+  // knows that the result is never used. In particular, async functions do not
+  // need to synthesize a return Promise if they're void-called.
+  if (statement.expression.type === 'CallExpression') {
+    compileCallExpression(cur, statement.expression, true, false);
+    /* No Pop */
+    return;
+  }
+
   compileExpression(cur, statement.expression);
   // Pop the result of the expression off the stack
   addOp(cur, 'Pop', countOperand(1));
@@ -494,8 +559,15 @@ export function compileReturnStatement(cur: Cursor, statement: B.ReturnStatement
   } else {
     addOp(tempCur, 'Literal', literalOperand(undefined));
   }
-  addOp(tempCur, 'Return');
 
+  const func = getContainingFunction(cur);
+  if (func === undefined) unexpected();
+  compilingNode(tempCur, statement);
+  if (func.isAsyncFunction) {
+    addOp(tempCur, 'AsyncReturn');
+  } else {
+    addOp(tempCur, 'Return');
+  }
 }
 
 export function compileThrowStatement(cur: Cursor, statement: B.ThrowStatement): void {
@@ -654,7 +726,7 @@ export function compileDoWhileStatement(cur: Cursor, statement: B.DoWhileStateme
   popBreakScope(cur, statement);
 }
 
-export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement, opts?: { catchTarget?: IL.Block }): void {
+export function compileBlockStatement(cur: Cursor, statement: B.BlockStatement, opts?: { catchTarget?: IL.Block, stackDepth?: number }): void {
   const scopeInfo = cur.ctx.scopeAnalysis.scopes.get(statement) ?? unexpected() as BlockScope;
 
   // Compile scope prologue
@@ -792,6 +864,8 @@ function createBlock(cur: Cursor, predeclaredBlock: IL.Block): Cursor {
 }
 
 function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Operation {
+  cur.ctx
+
   const meta = IL.opcodes[opcode];
   for (const [i, expectedType] of meta.operands.entries()) {
     const operand = operands[i];
@@ -812,6 +886,12 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
       case 'CountOperand': {
         if (operand.count < 0 || operand.count > IL.MAX_COUNT) {
           return internalCompileError(cur, `Count out of range: ${operand.count}`);
+        }
+        break;
+      }
+      case 'FlagOperand': {
+        if (operand.flag !== true && operand.flag !== false) {
+          return internalCompileError(cur, `Flag operand incorrect: ${operand.flag}`);
         }
         break;
       }
@@ -892,7 +972,7 @@ function addOp(cur: Cursor, opcode: IL.Opcode, ...operands: IL.Operand[]): IL.Op
   return operation;
 }
 
-function labelOfBlock(block: IL.Block): IL.LabelOperand {
+export function labelOfBlock(block: IL.Block): IL.LabelOperand {
   const labelOperand: IL.LabelOperand = {
     type: 'LabelOperand',
     // Note: ID can be undefined here if if the block is predeclared. It would
@@ -906,10 +986,18 @@ function labelOfBlock(block: IL.Block): IL.LabelOperand {
   return labelOperand;
 }
 
-function literalOperand(value: IL.LiteralValueType): IL.LiteralOperand {
+export function literalOperand(value: IL.LiteralValueType): IL.LiteralOperand {
   return {
     type: 'LiteralOperand',
     literal: literalOperandValue(value)
+  }
+}
+
+// Note: better to use labelOfBlock if you can, but there are some places this manual form is convenient.
+export function labelOperand(targetBlockId: IL.BlockID): IL.LabelOperand {
+  return {
+    type: 'LabelOperand',
+    targetBlockId
   }
 }
 
@@ -923,10 +1011,17 @@ function functionLiteralOperand(functionId: IL.FunctionID): IL.LiteralOperand {
   }
 }
 
-function countOperand(count: number): IL.CountOperand {
+export function countOperand(count: number): IL.CountOperand {
   return {
     type: 'CountOperand',
     count
+  }
+}
+
+export function flagOperand(flag: boolean): IL.FlagOperand {
+  return {
+    type: 'FlagOperand',
+    flag
   }
 }
 
@@ -937,7 +1032,7 @@ export function indexOperand(index: number): IL.IndexOperand {
   }
 }
 
-function nameOperand(name: string): IL.NameOperand {
+export function nameOperand(name: string): IL.NameOperand {
   return {
     type: 'NameOperand',
     name
@@ -1256,7 +1351,8 @@ export function compileTryStatement(cur: Cursor, statement: B.TryStatement) {
   const catchBlock = predeclareBlock();
   const after = predeclareBlock();
 
-  compileBlockStatement(cur, tryBody, { catchTarget: catchBlock })
+  const stackDepth = cur.stackDepth;
+  compileBlockStatement(cur, tryBody, { catchTarget: catchBlock, stackDepth })
   addOp(cur, 'Jump', labelOfBlock(after));
 
   const catchCur = createBlock(cur, catchBlock);
@@ -1423,7 +1519,7 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'UnaryExpression': return compileUnaryExpression(cur, expression);
     case 'AssignmentExpression': return compileAssignmentExpression(cur, expression);
     case 'LogicalExpression': return compileLogicalExpression(cur, expression);
-    case 'CallExpression': return compileCallExpression(cur, expression);
+    case 'CallExpression': return compileCallExpression(cur, expression, false, false);
     case 'NewExpression': return compileNewExpression(cur, expression);
     case 'MemberExpression': return compileMemberExpression(cur, expression);
     case 'ArrayExpression': return compileArrayExpression(cur, expression);
@@ -1433,9 +1529,63 @@ export function compileExpression(cur: Cursor, expression_: B.Expression | B.Pri
     case 'ArrowFunctionExpression': return compileArrowFunctionExpression(cur, expression);
     case 'FunctionExpression': return compileFunctionExpression(cur, expression);
     case 'TemplateLiteral': return compileTemplateLiteral(cur, expression);
+    case 'AwaitExpression': return compileAwaitExpression(cur, expression);
     case 'ClassExpression': return featureNotSupported(cur, 'class expressions');
     default: return compileErrorIfReachable(cur, expression);
   }
+}
+
+export function compileAwaitExpression(cur: Cursor, expression: B.AwaitExpression) {
+  if (expression.argument.type === 'CallExpression') {
+    // Await-call operation
+    compileCallExpression(cur, expression.argument, false, true);
+  } else {
+    compileExpression(cur, expression.argument);
+  }
+
+  if (cur.ctx.awaitStackDepths) {
+    // Check the stack depth from the previous run matches this run, since the
+    // analysis assumes that the stack depth is the same for each run even though
+    // the closure size changes in the second run.
+    const loc = `${expression.loc?.start.line}:${expression.loc!.start.column + 1}`;
+    hardAssert(cur.ctx.awaitStackDepths.get(loc) === cur.stackDepth);
+  }
+  compilingNode(cur, expression);
+  addOp(cur, 'Await');
+
+  // Look for the closest catch block in the same function
+  let scope = cur.scopeStack;
+  while (scope && !scope.catchTarget && scope.parent && scope.parent.scope.type !== 'FunctionScope') {
+    if (scope.scope.type === 'ModuleScope') {
+      compileError(cur, 'Await expression not allowed at module scope', expression);
+    }
+    scope = scope.parent;
+  }
+  if (!scope?.catchTarget) scope = undefined; // No catch block found in the same function
+  hardAssert(!scope || (scope.catchTarget && scope.stackDepth));
+  // Either we found a catch block, or we just use the default catch block in
+  // the async function which is in slots 1 and 2.
+  const catchTargetDepth = scope?.stackDepth ?? 1;
+
+  // The number of slots that need to be copied out of the closure into the call
+  // stack. Note that the `Await` instruction itself has a stack change value of
+  // -1, meaning that `cur.stackDepth` here does not include the value to be
+  // awaited, nor the result of awaiting that value.
+  const restoreSlotCount = cur.stackDepth
+    - 1 // synchronous return value in var[0]
+    - 2 // catch target
+
+  // The "catchTarget" operand is the number of slots we have to go back
+  // relative to the current stack depth to find the closest catch target after
+  // resuming the async function. For example, if there are no other slots on
+  // the stack then the current stack depth is 3 and the catch target is in slot
+  // 1, so the `catchTarget` variable will be `2` to indicate that the catch
+  // target is 2 slots behind the stack pointer.
+  const catchTarget = cur.stackDepth - catchTargetDepth;
+  hardAssert(catchTarget >= 2); // Needs to be at least 2 slots back because a catch target consumes 2 slots.
+
+  const resumeOp = addOp(cur, 'AsyncResume', countOperand(restoreSlotCount), countOperand(catchTarget));
+  resumeOp.stackDepthBefore = 0; // Bit of a hack, but we expect the stack to be empty when we resume the async function
 }
 
 export function compileTemplateLiteral(cur: Cursor, expression: B.TemplateLiteral) {
@@ -1566,6 +1716,7 @@ export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpressio
     addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
     addOp(cur, 'Literal', literalOperand(i));
     compileExpression(cur, element);
+    compilingNode(cur, expression);
     addOp(cur, 'ObjectSet');
   }
   // If the array literal ends in an elision, then we need to update the length
@@ -1574,6 +1725,7 @@ export function compileArrayExpression(cur: Cursor, expression: B.ArrayExpressio
     addOp(cur, 'LoadVar', indexOperand(indexOfArrayInstance));
     addOp(cur, 'Literal', literalOperand('length'));
     addOp(cur, 'Literal', literalOperand(expression.elements.length));
+    compilingNode(cur, expression);
     addOp(cur, 'ObjectSet');
   }
 }
@@ -1647,15 +1799,20 @@ export function compileNewExpression(cur: Cursor, expression: B.NewExpression) {
   addOp(cur, 'New', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
 }
 
-export function compileCallExpression(cur: Cursor, expression: B.CallExpression) {
+export function compileCallExpression(cur: Cursor, expression: B.CallExpression, isVoidCall: boolean, isAwaitCall: boolean) {
   const callee = expression.callee;
   if (callee.type === 'Super') {
     return compileError(cur, 'Reserved word "super" invalid in this context');
   }
   // Where to put the result of the call
   const indexOfResult = cur.stackDepth;
+  const finalStackLevel = cur.stackDepth + (isVoidCall ? 0 : 1);
 
   if (callee.type === 'MemberExpression') {
+    // Reserve a slot for the function reference, since this needs to be first in a Call operation
+    const indexOfFunctionReference = cur.stackDepth;
+    addOp(cur, 'Literal', literalOperand(undefined));
+
     const indexOfObjectReference = cur.stackDepth;
     compileExpression(cur, callee.object); // The first IL parameter is the object instance
     // Fetch the property on the object that represents the function to be called
@@ -1669,9 +1826,7 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
       addOp(cur, 'Literal', literalOperand(property.name));
     }
     addOp(cur, 'ObjectGet');
-    // Awkwardly, the `this` reference must be the first parameter, which must
-    // come after the function reference
-    addOp(cur, 'LoadVar', indexOperand(indexOfObjectReference));
+    addOp(cur, 'StoreVar', indexOperand(indexOfFunctionReference));
   } else {
     if (!B.isExpression(callee)) return unexpected();
     compileExpression(cur, callee);
@@ -1687,14 +1842,24 @@ export function compileCallExpression(cur: Cursor, expression: B.CallExpression)
     compileExpression(cur, arg);
   }
 
-  addOp(cur, 'Call', countOperand(expression.arguments.length + 1)); // +1 is for the object reference
+  const ilArgCount = expression.arguments.length + 1; // +1 is for the object reference
 
-  // In the case of a method call like `x.y()`, the value from expression `x.y`
-  // is still on the stack after the call and needs to be popped off.
-  if (cur.stackDepth > indexOfResult + 1) {
-    // Some things need to be popped off the stack, but we need the result to be underneath them
-    addOp(cur, 'StoreVar', indexOperand(indexOfResult));
-    const remainingToPop = cur.stackDepth - (indexOfResult + 1);
+  if (isAwaitCall) {
+    addOp(cur, 'AwaitCall', countOperand(ilArgCount));
+  } else {
+    addOp(cur, 'Call', countOperand(ilArgCount), flagOperand(isVoidCall));
+  }
+
+  if (cur.stackDepth > finalStackLevel) {
+    // Await-calls can't be followed by anything else before the Await
+    // instruction.
+    hardAssert(!isAwaitCall);
+
+    if (!isVoidCall) {
+      // Some things need to be popped off the stack, but we need the result to be underneath them
+      addOp(cur, 'StoreVar', indexOperand(indexOfResult));
+    }
+    const remainingToPop = cur.stackDepth - finalStackLevel;
     if (remainingToPop) {
       addOp(cur, 'Pop', countOperand(remainingToPop));
     }
@@ -2144,7 +2309,7 @@ export function compileVariableDeclaration(cur: Cursor, decl: B.VariableDeclarat
   }
 }
 
-function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }): ScopeHelper {
+function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block, stackDepth?: number }): ScopeHelper {
   const stackDepthAtEntry = cur.stackDepth;
 
   const helper: ScopeHelper = {
@@ -2185,7 +2350,7 @@ function enterScope(cur: Cursor, scope: Scope, opts?: { catchTarget?: IL.Block }
     }
   };
 
-  const newScopeStack: ScopeStack = { helper, scope, parent: cur.scopeStack, catchTarget: opts?.catchTarget }
+  const newScopeStack: ScopeStack = { helper, scope, parent: cur.scopeStack, catchTarget: opts?.catchTarget, stackDepth: opts?.stackDepth ?? cur.stackDepth }
   // Push scope stack
   cur.scopeStack = newScopeStack;
 
@@ -2226,4 +2391,26 @@ function compileNopSpecialForm(cur: Cursor, statement: B.Statement): boolean {
   }
   addOp(cur, 'Nop', countOperand(nopSize));
   return true;
+}
+
+function getContainingFunction(cur: Cursor) {
+  let scope = cur.scopeStack;
+  while (scope && scope.scope.type === 'BlockScope') {
+    scope = scope.parent;
+  }
+  return scope?.scope;
+}
+
+function findAwaitPoints(unit: IL.Unit) {
+  const awaitPoints: IL.Operation[] = [];
+  for (const func of Object.values(unit.functions)) {
+    for (const block of Object.values(func.blocks)) {
+      for (const op of block.operations) {
+        if (op.opcode === 'Await') {
+          awaitPoints.push(op);
+        }
+      }
+    }
+  }
+  return awaitPoints;
 }

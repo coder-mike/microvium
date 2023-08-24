@@ -1,0 +1,129 @@
+export 0 = &function run;
+
+slot ['global:Microvium'] = &allocation 4;
+slot ['global:Number'] = &allocation 6;
+slot ['global:assert'] = host function 2;
+slot ['global:assertEqual'] = host function 3;
+
+function ['Microvium.newUint8Array']() {
+  entry:
+    LoadArg(index 1);
+    Uint8ArrayNew();
+    Return();
+}
+
+function Number_isNaN() {
+  entry:
+    // NaN is the only value that is not equal to itself
+    LoadArg(index 1);
+    LoadArg(index 1);
+    BinOp(op '!==');
+    // NaN is the only value that is not equal to itself
+    Return();
+}
+
+function run() {
+  entry:
+    Literal(lit deleted);
+    LoadGlobal(name 'global:Microvium');
+    Literal(lit 'noOpFunction');
+    ObjectGet();
+    StoreVar(index 0);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    UnOp(op 'typeof');
+    Literal(lit 'function');
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Microvium');
+    LoadVar(index 4);
+    Literal(lit 'typeCodeOf');
+    ObjectGet();
+    StoreVar(index 3);
+    LoadVar(index 0);
+    Call(count 2, flag false);
+    Literal(lit 5);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Call(count 1, flag false);
+    Literal(lit undefined);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    Literal(lit undefined);
+    Literal(lit 42);
+    Call(count 2, flag false);
+    Literal(lit undefined);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit '');
+    LoadVar(index 0);
+    BinOp(op '+');
+    LoadGlobal(name 'global:Microvium');
+    Literal(lit 'isMicrovium');
+    ObjectGet();
+    Branch(@block1, @block2);
+  block1:
+    Literal(lit '[Function]');
+    Jump(@block3);
+  block2:
+    Literal(lit '() => undefined');
+    Jump(@block3);
+  block3:
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 0);
+    BinOp(op '===');
+    Literal(lit true);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 0);
+    BinOp(op '!==');
+    Literal(lit false);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assert');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Number');
+    LoadVar(index 4);
+    Literal(lit 'isNaN');
+    ObjectGet();
+    StoreVar(index 3);
+    LoadVar(index 0);
+    UnOp(op '+');
+    Call(count 2, flag false);
+    Call(count 2, flag true);
+    Pop(count 1);
+    Literal(lit undefined);
+    Return();
+}
+
+function typeCodeOf() {
+  entry:
+    LoadArg(index 1);
+    TypeCodeOf();
+    Return();
+}
+
+allocation 4 = {
+  isMicrovium: true,
+  newUint8Array: &function ['Microvium.newUint8Array'],
+  noOpFunction: no-op-function,
+  typeCodeOf: &function typeCodeOf,
+};
+
+allocation 6 = {
+  isNaN: &function Number_isNaN,
+};

@@ -73,6 +73,8 @@ module with entry 'moduleEntry' {
         keysAfterSnapshot2 @ binding_7
         assertEqual @ free assertEqual
         keysAfterSnapshot2 @ binding_7
+        assertEqual @ free assertEqual
+        Reflect @ free Reflect
       }
     }
   }

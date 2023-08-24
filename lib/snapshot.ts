@@ -3,12 +3,13 @@ import * as fs from 'fs-extra';
 import { invalidOperation } from './utils';
 import { validateSnapshotBinary } from './snapshot-il';
 import { SnapshotReconstructionInfo } from './decode-snapshot';
+import { SourceMap } from './source-map';
 
 /**
  * A snapshot of the state of a virtual machine
  */
 export class SnapshotClass implements Snapshot {
-  constructor(data: Buffer, public reconstructionInfo?: SnapshotReconstructionInfo) {
+  constructor(data: Buffer, public reconstructionInfo?: SnapshotReconstructionInfo, public sourceMap?: SourceMap) {
     const errInfo = validateSnapshotBinary(data);
     if (errInfo) {
       return invalidOperation('Snapshot bytecode is invalid: ' + errInfo);

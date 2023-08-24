@@ -16,8 +16,7 @@ function ['#entry']() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:11:1
     Literal(lit 42);                     // 4                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:11:10
     LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/1.hello-world.test.mvm.js:11:14
-    Call(count 3);                       // 2                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:11:14
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:11:14
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:11:14
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:11:14
     Return();                            // 1                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:11:14
 }
@@ -33,8 +32,7 @@ function run() {
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:8:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:8:3
     Literal(lit 'Hello, World!');        // 3                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:8:9
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:8:9
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:8:9
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:8:9
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:9:2
     Return();                            // 0                 ./test/end-to-end/tests/1.hello-world.test.mvm.js:9:2
 }

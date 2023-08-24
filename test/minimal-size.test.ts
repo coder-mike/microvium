@@ -52,7 +52,7 @@ suite('minimal-size', function () {
     const vm = Microvium.create({}, { noLib: true });
     vm.evaluateModule({ sourceText: '' });
     const snapshot = vm.createSnapshot();
-    assert.equal(snapshot.data.length, 38);
+    assert.equal(snapshot.data.length, 46);
 
     // Note: because we're not running this on an emulator, this is the size as
     // running on a 64-bit machine. Also, debug mode is enabled
@@ -83,16 +83,16 @@ suite('minimal-size', function () {
     const vm = Microvium.create({}, {});
     vm.evaluateModule({ sourceText: '' });
     const snapshot = vm.createSnapshot();
-    assert.equal(snapshot.data.length, 80);
+    assert.equal(snapshot.data.length, 46);
 
     const vm2 = Microvium.restore(snapshot, {});
     const stats = vm2.getMemoryStats();
-    assert.equal(stats.totalSize, 130);
-    assert.equal(stats.coreSize, coreSize64BitMax);
-    assert.equal(stats.fragmentCount, 2);
-    assert.equal(stats.virtualHeapAllocatedCapacity, 10);
-    assert.equal(stats.virtualHeapUsed, 10);
-    assert.equal(stats.virtualHeapHighWaterMark, 10);
+    assert.equal(stats.totalSize, 88);
+    assert.equal(stats.coreSize, 88);
+    assert.equal(stats.fragmentCount, 1);
+    assert.equal(stats.virtualHeapAllocatedCapacity, 0);
+    assert.equal(stats.virtualHeapUsed, 0);
+    assert.equal(stats.virtualHeapHighWaterMark, 0);
 
     assert.equal(stats.stackHighWaterMark, 0);
     assert.equal(stats.stackHeight, 0);
@@ -114,27 +114,30 @@ suite('minimal-size', function () {
 
     */
 
-    const pointerRegisterCount = 3;
+    const pointerRegisterCount = 4;
     const longPointerRegisterCount = 1;
-    const wordRegisterCount = 3;
+    const wordRegisterCount = 4;
     const optionalWordRegisterCount = 1; // Includes single-byte `usingCachedRegisters`
 
-    const registersSize64BitMax =
+    const registersSize64BitMax = padTo64Bit(
       pointerRegisterCount * 8 +
       longPointerRegisterCount * 8 +
       wordRegisterCount * 2 +
-      optionalWordRegisterCount * 2;
+      optionalWordRegisterCount * 2
+    );
 
-    const registersSize32BitMax =
+    const registersSize32BitMax = padTo32Bit(
       pointerRegisterCount * 4 +
       longPointerRegisterCount * 4 +
       wordRegisterCount * 2 +
-      optionalWordRegisterCount * 2;
+      optionalWordRegisterCount * 2
+    );
 
-    const registersSize32BitMin =
+    const registersSize32BitMin = padTo32Bit(
       pointerRegisterCount * 4 +
       longPointerRegisterCount * 4 +
-      wordRegisterCount * 2;
+      wordRegisterCount * 2
+    )
 
     const registersSize16BitMin =
       pointerRegisterCount * 2 +
@@ -147,7 +150,7 @@ suite('minimal-size', function () {
     const importTableSize16Bit = importTableCount * 4; // Using 4 bytes here because flash pointer
     const globalVariablesSize = 2; // 1 global variable at 2 bytes each
 
-    const virtualHeapSize = 10;
+    const virtualHeapSize = 0; // Now that builtins are GC'd, the virtual heap can be empty
 
     const defaultStackCapacity = 256;
 
@@ -162,7 +165,7 @@ suite('minimal-size', function () {
       registersSize64BitMax +
       defaultStackCapacity +
       virtualHeapSize +
-      heapOverheadSize64Bit;
+      (virtualHeapSize ? heapOverheadSize64Bit : 0);
 
     const totalSize32BitMin =
       coreSize32BitMin +
@@ -171,7 +174,7 @@ suite('minimal-size', function () {
       registersSize32BitMin +
       defaultStackCapacity +
       virtualHeapSize +
-      heapOverheadSize32Bit;
+      (virtualHeapSize ? heapOverheadSize32Bit : 0);
 
     const totalSize32BitMax =
       coreSize32BitMax +
@@ -180,7 +183,7 @@ suite('minimal-size', function () {
       registersSize32BitMax +
       defaultStackCapacity +
       virtualHeapSize +
-      heapOverheadSize32Bit;
+      (virtualHeapSize ? heapOverheadSize32Bit : 0);
 
     const totalSize16BitMin =
       coreSize16BitMin +
@@ -189,7 +192,7 @@ suite('minimal-size', function () {
       registersSize16BitMin +
       defaultStackCapacity +
       virtualHeapSize +
-      heapOverheadSize16Bit;
+      (virtualHeapSize ? heapOverheadSize16Bit : 0);
 
     vm.globalThis.vmImport = vm.vmImport;
     vm.globalThis.vmExport = vm.vmExport;
@@ -198,7 +201,7 @@ suite('minimal-size', function () {
       vmExport(0, () => checkSize());
     `});
     const snapshot = vm.createSnapshot();
-    assert.equal(snapshot.data.length, 100);
+    assert.equal(snapshot.data.length, 70);
 
     const vm2 = Microvium.restore(snapshot, { 0: checkSize });
 
@@ -213,28 +216,38 @@ suite('minimal-size', function () {
 
     assert.equal(stats.totalSize, totalSize64BitMax);
     assert.equal(stats.coreSize, coreSize64BitMax);
-    assert.equal(stats.fragmentCount, 3);
+    assert.equal(stats.fragmentCount, 2);
     assert.equal(stats.virtualHeapAllocatedCapacity, virtualHeapSize);
     assert.equal(stats.virtualHeapUsed, virtualHeapSize);
     assert.equal(stats.virtualHeapHighWaterMark, virtualHeapSize);
-    assert.equal(stats.stackHighWaterMark, 18);
+    assert.equal(stats.stackHighWaterMark, 26);
     assert.equal(stats.stackHeight, 18);
     assert.equal(stats.stackAllocatedCapacity, defaultStackCapacity);
     assert.equal(stats.registersSize, registersSize64BitMax);
     assert.equal(stats.importTableSize, importTableSize64Bit);
     assert.equal(stats.globalVariablesSize, 2);
 
-    assert.equal(registersSize64BitMax, 40);
-    assert.equal(registersSize32BitMax, 24);
-    assert.equal(registersSize32BitMin, 22);
-    assert.equal(registersSize16BitMin, 16);
+    // The following is the final figures. Just update them manually when they change
 
-    assert.equal(totalSize64BitMax, 436);
-    assert.equal(totalSize32BitMax, 360);
-    assert.equal(totalSize32BitMin, 346);
-    assert.equal(totalSize16BitMin, 320);
+    assert.equal(registersSize64BitMax, 56);
+    assert.equal(registersSize32BitMax, 32);
+    assert.equal(registersSize32BitMin, 28);
+    assert.equal(registersSize16BitMin, 20);
+
+    assert.equal(totalSize64BitMax, 410);
+    assert.equal(totalSize32BitMax, 342);
+    assert.equal(totalSize32BitMin, 326);
+    assert.equal(totalSize16BitMin, 306);
   })
 })
+
+function padTo64Bit(n: number) {
+  return Math.ceil(n / 8) * 8;
+}
+
+function padTo32Bit(n: number) {
+  return Math.ceil(n / 4) * 4;
+}
 
 function roundUpTo8Bytes(n: number) {
   return Math.ceil(n / 8) * 8;
