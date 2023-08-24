@@ -1127,7 +1127,6 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
-static void* mvm_allocate(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError toPropertyName(VM* vm, Value* value);
@@ -1184,7 +1183,6 @@ static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static Value* vm_getHandleTargetOrNull(VM* vm, Value value);
 static Value vm_resolveIndirections(VM* vm, Value value);
-static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent);
@@ -1192,7 +1190,7 @@ static inline Value vm_encodeBytecodeOffsetAsPointer(VM* vm, uint16_t offset);
 static void vm_enqueueJob(VM* vm, Value jobClosure);
 static Value vm_dequeueJob(VM* vm);
 static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr);
-static void vm_push(mvm_VM* vm, Value value);
+static mvm_Value* vm_push(mvm_VM* vm, mvm_Value value);
 static Value vm_pop(mvm_VM* vm);
 static Value vm_asyncStartUnsafe(mvm_VM* vm, Value* out_result);
 static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount);
@@ -1212,7 +1210,8 @@ MVM_HIDDEN TeError vm_objectKeys(VM* vm, Value* pObject);
 MVM_HIDDEN void* mvm_mvm_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 MVM_HIDDEN TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
 MVM_HIDDEN TeError setProperty(VM* vm, Value* pObject, Value* pPropertyName, Value* pPropertyValue);
-
+MVM_HIDDEN void* mvm_allocate(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
+MVM_HIDDEN void mvm_subscribeToPromise(VM* vm, Value vPromise, Value vCallback);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);

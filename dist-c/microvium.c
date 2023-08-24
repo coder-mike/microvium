@@ -1691,7 +1691,6 @@ static int32_t vm_readInt32(VM* vm, TeTypeCode type, Value value);
 static TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result);
 static inline mvm_TfHostFunction* vm_getResolvedImports(VM* vm);
 static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketSize);
-static void* mvm_allocate(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 static void gc_freeGCMemory(VM* vm);
 static Value vm_allocString(VM* vm, size_t sizeBytes, void** data);
 static TeError toPropertyName(VM* vm, Value* value);
@@ -1748,7 +1747,6 @@ static void vm_free(VM* vm, void* ptr);
 static inline uint16_t* getTopOfStackSpace(vm_TsStack* stack);
 static Value* vm_getHandleTargetOrNull(VM* vm, Value value);
 static Value vm_resolveIndirections(VM* vm, Value value);
-static TeError vm_objectKeys(VM* vm, Value* pObject);
 static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot);
 static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID);
 static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent);
@@ -1756,7 +1754,7 @@ static inline Value vm_encodeBytecodeOffsetAsPointer(VM* vm, uint16_t offset);
 static void vm_enqueueJob(VM* vm, Value jobClosure);
 static Value vm_dequeueJob(VM* vm);
 static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr);
-static void vm_push(mvm_VM* vm, Value value);
+static mvm_Value* vm_push(mvm_VM* vm, mvm_Value value);
 static Value vm_pop(mvm_VM* vm);
 static Value vm_asyncStartUnsafe(mvm_VM* vm, Value* out_result);
 static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount);
@@ -1776,7 +1774,8 @@ MVM_HIDDEN TeError vm_objectKeys(VM* vm, Value* pObject);
 MVM_HIDDEN void* mvm_mvm_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
 MVM_HIDDEN TeError getProperty(VM* vm, Value* pObjectValue, Value* pPropertyName, Value* out_propertyValue);
 MVM_HIDDEN TeError setProperty(VM* vm, Value* pObject, Value* pPropertyName, Value* pPropertyValue);
-
+MVM_HIDDEN void* mvm_allocate(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode);
+MVM_HIDDEN void mvm_subscribeToPromise(VM* vm, Value vPromise, Value vCallback);
 
 #if MVM_SAFE_MODE
 static inline uint16_t vm_getResolvedImportCount(VM* vm);
@@ -2129,7 +2128,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   PUSH(targetFunc); // class or function
   if (reg->argCountAndFlags & AF_OVERRIDE_THIS) {
-    CODE_COVERAGE_UNTESTED(662); // Not hit
+    CODE_COVERAGE_UNTESTED(662); // Hit
     // This is a bit of a hack. If mvm_call is called from mvm_callEx, then
     // mvm_callEx will have already set the `this` value on the stack in this
     // position.
@@ -3970,7 +3969,7 @@ SUB_OP_EXTENDED_4: {
 /*   This should be the first instruction in an async function.              */
 /* ------------------------------------------------------------------------- */
     MVM_CASE (VM_OP4_ASYNC_START): {
-      CODE_COVERAGE(662); // Hit
+      CODE_COVERAGE(696); // Hit
       READ_PGM_1(reg1); // Closure size and parent reference flag
 
       // Reserve a slot for the result. Note that `ASYNC_START` is the first
@@ -4021,7 +4020,7 @@ SUB_OP_EXTENDED_4: {
       // result instead of passing it to the synchronous caller (it does so via
       // the job queue).
 
-      CODE_COVERAGE(663); // Hit
+      CODE_COVERAGE(732); // Not hit
 
       reg2 /* result */ = POP();
 
@@ -4196,58 +4195,9 @@ SUB_AWAIT: {
     goto SUB_EXIT;
   }
 
-  reg2 /* promiseStatus */ = regP1[VM_OIS_PROMISE_STATUS];
 
   FLUSH_REGISTER_CACHE();
-  if (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_PENDING) {
-    CODE_COVERAGE(707); // Hit
-
-    // Subscribe to the promise
-    reg3 /* subscribers */ = regP1[VM_OIS_PROMISE_OUT];
-    if (reg3 /* subscribers */ == VM_VALUE_UNDEFINED) {
-      CODE_COVERAGE(715); // Hit
-      // No subscribers yet (hot path)
-      regP1[VM_OIS_PROMISE_OUT] = reg->closure;
-    } else {
-      CODE_COVERAGE(716); // Hit
-      TeTypeCode tc = deepTypeOf(vm, reg3 /* subscribers */);
-
-      // Warning: the stack work here is a bit awkward but required because when
-      // we call `vm_newArray` or `vm_arrayPush` it may trigger a garbage
-      // collection which may move the promise object or the array itself. So we
-      // need these to be GC-reachable in slots that have stable addresses (i.e.
-      // stack slots).
-
-      vm_push(vm, reg1 /* promise */);
-      vm_push(vm, reg3 /* subscriberOrArray */);
-      if (tc == TC_REF_CLOSURE) {
-        CODE_COVERAGE(717); // Hit
-        // Single subscriber. Upgrade to array
-        reg2 = vm_newArray(vm, 2); // [old subscriber, new subscriber]
-        vm_push(vm, reg2 /* array */);
-        vm_arrayPush(vm, &reg->pStackPointer[-1] /* array */, &reg->pStackPointer[-2] /* subscriber */);
-        vm_pop(vm); // array
-        regP1 = ShortPtr_decode(vm, reg->pStackPointer[-2] /* promise */); // May have moved
-        regP1[VM_OIS_PROMISE_OUT] = reg2;
-        reg->pStackPointer[-1] = reg2;
-      } else {
-        CODE_COVERAGE(718); // Hit
-      }
-      vm_arrayPush(vm, &reg->pStackPointer[-1] /* subscriberOrArray */, &reg->closure);
-      vm_pop(vm); // subscriberOrArray
-      vm_pop(vm); // promise
-    }
-  } else { // Resolved or rejected
-    CODE_COVERAGE(708); // Hit
-    VM_ASSERT(vm, (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_RESOLVED) || (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_REJECTED));
-    TABLE_COVERAGE(reg2 /* promiseStatus */ == VM_PROMISE_STATUS_RESOLVED ? 1 : 0, 2, 709); // Hit 2/2
-
-    reg1 = regP1[VM_OIS_PROMISE_OUT]; // Result/error
-    reg3 /* isSuccess */ = (reg2 /* promiseStatus */ == VM_PROMISE_STATUS_RESOLVED) ? VM_VALUE_TRUE : VM_VALUE_FALSE;
-
-    // Immediately schedule this async function to resume on the job queue
-    vm_scheduleContinuation(vm, reg->closure, reg3, reg1);
-  }
+  mvm_subscribeToPromise(vm, reg1 /* promise */, reg->closure);
   CACHE_REGISTERS();
 
   // The stack has been unwound, so it should just be the synchronous return
@@ -4433,7 +4383,7 @@ SUB_POP_ARGS: {
     CODE_COVERAGE(108); // Hit
     (void)POP();
   } else {
-    CODE_COVERAGE_UNTESTED(109); // Not hit
+    CODE_COVERAGE_UNTESTED(109); // Hit
   }
 
   // We don't preserve this register across function calls, so when we return
@@ -4446,7 +4396,7 @@ SUB_POP_ARGS: {
     CODE_COVERAGE(221); // Hit
     goto SUB_RETURN_TO_HOST;
   } else if (reg3 & AF_VOID_CALLED) {
-    CODE_COVERAGE(652); // Hit
+    CODE_COVERAGE(733); // Not hit
     // The call operation was a void call, so don't push the return value
     goto SUB_TAIL_POP_0_PUSH_0;
   } else {
@@ -4533,7 +4483,7 @@ SUB_NEW: {
 
   // Can only `new` classes in Microvium
   if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
-    err = MVM_E_USING_NEW_ON_NON_CLASS;
+    err = vm_newError(vm, MVM_E_USING_NEW_ON_NON_CLASS);
     goto SUB_EXIT;
   }
 
@@ -4577,7 +4527,7 @@ SUB_NEW: {
     CODE_COVERAGE_UNTESTED(724); // Not hit
   } else {
     CODE_COVERAGE_ERROR_PATH(725); // Not hit
-    err = MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT;
+    err = vm_newError(vm, MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT);
     goto SUB_EXIT;
   }
 
@@ -4762,17 +4712,17 @@ SUB_CALL_HOST_COMMON: {
   // Represents an exception thrown by the host function that wasn't caught by
   // the host. The pResult should reference the exception object.
   if (err == MVM_E_UNCAUGHT_EXCEPTION) {
-    CODE_COVERAGE_UNTESTED(664); // Not hit
+    CODE_COVERAGE_UNTESTED(734); // Not hit
     reg1 = *pResult;
     err = MVM_E_SUCCESS;
     // The throw will unwind the stack to the closest catch block, so we don't
     // need to worry about unwinding the arguments off the stack.
     goto SUB_THROW;
   } else if (err != MVM_E_SUCCESS) {
-    CODE_COVERAGE_ERROR_PATH(665); // Not hit
+    CODE_COVERAGE_ERROR_PATH(735); // Not hit
     goto SUB_EXIT;
   } else {
-    CODE_COVERAGE(666); // Hit
+    CODE_COVERAGE(736); // Not hit
   }
 
   reg3 = reg1; // Callee argCountAndFlags
@@ -4808,11 +4758,11 @@ SUB_CALL_BYTECODE_FUNC: {
   // If it's a continuation (async resume point), we actually want the function
   // header of the containing function
   if (reg2 & VM_FUNCTION_HEADER_CONTINUATION_FLAG) {
-    CODE_COVERAGE(650); // Hit
+    CODE_COVERAGE(737); // Not hit
     reg2 /* back pointer */ = reg2 & VM_FUNCTION_HEADER_BACK_POINTER_MASK;
     reg2 /* function header */ = LongPtr_read2_aligned(LongPtr_add(lpProgramCounter, - reg2 * 4 - 2));
   } else {
-    CODE_COVERAGE(651); // Hit
+    CODE_COVERAGE(738); // Not hit
   }
 
   // Check the stack space required (before we PUSH_REGISTERS). Note that the
@@ -5014,6 +4964,10 @@ SUB_EXIT:
   return err;
 } // End of mvm_call
 
+/**
+ * Creates a new array of length 0 and the given capacity and initializes the
+ * allocated slots to VM_VALUE_DELETED.
+ */
 static Value vm_newArray(VM* vm, uint16_t capacity) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Hit 2/2
@@ -5138,7 +5092,7 @@ static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent) {
 TeError mvm_callEx(VM* vm, Value targetFunc, Value thisValue, Value* out_result, Value* args, uint8_t argCount) {
   mvm_TeError err;
 
-  CODE_COVERAGE_UNTESTED(659); // Not hit
+  CODE_COVERAGE_UNTESTED(659); // Hit
 
   if (!vm->stack) {
     CODE_COVERAGE_UNTESTED(660); // Not hit
@@ -5147,7 +5101,7 @@ TeError mvm_callEx(VM* vm, Value targetFunc, Value thisValue, Value* out_result,
       return err;
     }
   } else {
-    CODE_COVERAGE_UNTESTED(661); // Not hit
+    CODE_COVERAGE_UNTESTED(661); // Hit
   }
 
   err = vm_requireStackSpace(vm, vm->stack->reg.pStackPointer, argCount + 2);
@@ -5609,7 +5563,7 @@ void mvm_free(VM* vm) {
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
  */
-static void* mvm_allocate(VM* vm, uint16_t sizeBytes,  uint8_t /*TeTypeCode*/ typeCode) {
+MVM_HIDDEN void* mvm_allocate(VM* vm, uint16_t sizeBytes,  uint8_t /*TeTypeCode*/ typeCode) {
   uint16_t* p;
   uint16_t* end;
 
@@ -5872,7 +5826,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 
   // If this tips us over the top of the heap, then we run a collection
   if (heapSize + bucketSize > MVM_MAX_HEAP_SIZE) {
-    CODE_COVERAGE_UNTESTED(197); // Not hit
+    CODE_COVERAGE_UNTESTED(197); // Hit
     mvm_runGC(vm, false);
     heapSize = getHeapSize(vm);
   }
@@ -6986,7 +6940,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       return vm_intToStr(vm, i);
     }
     case TC_REF_FLOAT64: {
-      CODE_COVERAGE(248); // Hit
+      CODE_COVERAGE(248); // Not hit
       #if MVM_SUPPORT_FLOAT
       return vm_float64ToStr(vm, value);
       #else
@@ -7069,7 +7023,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       break;
     }
     case TC_VAL_NAN: {
-      CODE_COVERAGE(262); // Hit
+      CODE_COVERAGE(262); // Not hit
       constStr = "NaN";
       break;
     }
@@ -7482,7 +7436,7 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
 }
 
 size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value) {
-  CODE_COVERAGE_UNTESTED(620); // Not hit
+  CODE_COVERAGE_UNTESTED(620); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   size_t size;
   vm_toStringUtf8_long(vm, value, &size);
@@ -7704,7 +7658,7 @@ SUB_GET_PROPERTY:
       int16_t index = VirtualInt14_decode(vm, propertyName);
 
       if ((index < 0) || (index >= length)) {
-        CODE_COVERAGE(343); // Hit
+        CODE_COVERAGE(343); // Not hit
         *out_propertyValue = VM_VALUE_UNDEFINED;
         return MVM_E_SUCCESS;
       }
@@ -8590,7 +8544,7 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
 
 // Convert a string to an integer
 TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
-  CODE_COVERAGE(404); // Hit
+  CODE_COVERAGE(404); // Not hit
 
   TeTypeCode type = deepTypeOf(vm, value);
   VM_ASSERT(vm, type == TC_REF_STRING || type == TC_REF_INTERNED_STRING);
@@ -8630,7 +8584,7 @@ TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
 
   // Decimal point
   if ((LongPtr_read1(s) == ',') || (LongPtr_read1(s) == '.')) {
-    CODE_COVERAGE(653); // Hit
+    CODE_COVERAGE(739); // Not hit
     isFloat = true;
     s = LongPtr_add(s, 1);
   }
@@ -8644,13 +8598,13 @@ TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
   // Check if we reached the end of the string. If we haven't reached the end of
   // the string then there is a non-digit character in the string.
   if (LongPtr_sub(s, start) != len) {
-    CODE_COVERAGE(654); // Hit
+    CODE_COVERAGE(740); // Not hit
     return MVM_E_NAN;
   }
 
   // This function cannot handle floating point numbers
   if (isFloat) {
-    CODE_COVERAGE_UNTESTED(655); // Not hit
+    CODE_COVERAGE_UNTESTED(741); // Not hit
     return MVM_E_FLOAT64;
   }
 
@@ -8679,15 +8633,15 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     }
     MVM_CASE(TC_REF_STRING):
     MVM_CASE(TC_REF_INTERNED_STRING): {
-      CODE_COVERAGE(403); // Hit
+      CODE_COVERAGE(403); // Not hit
       return strToInt32(vm, value, out_result);
     }
     MVM_CASE(TC_VAL_STR_LENGTH): {
-      CODE_COVERAGE(270); // Hit
+      CODE_COVERAGE(270); // Not hit
       return MVM_E_NAN;
     }
     MVM_CASE(TC_VAL_STR_PROTO): {
-      CODE_COVERAGE(271); // Hit
+      CODE_COVERAGE(271); // Not hit
       return MVM_E_NAN;
     }
     MVM_CASE(TC_REF_PROPERTY_LIST): {
@@ -8756,7 +8710,7 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
       return MVM_E_NAN;
     }
     MVM_CASE(TC_VAL_NO_OP_FUNC): {
-      CODE_COVERAGE(656); // Hit
+      CODE_COVERAGE(742); // Not hit
       return MVM_E_NAN;
     }
     default:
@@ -9347,7 +9301,7 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
   uint16_t size = *slot;
   if (!Value_isVirtualUInt12(size)) {
     CODE_COVERAGE_ERROR_PATH(345); // Not hit
-    return MVM_E_INVALID_UINT8_ARRAY_LENGTH;
+    return vm_newError(vm, MVM_E_INVALID_UINT8_ARRAY_LENGTH);
   }
   size = VirtualInt14_decode(vm, size);
 
@@ -9381,7 +9335,7 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
 
   if (!Value_isShortPtr(uint8ArrayValue)) {
     CODE_COVERAGE_ERROR_PATH(574); // Not hit
-    return MVM_E_TYPE_ERROR;
+    return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 
   void* p = ShortPtr_decode(vm, uint8ArrayValue);
@@ -9389,7 +9343,7 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
   TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
   if (typeCode != TC_REF_UINT8_ARRAY) {
     CODE_COVERAGE_ERROR_PATH(575); // Not hit
-    return MVM_E_TYPE_ERROR;
+    return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 
   *out_size = (size_t)vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
@@ -9407,7 +9361,7 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
  *   will wrap that promise in a callback.
  */
 static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
-  CODE_COVERAGE(657); // Hit
+  CODE_COVERAGE(743); // Not hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
   #if MVM_SAFE_MODE
@@ -9423,11 +9377,11 @@ static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
   // callback should only be called exactly once).
   reg->cpsCallback = VM_VALUE_DELETED;
 
-  TeTypeCode tc = mvm_typeOf(vm, cpsCallback);
+  mvm_TeType tc = mvm_typeOf(vm, cpsCallback);
 
   // The callback is a continuation function (optimized hot-path)
   if (tc == VM_T_FUNCTION) {
-    CODE_COVERAGE(661); // Hit
+    CODE_COVERAGE(744); // Not hit
     // Else, the callback will be a function. This path indicates the situation
     // where the caller supports CPS and has given the callee the callback via
     // the `cpsCallback` register.
@@ -9462,7 +9416,7 @@ static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
     // This path indicates the situation where the callback for the current
     // activation record is no longer accessible, either because of a nested
     // function call or because the host already called `mvm_asyncStart`.
-    CODE_COVERAGE_ERROR_PATH(660); // Not hit
+    CODE_COVERAGE_ERROR_PATH(745); // Not hit
     MVM_FATAL_ERROR(vm, MVM_E_ASYNC_START_ERROR);
     return 0;
   }
@@ -9471,7 +9425,7 @@ static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
   // and not an await-call) and so is expecting a promise result. We need to
   // instantiate a promise and then create a closure callback that resolves the
   // promise.
-  CODE_COVERAGE(659); // Hit
+  CODE_COVERAGE(746); // Not hit
 
   VM_ASSERT(vm, cpsCallback == VM_VALUE_UNDEFINED);
   Value promiseProto = getBuiltin(vm, BIN_PROMISE_PROTOTYPE);
@@ -9547,12 +9501,14 @@ mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
   return closureValue;
 }
 
-static void vm_push(mvm_VM* vm, mvm_Value value) {
+static mvm_Value* vm_push(mvm_VM* vm, mvm_Value value) {
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   VM_ASSERT(vm, vm && vm->stack);
   vm_TsRegisters* reg = &vm->stack->reg;
   VM_ASSERT(vm, reg->pStackPointer < getTopOfStackSpace(vm->stack));
-  *reg->pStackPointer++ = value;
+  mvm_Value* result = reg->pStackPointer++;
+  *result = value;
+  return result;
 }
 
 static mvm_Value vm_pop(mvm_VM* vm) {
@@ -10062,3 +10018,78 @@ int32_t mvm_getInstructionCountRemaining(mvm_VM* vm) {
   return vm->stopAfterNInstructions;
 }
 #endif // MVM_GAS_COUNTER
+
+/**
+ * Subscribe a callback to a promise.
+ */
+MVM_HIDDEN void mvm_subscribeToPromise(VM* vm, Value vPromise, Value vCallback) {
+  CODE_COVERAGE_UNTESTED(747); // Not hit
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  VM_ASSERT(vm, deepTypeOf(vm, vPromise) == TC_REF_PROPERTY_LIST);
+  VM_ASSERT(vm, mvm_typeOf(vm, vCallback) == VM_T_FUNCTION);
+
+  Value* pPromise = ShortPtr_decode(vm, vPromise);
+  // Check that the promise is a promise
+  VM_ASSERT(vm, pPromise[VM_OIS_PROTO] == getBuiltin(vm, BIN_PROMISE_PROTOTYPE));
+
+  vm_TePromiseStatus promiseStatus = pPromise[VM_OIS_PROMISE_STATUS];
+
+  if (promiseStatus == VM_PROMISE_STATUS_PENDING) {
+    CODE_COVERAGE(707); // Hit
+
+    // Subscribe to the promise
+    Value vSubscribers = pPromise[VM_OIS_PROMISE_OUT];
+    if (vSubscribers == VM_VALUE_UNDEFINED) {
+      CODE_COVERAGE(715); // Hit
+      // No subscribers yet (hot path)
+      pPromise[VM_OIS_PROMISE_OUT] = vCallback;
+    } else {
+      CODE_COVERAGE(716); // Hit
+
+      // Warning: the stack work here is a bit awkward but required because when
+      // we call `vm_newArray` or `vm_arrayPush` it may trigger a garbage
+      // collection which may move the promise object or the array itself. So we
+      // need these to be GC-reachable in slots that have stable addresses (i.e.
+      // stack slots).
+
+      Value* pvCallback = vm_push(vm, vCallback);
+      Value* pvPromise = vm_push(vm, vPromise);
+      Value* pvSubscribers = vm_push(vm, vSubscribers);
+
+      TeTypeCode tc = deepTypeOf(vm, vSubscribers);
+      if (tc == TC_REF_CLOSURE) { // Single subscriber. Upgrade to array
+        CODE_COVERAGE(717); // Hit
+        Value vNewArray = vm_newArray(vm, 2); // capacity = 2; [old subscriber, new subscriber]
+        Value* pvNewArray = vm_push(vm, vNewArray);
+        // Put the single subscriber into the array
+        vm_arrayPush(vm, pvNewArray, pvSubscribers);
+        vNewArray = vm_pop(vm);
+        pPromise = ShortPtr_decode(vm, *pvPromise); // May have moved
+        pPromise[VM_OIS_PROMISE_OUT] = vNewArray;
+        *pvSubscribers = vNewArray;
+      } else { // Already an array -- nothing to do
+        CODE_COVERAGE(718); // Hit
+        VM_ASSERT(vm, tc == TC_REF_ARRAY);
+      }
+      vm_arrayPush(vm, pvSubscribers, pvCallback);
+      vm_pop(vm); // vSubscribers
+      vm_pop(vm); // vPromise
+      vm_pop(vm); // vCallback
+    }
+  } else { // Resolved or rejected
+    CODE_COVERAGE(708); // Hit
+    VM_ASSERT(vm, (promiseStatus == VM_PROMISE_STATUS_RESOLVED) || (promiseStatus == VM_PROMISE_STATUS_REJECTED));
+    TABLE_COVERAGE(promiseStatus == VM_PROMISE_STATUS_RESOLVED ? 1 : 0, 2, 709); // Hit 2/2
+
+    Value resultOrError = pPromise[VM_OIS_PROMISE_OUT];
+    Value isSuccess = (promiseStatus == VM_PROMISE_STATUS_RESOLVED) ? VM_VALUE_TRUE : VM_VALUE_FALSE;
+
+    // Immediately schedule this async function to resume on the job queue
+    vm_scheduleContinuation(vm, vCallback, isSuccess, resultOrError);
+  }
+
+  // The whole function is a potential GC point because it may allocate a new
+  // array for the subscription.
+  VM_POTENTIAL_GC_POINT(vm);
+}

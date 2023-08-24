@@ -1,12 +1,6 @@
 # To do
 
-  - WIP: WASM: Host awaiting async JS func
-  - WIP: WASM: Host awaiting JS promise
-  - WIP: WASM: async host func
-  - WIP: WASM: rejecting async host func
-  - WIP: WASM: Error passing host promise to VM
-  - WIP: Update the "Microvium is small" blog-post
-  - WIP: Release
+  - Expose globalThis as an ephemeral so that JS can add its own globals.
 
   - Finish refactoring of version numbers to major and minor.
   - String comparison with `<` and `>`. https://github.com/coder-mike/microvium/issues/67
