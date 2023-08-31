@@ -1,4 +1,4 @@
-export 0 = &allocation 10;
+export 0 = &allocation 12;
 
 slot ['global:assertEqual'] = host function 3;
 
@@ -13,7 +13,7 @@ function run() {
     Return();
 }
 
-allocation 10 = Closure [
+allocation 12 = Closure [
   &function run,
   1,
 ];

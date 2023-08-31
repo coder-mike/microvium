@@ -1,0 +1,27 @@
+export 0 = &function run;
+
+slot ['global:assertEqual'] = host function 3;
+slot ['global:foo'] = 44;
+
+function run() {
+  entry:
+    // Runtime should restore last compile-time value
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'global:foo');
+    Literal(lit 44);
+    Call(count 3, flag true);
+    // Runtime mutation (only works through variable name)
+    Literal(lit 45);
+    LoadVar(index 0);
+    StoreGlobal(name 'global:foo');
+    Pop(count 1);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    LoadGlobal(name 'global:foo');
+    Literal(lit 45);
+    Call(count 3, flag true);
+    Literal(lit undefined);
+    Return();
+}
+

@@ -3,7 +3,7 @@ export 0 = &function run;
 slot basics = &function basics;
 slot closureOperations = &function closureOperations;
 slot differentVariableTypes = &function differentVariableTypes;
-slot f = &allocation 10;
+slot f = &allocation 12;
 slot ['global:Number'] = &allocation 6;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
@@ -969,7 +969,7 @@ function thisCapturing() {
     Return();
 }
 
-allocation 10 = Closure [
+allocation 12 = Closure [
   &function anonymous14,
   3,
 ];

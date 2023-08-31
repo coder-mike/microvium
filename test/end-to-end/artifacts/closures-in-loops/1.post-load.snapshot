@@ -1,6 +1,6 @@
 export 0 = &function run;
 
-slot ['global:console'] = &allocation 8;
+slot ['global:console'] = &allocation 10;
 slot ['global:print'] = host function 1;
 slot mutationOfLoopVar = &function mutationOfLoopVar;
 slot popScope = &function popScope;
@@ -731,10 +731,10 @@ function testNestedBreak() {
     Return();
 }
 
-allocation 7 = {
-  push: &function Array_push,
+allocation 10 = {
+  log: host function 1,
 };
 
-allocation 8 = {
-  log: host function 1,
+allocation 7 = {
+  push: &function Array_push,
 };

@@ -48,6 +48,7 @@ See [Getting Started](./doc/getting-started.md) which walks you through all 3 of
 
   - [Getting Started](./doc/getting-started.md)
   - [Concepts](./doc/concepts.md)
+  - [Reference](./doc/reference.md)
   - [Contribute](./doc/contribute.md)
 
 ## Contributing

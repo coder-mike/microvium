@@ -144,6 +144,12 @@ export function addDefaultGlobals(vm: Microvium) {
   vmGlobal.JSON = vm.newObject();
   vmGlobal.JSON.parse = jsonParse(vm); // Only supported at build time
   vmGlobal.JSON.stringify = JSON.stringify; // Only supported at build time
+
+  // In order to actually use this to add new globals, you'd have to have a
+  // bootstrap module that assigns the globals before importing any other
+  // modules, since Microvium requires the globals to be present before
+  // any dependent modules are loaded.
+  vmGlobal.globalThis = vmGlobal;
 }
 
 export interface SnapshottingOptions {

@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 0
 0003       1     reserved: 0
 0004       2     bytecodeSize: 312
-0006       2     expectedCRC: e197
+0006       2     expectedCRC: aa8e
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -81,35 +81,35 @@ Addr    Size
 006c       3             LoadGlobal [3]
 006f       1             Literal(lit undefined)
 0070       2             Call(count 1, flag true)
-0072       3             LoadGlobal [0]
+0072       3             LoadGlobal [1]
 0075       1             Literal(lit undefined)
 0076       3             LoadGlobal [2]
 0079       3             Literal('length')
 007c       1             ObjectGet()
 007d       3             Literal(6)
 0080       2             Call(count 3, flag true)
-0082       3             LoadGlobal [0]
+0082       3             LoadGlobal [1]
 0085       1             Literal(lit undefined)
 0086       3             LoadGlobal [2]
 0089       1             Literal(lit 0)
 008a       1             ObjectGet()
 008b       1             Literal(lit 1)
 008c       2             Call(count 3, flag true)
-008e       3             LoadGlobal [0]
+008e       3             LoadGlobal [1]
 0091       1             Literal(lit undefined)
 0092       3             LoadGlobal [2]
 0095       1             Literal(lit 2)
 0096       1             ObjectGet()
 0097       1             Literal(lit 3)
 0098       2             Call(count 3, flag true)
-009a       3             LoadGlobal [0]
+009a       3             LoadGlobal [1]
 009d       1             Literal(lit undefined)
 009e       3             LoadGlobal [2]
 00a1       1             Literal(lit 3)
 00a2       1             ObjectGet()
 00a3       1             Literal(lit 1)
 00a4       2             Call(count 3, flag true)
-00a6       3             LoadGlobal [0]
+00a6       3             LoadGlobal [1]
 00a9       1             Literal(lit undefined)
 00aa       3             LoadGlobal [2]
 00ad       1             Literal(lit 5)
@@ -166,7 +166,7 @@ Addr    Size
 00e0       1             Return()
 00e1   17  -         # Block block2
 00e1       1             Literal(lit undefined)
-00e2       3             LoadGlobal [1]
+00e2       3             LoadGlobal [0]
 00e5       1             LoadVar(index 3)
 00e6       3             Literal(&0040)
 00e9       1             ObjectGet()
@@ -184,7 +184,7 @@ Addr    Size
 00f6       2             Jump &00d3
 00f8   17  -         # Block block5
 00f8       1             Literal(lit undefined)
-00f9       3             LoadGlobal [1]
+00f9       3             LoadGlobal [0]
 00fc       1             LoadVar(index 3)
 00fd       3             Literal(&0040)
 0100       1             ObjectGet()
@@ -202,8 +202,8 @@ Addr    Size
 010d       2             Jump &00da
 010f       1 <unused>
 0110    e  - # Globals
-0110       2     [0]: &0048
-0112       2     [1]: &012a
+0110       2     [0]: &012a
+0112       2     [1]: &0048
 0114       2     [2]: &0134
 0116       2     [3]: &00c0
 0118       2     Handle: &0120

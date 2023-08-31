@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 0
 0003       1     reserved: 0
 0004       2     bytecodeSize: 3354
-0006       2     expectedCRC: 9046
+0006       2     expectedCRC: a88d
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
@@ -125,7 +125,7 @@ Addr    Size
 011c       0         isContinuation: 0
 011c   13  -         # Block 011c
 011c       3             Literal(deleted)
-011f       3             LoadGlobal [0]
+011f       3             LoadGlobal [1]
 0122       1             Literal(lit undefined)
 0123       3             Literal(&0060)
 0126       2             Call(count 2, flag true)
@@ -206,7 +206,7 @@ Addr    Size
 0180       0         maxStackDepth: 4
 0180       0         isContinuation: 0
 0180   12  -         # Block 0180
-0180       3             LoadGlobal [0]
+0180       3             LoadGlobal [1]
 0183       1             Literal(lit undefined)
 0184       3             Literal(&006c)
 0187       1             LoadScoped [3]
@@ -223,7 +223,7 @@ Addr    Size
 0194       0         isContinuation: 0
 0194   13  -         # Block 0194
 0194       3             Literal(deleted)
-0197       3             LoadGlobal [0]
+0197       3             LoadGlobal [1]
 019a       1             Literal(lit undefined)
 019b       3             Literal(&0078)
 019e       2             Call(count 2, flag true)
@@ -312,7 +312,7 @@ Addr    Size
 0200       0         maxStackDepth: 4
 0200       0         isContinuation: 0
 0200   12  -         # Block 0200
-0200       3             LoadGlobal [0]
+0200       3             LoadGlobal [1]
 0203       1             Literal(lit undefined)
 0204       3             Literal(&006c)
 0207       1             LoadScoped [3]
@@ -331,7 +331,7 @@ Addr    Size
 0214       2             ScopeNew(count 3)
 0216       3             Literal(deleted)
 0219       3             Literal(deleted)
-021c       3             LoadGlobal [0]
+021c       3             LoadGlobal [1]
 021f       1             Literal(lit undefined)
 0220       3             Literal(&0094)
 0223       2             Call(count 2, flag true)
@@ -422,7 +422,7 @@ Addr    Size
 0290       0         maxStackDepth: 4
 0290       0         isContinuation: 0
 0290   18  -         # Block 0290
-0290       3             LoadGlobal [0]
+0290       3             LoadGlobal [1]
 0293       1             Literal(lit undefined)
 0294       3             Literal(&006c)
 0297       1             LoadScoped [3]
@@ -444,7 +444,7 @@ Addr    Size
 02ac       0         isContinuation: 0
 02ac   18  -         # Block 02ac
 02ac       1             Literal(lit undefined)
-02ad       3             LoadGlobal [1]
+02ad       3             LoadGlobal [0]
 02b0       1             LoadVar(index 1)
 02b1       3             Literal(&0054)
 02b4       1             ObjectGet()
@@ -467,7 +467,7 @@ Addr    Size
 02c8       2             ScopeNew(count 3)
 02ca       3             Literal(deleted)
 02cd       3             Literal(deleted)
-02d0       3             LoadGlobal [0]
+02d0       3             LoadGlobal [1]
 02d3       1             Literal(lit undefined)
 02d4       3             Literal(&00b4)
 02d7       2             Call(count 2, flag true)
@@ -567,7 +567,7 @@ Addr    Size
 0350       0         maxStackDepth: 4
 0350       0         isContinuation: 0
 0350   18  -         # Block 0350
-0350       3             LoadGlobal [0]
+0350       3             LoadGlobal [1]
 0353       1             Literal(lit undefined)
 0354       3             Literal(&006c)
 0357       1             LoadScoped [3]
@@ -589,7 +589,7 @@ Addr    Size
 036c       0         isContinuation: 0
 036c   18  -         # Block 036c
 036c       1             Literal(lit undefined)
-036d       3             LoadGlobal [1]
+036d       3             LoadGlobal [0]
 0370       1             LoadVar(index 1)
 0371       3             Literal(&0054)
 0374       1             ObjectGet()
@@ -612,7 +612,7 @@ Addr    Size
 0388       2             ScopeNew(count 3)
 038a       3             Literal(deleted)
 038d       3             Literal(deleted)
-0390       3             LoadGlobal [0]
+0390       3             LoadGlobal [1]
 0393       1             Literal(lit undefined)
 0394       3             Literal(&00c8)
 0397       2             Call(count 2, flag true)
@@ -756,7 +756,7 @@ Addr    Size
 0448       0         maxStackDepth: 4
 0448       0         isContinuation: 0
 0448   24  -         # Block 0448
-0448       3             LoadGlobal [0]
+0448       3             LoadGlobal [1]
 044b       1             Literal(lit undefined)
 044c       3             Literal(&006c)
 044f       1             LoadScoped [8]
@@ -785,7 +785,7 @@ Addr    Size
 0470       0         maxStackDepth: 4
 0470       0         isContinuation: 0
 0470   18  -         # Block 0470
-0470       3             LoadGlobal [0]
+0470       3             LoadGlobal [1]
 0473       1             Literal(lit undefined)
 0474       3             Literal(&006c)
 0477       1             LoadScoped [3]
@@ -807,7 +807,7 @@ Addr    Size
 048c       0         isContinuation: 0
 048c   18  -         # Block 048c
 048c       1             Literal(lit undefined)
-048d       3             LoadGlobal [1]
+048d       3             LoadGlobal [0]
 0490       1             LoadVar(index 1)
 0491       3             Literal(&0054)
 0494       1             ObjectGet()
@@ -822,8 +822,8 @@ Addr    Size
 04a1       2             Call(count 2, flag false)
 04a3       1             Return()
 04a4   16  - # Globals
-04a4       2     [0]: &005c
-04a6       2     [1]: &04bc
+04a4       2     [0]: &04bc
+04a6       2     [1]: &005c
 04a8       2     [2]: &011c
 04aa       2     [3]: &0194
 04ac       2     [4]: &0214

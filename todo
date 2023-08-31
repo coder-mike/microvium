@@ -1,7 +1,5 @@
 # To do
 
-  - Expose globalThis as an ephemeral so that JS can add its own globals.
-
   - Finish refactoring of version numbers to major and minor.
   - String comparison with `<` and `>`. https://github.com/coder-mike/microvium/issues/67
   - Support for string prototype methods. https://github.com/coder-mike/microvium/issues/65

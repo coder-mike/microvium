@@ -63,12 +63,15 @@ enum ScopeVariablesReference {
   OPERATION = 3
 };
 
+const uncreatedVariable = Symbol('uncreated');
+type UncreatedVariable = typeof uncreatedVariable;
+
 export class VirtualMachine {
   private opts: VM.VirtualMachineOptions;
   private allocations = new Map<IL.AllocationID, IL.Allocation>();
   private nextHeapID = 1;
   private globalVariables = new Map<IL.GlobalVariableName, VM.GlobalSlotID>();
-  private globalSlots = new Map<VM.GlobalSlotID, VM.GlobalSlot>();
+  private globalSlots = new Map<VM.GlobalSlotID, VM.GlobalSlot | UncreatedVariable>();
   private hostFunctions = new Map<IL.HostFunctionID, VM.HostFunctionHandler>();
   private catchTarget: IL.StackDepthValue | IL.UndefinedValue = IL.undefinedValue;
   private frame: VM.Frame | undefined;
@@ -253,6 +256,9 @@ export class VirtualMachine {
       builtins
     });
 
+    // Check for any uncreated global variables
+    this.checkGlobalsAreCreated(globalSlots);
+
     const snapshot: SnapshotIL = {
       globalSlots,
       functions,
@@ -427,11 +433,13 @@ export class VirtualMachine {
   ): { entryFunction: IL.FunctionValue } {
     const self = this;
 
-    const missingGlobals = unit.freeVariables
-      .filter(g => !this.globalVariables.has(g))
-
-    if (missingGlobals.length > 0) {
-      return invalidOperation(`Unit cannot be loaded because of missing required globals: ${missingGlobals.join(', ')}`);
+    // Create required globals but mark them as uncreated. This is a subtly
+    // different to TDZ. In JS if you access a global variable that hasn't been
+    // created (e.g. by `globalThis.x = y`) then you get an error like `x is not
+    // defined` but for the TDZ case you get an error like `Cannot access 'x'
+    // before initialization`.
+    for (const global of unit.freeVariables) {
+      this.globalSet(global, uncreatedVariable);
     }
 
     // IDs are remapped when loading into the shared namespace of this VM
@@ -441,6 +449,8 @@ export class VirtualMachine {
     // Allocation slots for all the module-level variables, including functions
     const moduleVariableResolutions = new Map<IL.ModuleVariableName, VM.GlobalSlotID>();
     for (const moduleVariable of unit.moduleVariables) {
+      // Note: the slot IDs for module variables do not conflict with future
+      // global variables because all global slots are prefixed with `global:`.
       const slotID = uniqueName(moduleVariable, n => this.globalSlots.has(n));
       this.globalSlots.set(slotID, { value: IL.undefinedValue });
       moduleVariableResolutions.set(moduleVariable, slotID);
@@ -753,9 +763,10 @@ export class VirtualMachine {
               const globals = _(globalEntries)
                 .map(([name, id]) => ({ name, value: this.globalSlots.get(id) }))
                 .filter(({ value }) => value !== undefined)
+                .filter(({ value }) => value !== uncreatedVariable)
                 .map(({ name, value }) => ({
                   name,
-                  value: DebuggerHelpers.stringifyILValue(value!.value),
+                  value: DebuggerHelpers.stringifyILValue((value as VM.GlobalSlot).value),
                   // See the `DebuggerProtocol.Variable` type. For now, to
                   // simplify, variables don't reference other variables
                   variablesReference: 0
@@ -1543,6 +1554,9 @@ export class VirtualMachine {
     if (value === undefined) {
       return this.ilError(`Access to undefined global variable slot: "${name}"`);
     }
+    if (value === uncreatedVariable) {
+      return this.runtimeError(`Variable ${name} is not defined`);
+    }
     this.push(value.value);
   }
 
@@ -1575,17 +1589,39 @@ export class VirtualMachine {
     if (!slotID) {
       return IL.undefinedValue;
     }
-    return notUndefined(this.globalSlots.get(slotID)).value;
+    const slot = this.globalSlots.get(slotID) ?? unexpected();
+    if (slot === uncreatedVariable) {
+      this.runtimeError(`Variable ${name} is not defined`);
+    }
+    return slot.value;
   }
 
-  public globalSet(name: string, value: IL.Value): void {
+  /**
+   * Set or create a global variable with the given value
+   */
+  public globalSet(name: string, value: IL.Value | UncreatedVariable): void {
     let slotID = this.globalVariables.get(name);
+
     if (!slotID) {
       slotID = uniqueName('global:' + name, n => this.globalSlots.has(n));
       this.globalVariables.set(name, slotID);
-      this.globalSlots.set(slotID, { value: IL.undefinedValue });
+      this.globalSlots.set(slotID, uncreatedVariable);
     }
-    notUndefined(this.globalSlots.get(slotID)).value = value;
+
+    // The part above was to create the slot. The next part is to set the value
+    // but this doesn't apply if there's no value
+    if (value === uncreatedVariable) return;
+
+    let slot = this.globalSlots.get(slotID) ?? unexpected();
+
+    // This globalSet function is used to set up the global environment before
+    // the script is run, so it just creates variables as-needed.
+    if (slot === uncreatedVariable) {
+      slot = { value };
+      this.globalSlots.set(slotID, slot);
+    }
+
+    slot.value = value;
   }
 
   private operationLoadReg(name: string) {
@@ -1971,6 +2007,9 @@ export class VirtualMachine {
     const value = this.pop();
     const slot = this.globalSlots.get(slotID);
     if (!slot) return this.ilError('Invalid slot ID: ' + slotID);
+    if (slot === uncreatedVariable) {
+      this.runtimeError(`Variable ${slotID} is not defined`);
+    }
     slot.value = value;
   }
 
@@ -2655,7 +2694,7 @@ export class VirtualMachine {
         .join('\n')
     }\n\n${
       entries(this.globalSlots)
-        .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${stringifyValue(v.value)};`)
+        .map(([k, v]) => `slot ${stringifyIdentifier(k)} = ${v === uncreatedVariable ? '<uncreated variable>' : stringifyValue(v.value)};`)
         .join('\n')
     }\n\n${
       [...this.handles]
@@ -3280,6 +3319,15 @@ export class VirtualMachine {
     })
   }
 
+  checkGlobalsAreCreated(globalSlots: typeof this.globalSlots): asserts globalSlots is Map<VM.GlobalSlotID, VM.GlobalSlot> {
+    for (const [slotId, slot] of globalSlots) {
+      if (slot === uncreatedVariable) {
+        const globalName = [...this.globalVariables.entries()].find(([_, slotId]) => slotId === slotId)?.[0];
+        this.runtimeError(`Global variable ${globalName ?? slotId} may be used at runtime but was not created at compile time`);
+      }
+    }
+  }
+
   // Frame properties
   private get args() { return this.internalFrame.args; }
   private get block() { return this.internalFrame.block; }
@@ -3312,7 +3360,7 @@ function garbageCollect({
   builtins
 }: {
   globalVariables: Map<IL.GlobalVariableName, VM.GlobalSlotID>,
-  globalSlots: Map<VM.GlobalSlotID, VM.GlobalSlot>,
+  globalSlots: Map<VM.GlobalSlotID, VM.GlobalSlot | UncreatedVariable>,
   frame: VM.Frame | undefined,
   handles: Set<VM.Handle<IL.Value>>,
   exports: Map<IL.ExportID, IL.Value>,
@@ -3331,7 +3379,9 @@ function garbageCollect({
   for (const slotID of globalVariables.values()) {
     const slot = notUndefined(globalSlots.get(slotID));
     reachableGlobalSlots.add(slotID);
-    markValueIsReachable(slot.value);
+    if (slot !== uncreatedVariable) {
+      markValueIsReachable(slot.value);
+    }
   }
 
   // Roots on the stack
@@ -3501,7 +3551,9 @@ function garbageCollect({
           const name = nameOperand.name;
           reachableGlobalSlots.add(name);
           const globalVariable = notUndefined(globalSlots.get(name));
-          markValueIsReachable(globalVariable.value);
+          if (globalVariable !== uncreatedVariable) {
+            markValueIsReachable(globalVariable.value);
+          }
         } else if (op.opcode === 'Literal') {
           const [valueOperand] = op.operands;
           if (valueOperand.type !== 'LiteralOperand') return unexpected();

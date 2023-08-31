@@ -2,8 +2,8 @@ export 0 = &function run;
 
 slot ['global:Reflect'] = &allocation 3;
 slot ['global:assertEqual'] = host function 3;
-slot keysBeforeSnapshot = &allocation 11;
-slot objBeforeSnapshot = &allocation 10;
+slot keysBeforeSnapshot = &allocation 13;
+slot objBeforeSnapshot = &allocation 12;
 
 function Array_push() {
   entry:
@@ -141,12 +141,12 @@ function run() {
     Return();
 }
 
-allocation 10 = {
+allocation 12 = {
   x: 5,
   y: 10,
 };
 
-allocation 11 = [
+allocation 13 = [
   'x',
   'y',
 ];

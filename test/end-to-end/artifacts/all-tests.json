@@ -80,5 +80,6 @@
     "async-await await-over-snapshot",
     "async-await await-over-snapshot-throw",
     "async-await host-async-no-await",
-    "native-api mvm_stopAfterNInstructions"
+    "native-api mvm_stopAfterNInstructions",
+    "end-to-end globalThis"
 ]

@@ -1,0 +1,5 @@
+runExportedFunction: 0
+nativeOnly: false
+testOnly: false
+description: Testing use of globalThis to interact with globals at compile time.
+assertionCount: 2

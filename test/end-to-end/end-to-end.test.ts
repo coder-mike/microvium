@@ -6,7 +6,7 @@ import { VirtualMachineFriendly } from '../../lib/virtual-machine-friendly';
 import { stringifySnapshotIL } from '../../lib/snapshot-il';
 import { htmlPageTemplate } from '../../lib/general';
 import YAML from 'yaml';
-import { Microvium, HostImportTable } from '../../lib';
+import { Microvium, HostImportTable, addDefaultGlobals } from '../../lib';
 import { assertSameCode } from '../common';
 import { assert } from 'chai';
 import { NativeVM } from '../../lib/native-vm';
@@ -213,11 +213,12 @@ async function runTest(anySkips: boolean, testArtifactDir: string, yamlText: str
       }
     }
   };
-  const globalProxyForNode = new Proxy({}, {
+  const globalProxyForNode: any = new Proxy({}, {
     has: (_, p) => true,
     get: (_, p) => globalsForNode[p],
-    set: (_, p) => false,
+    set: (_, p, v) => globalsForNode[p] = v,
   });
+  globalProxyForNode.globalThis = globalProxyForNode;
 
   nodeVM.createContext(globalProxyForNode);
 
@@ -286,6 +287,7 @@ async function runTest(anySkips: boolean, testArtifactDir: string, yamlText: str
     // consistent results from the tests.
     overflowChecks: NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS
   });
+  addDefaultGlobals(vm);
   const vmGlobal = vm.globalThis;
   vmGlobal.print = vm.vmImport(HOST_FUNCTION_PRINT_ID);
   vmGlobal.assert = vm.vmImport(HOST_FUNCTION_ASSERT_ID);

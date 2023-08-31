@@ -3718,6 +3718,13 @@ SUB_OP_EXTENDED_3: {
     MVM_CASE (VM_OP3_LOAD_GLOBAL_3): {
       CODE_COVERAGE(155); // Hit
       reg1 = globals[reg1];
+      if (reg1 == VM_VALUE_DELETED) {
+        CODE_COVERAGE_ERROR_PATH(748); // Not hit
+        err = vm_newError(vm, MVM_E_UNINITIALIZED_GLOBAL);
+        goto SUB_EXIT;
+      } else {
+        CODE_COVERAGE(749); // Not hit
+      }
       goto SUB_TAIL_POP_0_PUSH_REG1;
     }
 

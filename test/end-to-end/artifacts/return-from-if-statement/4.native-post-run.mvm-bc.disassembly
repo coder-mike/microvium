@@ -8,7 +8,7 @@ Addr    Size
 0002       1     requiredEngineVersion: 0
 0003       1     reserved: 0
 0004       2     bytecodeSize: 244
-0006       2     expectedCRC: 843a
+0006       2     expectedCRC: fb93
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
@@ -58,7 +58,7 @@ Addr    Size
 008c       0         maxStackDepth: 5
 008c       0         isContinuation: 0
 008c   1e  -         # Block 008c
-008c       3             LoadGlobal [0]
+008c       3             LoadGlobal [1]
 008f       1             Literal(lit undefined)
 0090       3             LoadGlobal [2]
 0093       1             Literal(lit undefined)
@@ -66,7 +66,7 @@ Addr    Size
 0095       2             Call(count 2, flag false)
 0097       1             Literal(lit 1)
 0098       2             Call(count 3, flag true)
-009a       3             LoadGlobal [0]
+009a       3             LoadGlobal [1]
 009d       1             Literal(lit undefined)
 009e       3             LoadGlobal [2]
 00a1       1             Literal(lit undefined)
@@ -85,7 +85,7 @@ Addr    Size
 00ad       2             Branch &00c0
 00af   11  -         # Block 00af
 00af       1             Literal(lit undefined)
-00b0       3             LoadGlobal [1]
+00b0       3             LoadGlobal [0]
 00b3       1             LoadVar(index 1)
 00b4       3             Literal(&003c)
 00b7       1             ObjectGet()
@@ -96,7 +96,7 @@ Addr    Size
 00bf       1             Return()
 00c0   11  -         # Block 00c0
 00c0       1             Literal(lit undefined)
-00c1       3             LoadGlobal [1]
+00c1       3             LoadGlobal [0]
 00c4       1             LoadVar(index 1)
 00c5       3             Literal(&003c)
 00c8       1             ObjectGet()
@@ -107,8 +107,8 @@ Addr    Size
 00d0       1             Return()
 00d1      11 <unused>
 00e2    8  - # Globals
-00e2       2     [0]: &0088
-00e4       2     [1]: &00ec
+00e2       2     [0]: &00ec
+00e4       2     [1]: &0088
 00e6       2     [2]: &00ac
 00e8       2     Handle: undefined
 00ea    a  - # GC allocations

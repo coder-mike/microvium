@@ -4,7 +4,8 @@ import path from 'path';
 
 export function addBuiltinGlobals(vm: VirtualMachineFriendly, noLib: boolean = false) {
   // Note: There is also a VirtualMachine.addBuiltinGlobals which can be used
-  // when a global requires custom IL.
+  // when a global requires custom IL, and `addDefaultGlobals` in lib.ts which
+  // adds globals for the default host environment.
 
   // Note: even with noLib, we can add these globals because they're pretty
   // important but also the garbage collector will remove these if they aren't

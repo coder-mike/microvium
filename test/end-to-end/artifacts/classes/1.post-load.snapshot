@@ -1,12 +1,12 @@
 export 0 = &function run;
 
-slot GlobalClass = class (&function GlobalClass, &allocation 10);
+slot GlobalClass = class (&function GlobalClass, &allocation 12);
 slot ['global:Microvium'] = &allocation 4;
 slot ['global:Number'] = &allocation 6;
 slot ['global:Reflect'] = &allocation 3;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
-slot globalInst = &allocation 12;
+slot globalInst = &allocation 14;
 slot test_classAsMember = &function test_classAsMember;
 slot test_classProperty = &function test_classProperty;
 slot test_classStaticProperty = &function test_classStaticProperty;
@@ -1741,17 +1741,17 @@ function typeCodeOf() {
     Return();
 }
 
-allocation 10 = {
+allocation 12 = {
   myProp: 42,
   myStaticMethod: &function GlobalClass_myStaticMethod,
-  prototype: &allocation 11,
+  prototype: &allocation 13,
 };
 
-allocation 11 = {
+allocation 13 = {
   myMethod: &function GlobalClass_myMethod,
 };
 
-allocation 12 = {
+allocation 14 = {
   x: 15,
 };
 

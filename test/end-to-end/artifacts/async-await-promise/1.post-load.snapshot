@@ -1,6 +1,6 @@
 export 0 = &function run;
 
-slot Error = class (&function Error, &allocation 10);
+slot Error = class (&function Error, &allocation 12);
 slot ['global:Promise'] = class (&function promiseConstructor, &allocation 2);
 slot ['global:Reflect'] = &allocation 3;
 slot ['global:assert'] = host function 2;
@@ -1354,11 +1354,11 @@ function test_unresolvedPromise3Subscribers() {
 allocation 1 = {
 };
 
-allocation 10 = {
-  prototype: &allocation 11,
+allocation 12 = {
+  prototype: &allocation 13,
 };
 
-allocation 11 = {
+allocation 13 = {
 };
 
 allocation 2 = {

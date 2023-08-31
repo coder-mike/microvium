@@ -2,7 +2,8 @@
 description: >
   Tests primitive type conversions
 runExportedFunction: 0
-# assertionCount: 25
+assertionCount: 14
+testOnly: false
 ---*/
 vmExport(0, run);
 
