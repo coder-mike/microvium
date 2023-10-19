@@ -797,6 +797,14 @@ typedef mvm_TeError TeError;
 #define MVM_INT32TOSTRING(buffer, i) MVM_SNPRINTF(buffer, 12, "%" PRId32, i);
 #endif
 
+#ifndef MVM_POINTER_SET_BOUNDS
+#define MVM_POINTER_SET_BOUNDS(ptr, bounds) ptr
+#endif
+
+#ifndef MVM_POINTER_MAKE_IMMUTABLE
+#define MVM_POINTER_MAKE_IMMUTABLE(ptr) ptr
+#endif
+
 #ifndef MVM_MALLOC
 #define MVM_MALLOC malloc
 #endif
@@ -7436,15 +7444,14 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   // Is the string in RAM? (i.e. the truncated pointer is the same as the full pointer)
   if (LongPtr_new(pTarget) == lpTarget) {
     CODE_COVERAGE(624); // Hit
-    return (const char*)pTarget;
   } else {
     CODE_COVERAGE_UNTESTED(625); // Not hit
     // Allocate a new string in local memory (with additional null terminator)
     vm_allocString(vm, size, &pTarget);
     memcpy_long(pTarget, lpTarget, size);
-
-    return (const char*)pTarget;
   }
+  // Set bounds on the string, including the null terminator
+  return MVM_POINTER_MAKE_IMMUTABLE(MVM_POINTER_SET_BOUNDS((const char*)pTarget, size+1));
 }
 
 size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value) {
@@ -9358,8 +9365,9 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
     return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 
-  *out_size = (size_t)vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-  *out_data = p;
+  size_t size = (size_t)vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+  *out_size = size;
+  *out_data = MVM_POINTER_SET_BOUNDS(p, size);
   return MVM_E_SUCCESS;
 }
 

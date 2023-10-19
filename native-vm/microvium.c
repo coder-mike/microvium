@@ -5035,10 +5035,13 @@ static Value vm_intToStr(VM* vm, int32_t i) {
   CODE_COVERAGE(618); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
-  char buf[32];
+  // 32-bit integer can be no more than 10 digits and a minus sign, followed by
+  // a null terminator if we want to use it as a C string.
+  char buf[12];
   size_t size;
 
-  size = MVM_SNPRINTF(buf, sizeof buf, "%" PRId32, i);
+  size = MVM_INT32TOSTRING(buf, i);
+
   VM_ASSERT(vm, size < sizeof buf);
 
   return mvm_newString(vm, buf, size);
@@ -5543,15 +5546,14 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   // Is the string in RAM? (i.e. the truncated pointer is the same as the full pointer)
   if (LongPtr_new(pTarget) == lpTarget) {
     CODE_COVERAGE(624); // Hit
-    return (const char*)pTarget;
   } else {
     CODE_COVERAGE_UNTESTED(625); // Not hit
     // Allocate a new string in local memory (with additional null terminator)
     vm_allocString(vm, size, &pTarget);
     memcpy_long(pTarget, lpTarget, size);
-
-    return (const char*)pTarget;
   }
+  // Set bounds on the string, including the null terminator
+  return MVM_POINTER_MAKE_IMMUTABLE(MVM_POINTER_SET_BOUNDS((const char*)pTarget, size+1));
 }
 
 size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value) {
@@ -7465,8 +7467,10 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
     return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 
-  *out_size = (size_t)vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-  *out_data = p;
+  size_t size = (size_t)vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+  *out_size = size;
+  *out_data = MVM_POINTER_SET_BOUNDS(p, size);
+
   return MVM_E_SUCCESS;
 }
 
