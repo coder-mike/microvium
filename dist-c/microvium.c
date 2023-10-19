@@ -793,6 +793,10 @@ typedef mvm_TeError TeError;
 #define MVM_SNPRINTF snprintf
 #endif
 
+#ifndef MVM_INT32TOSTRING
+#define MVM_INT32TOSTRING(buffer, i) MVM_SNPRINTF(buffer, 12, "%" PRId32, i);
+#endif
+
 #ifndef MVM_MALLOC
 #define MVM_MALLOC malloc
 #endif
@@ -6922,10 +6926,12 @@ static Value vm_intToStr(VM* vm, int32_t i) {
   CODE_COVERAGE(618); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
-  char buf[32];
+  // 32-bit integer can be no more than 10 digits and a minus sign, followed by
+  // a null terminator if we want to use it as a C string.
+  char buf[12];
   size_t size;
 
-  size = MVM_SNPRINTF(buf, sizeof buf, "%" PRId32, i);
+  size = MVM_INT32TOSTRING(buf, i);
   VM_ASSERT(vm, size < sizeof buf);
 
   return mvm_newString(vm, buf, size);
