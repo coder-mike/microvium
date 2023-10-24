@@ -6940,6 +6940,7 @@ static Value vm_intToStr(VM* vm, int32_t i) {
   size_t size;
 
   size = MVM_INT32TOSTRING(buf, i);
+
   VM_ASSERT(vm, size < sizeof buf);
 
   return mvm_newString(vm, buf, size);
@@ -9368,6 +9369,7 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
   size_t size = (size_t)vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
   *out_size = size;
   *out_data = MVM_POINTER_SET_BOUNDS(p, size);
+
   return MVM_E_SUCCESS;
 }
 

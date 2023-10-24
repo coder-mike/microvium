@@ -113,7 +113,7 @@ console.log(myVariable);
 
 Compile-time only. See [ephemeral](#ephemerals).
 
-A guest can call `vmImport` at compile time to get a reference to the corresponding host function identified by the given `id`. On each host on which the guest is restored, the reference will be reconnected to whatever function has the associated ID in that host.
+A guest can call `vmImport` at compile time to get a reference to the corresponding host function identified by the given `id`. On each host on which the guest is restored, the reference will be reconnected to whatever function has the associated ID in that host. When a snapshot is restored at runtime, all the previously-imported functions will be resolved in the new runtime host.
 
 IDs must be integers in the range `0` to `65535`.
 
