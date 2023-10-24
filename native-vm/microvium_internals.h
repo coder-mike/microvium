@@ -229,6 +229,18 @@ typedef mvm_TeError TeError;
 #define MVM_SNPRINTF snprintf
 #endif
 
+#ifndef MVM_INT32TOSTRING
+#define MVM_INT32TOSTRING(buffer, i) MVM_SNPRINTF(buffer, 12, "%" PRId32, i);
+#endif
+
+#ifndef MVM_POINTER_SET_BOUNDS
+#define MVM_POINTER_SET_BOUNDS(ptr, bounds) ptr
+#endif
+
+#ifndef MVM_POINTER_MAKE_IMMUTABLE
+#define MVM_POINTER_MAKE_IMMUTABLE(ptr) ptr
+#endif
+
 #ifndef MVM_MALLOC
 #define MVM_MALLOC malloc
 #endif
