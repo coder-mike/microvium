@@ -1,14 +1,10 @@
 # Memory Usage (of microvium.c)
 
-Note: These sizes are measured in Sept 2022 and are subject to change (or may have already changed when you read this). See [size.txt](../../size-test/output/size.txt) for the latest ROM size measurement as measured for a Cortex M0 processor and using [this port file](../../size-test/microvium_port.h)
+The current compiled size of Microvium as of Nov 2023 is 12 kB when compiled for a Cortex M0 using the Thumb instruction set and a [reasonable port file](../../size-test/microvium_port.h). Please assume a roughly 33% growth over and above this (to a size of about 16 kB) as the engine acquires new features.
 
-See also [minimal-size.test.ts](../../test/minimal-size.test.ts)
+# Summary
 
--------------------------------------------
-
-TL;DR:
-
-  - The engine itself uses **8-16kB of ROM** and no statically-allocated RAM.
+  - The engine itself uses **10-20kB of ROM** and no statically-allocated RAM.
   - Each virtual machine uses at least:
     - **38 bytes** of ROM
     - **36 bytes** of RAM while idle
@@ -18,8 +14,14 @@ TL;DR:
 
 See also:
 
+  - [minimal-size.test.ts](../../test/minimal-size.test.ts)
   - [size-tests.md](../../size-test/size-tests.md)
   - [memory-management.md](./memory-management.md)
+
+
+# Details
+
+Note: The following sizes are measured in Sept 2022 and are subject to change (or may have already changed when you read this). See [size.txt](../../size-test/output/size.txt) for the latest ROM size measurement as measured for a Cortex M0 processor and using [this port file](../../size-test/microvium_port.h)
 
 The memory usage of a Microvium program changes over time as the program is running. A typical memory profile on a microcontroller may be as follows:
 
