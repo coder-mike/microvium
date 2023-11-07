@@ -68,6 +68,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     lpProgramCounter = reg->lpProgramCounter; \
     pFrameBase = reg->pFrameBase; \
     pStackPointer = reg->pStackPointer; \
+    VM_EXEC_SAFE_MODE(reg->pStackPointer = NULL;) \
+    VM_EXEC_SAFE_MODE(reg->lpProgramCounter = LongPtr_new(NULL);) \
   } while (false)
 
   #define FLUSH_REGISTER_CACHE() do { \
@@ -76,6 +78,9 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     reg->lpProgramCounter = lpProgramCounter; \
     reg->pFrameBase = pFrameBase; \
     reg->pStackPointer = pStackPointer; \
+    VM_EXEC_SAFE_MODE(pFrameBase = NULL;) \
+    VM_EXEC_SAFE_MODE(pStackPointer = NULL;) \
+    VM_EXEC_SAFE_MODE(lpProgramCounter = LongPtr_new(NULL);) \
   } while (false)
 
   #define READ_PGM_1(target) do { \
@@ -93,7 +98,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   #define PUSH(v) do { \
     VM_ASSERT(vm, reg->usingCachedRegisters == true); \
     VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack)); \
-    *pStackPointer = v; \
+    *pStackPointer = (v); \
     pStackPointer++; \
   } while (false)
 
@@ -120,7 +125,26 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     reg->closure = POP(); \
     pStackPointer--; \
     pFrameBase = (uint16_t*)((uint8_t*)pStackPointer - *pStackPointer); \
-    reg->pArgs = pFrameBase - VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS - (uint8_t)reg->argCountAndFlags; \
+    reg->pArgs = pFrameBase - VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS - (reg->argCountAndFlags & AF_ARG_COUNT_MASK); \
+  } while (false)
+
+  // Push a catch target, where `handler` is the bytecode landing pad
+  #define PUSH_CATCH_TARGET(handler) do { \
+    /* Note: the value stored on the stack is essentially an auto-relative
+    pointer stored as an Int14. It will always be negative because the catch
+    target is always behind the stack pointer */ \
+    int16_t temp = reg->pCatchTarget ? (int16_t)(reg->pCatchTarget - pStackPointer) : 0; \
+    pStackPointer[0] = VirtualInt14_encode(vm, temp); \
+    /* Note: pCatchTarget points to the base of the catch target, which the
+    address before incrementing */  \
+    reg->pCatchTarget = pStackPointer++; \
+    PUSH(handler); \
+  } while (false)
+
+  // Unwinds the catch target at pStackPointer
+  #define UNWIND_CATCH_TARGET() do { \
+    int16_t temp = VirtualInt14_decode(vm, pStackPointer[0]); \
+    reg->pCatchTarget = temp ? pStackPointer + temp : NULL; \
   } while (false)
 
   // Reinterpret reg1 as 8-bit signed
@@ -140,7 +164,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   // that the C compiler will promote these eagerly to the CPU registers,
   // although it may choose not to.
   register uint16_t* pFrameBase;
-  register uint16_t* pStackPointer;
+  register uint16_t* pStackPointer; // Name is confusing. This is the stack pointer, not a pointer to the stack pointer.
   register LongPtr lpProgramCounter;
 
   // These are general-purpose scratch "registers". Note: probably the compiler
@@ -150,8 +174,9 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   register uint16_t reg1;
   register uint16_t reg2;
   register uint16_t reg3;
-  uint16_t* regP1 = 0;
-  LongPtr regLP1 = 0;
+  uint16_t* regP1;
+  uint16_t* regP2;
+  LongPtr regLP1;
 
   uint16_t* globals;
   vm_TsRegisters* reg;
@@ -170,6 +195,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   reg1 = 0;
   reg2 = 0;
   reg3 = 0;
+  regP1 = NULL;
+  regLP1 = NULL;
 
   // ------------------------------ Initialization ---------------------------
 
@@ -183,7 +210,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
       return err;
     }
   } else {
-    CODE_COVERAGE_UNTESTED(232); // Not hit
+    CODE_COVERAGE(232); // Hit
   }
 
   globals = vm->globals;
@@ -193,16 +220,15 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   // Because we're coming from C-land, any exceptions that happen during
   // mvm_call should register as host errors
-  reg->catchTarget = VM_VALUE_UNDEFINED;
+  reg->pCatchTarget = NULL;
 
   // Copy the state of the VM registers into the logical variables for quick access
   CACHE_REGISTERS();
 
   // ---------------------- Push host arguments to the stack ------------------
 
-  // 254 is the maximum because we also push the `this` value implicitly and the
-  // total arg count cannot exceed 1 byte
-  if (argCount > 254) {
+  // 126 is the maximum because we also push the `this` value implicitly
+  if (argCount > (AF_ARG_COUNT_MASK - 1)) {
     CODE_COVERAGE_ERROR_PATH(220); // Not hit
     return MVM_E_TOO_MANY_ARGUMENTS;
   } else {
@@ -214,7 +240,7 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
   PUSH(targetFunc); // class or function
   if (reg->argCountAndFlags & AF_OVERRIDE_THIS) {
-    CODE_COVERAGE_UNTESTED(662); // Not hit
+    CODE_COVERAGE_UNTESTED(662); // Hit
     // This is a bit of a hack. If mvm_call is called from mvm_callEx, then
     // mvm_callEx will have already set the `this` value on the stack in this
     // position.
@@ -234,7 +260,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   // ---------------------------- Call target function ------------------------
 
   reg1 /* argCountAndFlags */ = (argCount + 1) | AF_PUSHED_FUNCTION | AF_CALLED_FROM_HOST; // +1 for the `this` value
-  reg2 /* target */ = targetFunc;
+  reg2 /* target */ = vm_resolveIndirections(vm, targetFunc);
+  reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
 
   // When calling mvm_call from C, if the target is a class then we implicitly
   // `new` the class. This doesn't violate anything from the spec because it
@@ -246,14 +273,16 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
     goto SUB_CALL;
   }
 
+  goto SUB_CALL;
+
   // --------------------------------- Run Loop ------------------------------
 
   // This forms the start of the run loop
   //
   // Some useful debug watches:
   //
-  //   - Program counter: /* pc */ (uint8_t*)lpProgramCounter - (uint8_t*)vm->lpBytecode
-  //                      /* pc */ (uint8_t*)vm->stack->reg.lpProgramCounter - (uint8_t*)vm->lpBytecode
+  //   - Program counter: /* pc */ (uint16_t)((uint8_t*)lpProgramCounter - (uint8_t*)vm->lpBytecode)
+  //                      /* pc */ (uint16_t)((uint8_t*)vm->stack->reg.lpProgramCounter - (uint8_t*)vm->lpBytecode)
   //
   //   - Frame height (in words):  /* fh */ (uint16_t*)pStackPointer - (uint16_t*)pFrameBase
   //                               /* fh */ (uint16_t*)vm->stack->reg.pStackPointer - (uint16_t*)vm->stack->reg.pFrameBase
@@ -267,8 +296,10 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
   //   - Frame base (in words): /* bp */ (uint16_t*)pFrameBase - (uint16_t*)(vm->stack + 1)
   //                            /* bp */ (uint16_t*)vm->stack->reg.pFrameBase - (uint16_t*)(vm->stack + 1)
   //
-  //   - Arg count:             /* argc */ (uint8_t)vm->stack->reg.argCountAndFlags
+  //   - Arg count:             /* argc */ vm->stack->reg.argCountAndFlags & 0x7F
   //   - First 4 arg values:    /* args */ vm->stack->reg.pArgs,4
+  //
+  //   - Caller PC:             /* caller-pc */ pFrameBase[-1]
   //
   // Notes:
   //
@@ -278,6 +309,8 @@ TeError mvm_call(VM* vm, Value targetFunc, Value* out_result, Value* args, uint8
 
 SUB_DO_NEXT_INSTRUCTION:
   CODE_COVERAGE(59); // Hit
+
+  VM_ASSERT(vm, reg->usingCachedRegisters);
 
   #ifdef MVM_GAS_COUNTER
   if (vm->stopAfterNInstructions >= 0) {
@@ -293,11 +326,6 @@ SUB_DO_NEXT_INSTRUCTION:
   }
   #endif
 
-  // This is not required for execution but is intended for diagnostics,
-  // required by mvm_getCurrentAddress.
-  // TODO: If MVM_INCLUDE_DEBUG_CAPABILITY is not included, maybe this shouldn't be here, and `mvm_getCurrentAddress` should also not be available.
-  reg->lpProgramCounter = lpProgramCounter;
-
   // Check we're within range
   #if MVM_DONT_TRUST_BYTECODE
   if ((lpProgramCounter < minProgramCounter) || (lpProgramCounter >= maxProgramCounter)) {
@@ -311,7 +339,7 @@ SUB_DO_NEXT_INSTRUCTION:
       TsBreakpoint* pBreakpoint = vm->pBreakpoints;
       uint16_t currentBytecodeAddress = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
       do {
-        if (pBreakpoint->bytecodeAddress == currentBytecodeAddress) {
+        if ((pBreakpoint->bytecodeAddress == -1) || (pBreakpoint->bytecodeAddress == (int)currentBytecodeAddress)) {
           FLUSH_REGISTER_CACHE();
           mvm_TfBreakpointCallback breakpointCallback = vm->breakpointCallback;
           if (breakpointCallback)
@@ -458,6 +486,12 @@ SUB_DO_NEXT_INSTRUCTION:
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP_CALL_5): {
+      /* Note: this isn't actually used at the moment, because we don't have the
+      static analysis to statically determine the target. But my expectation is
+      that when we have this static analysis, most function calls are going to
+      take this form, where the arg count is small and the target is statically
+      determined, but where it's not worth it to put the call into the
+      short-call table. */
       CODE_COVERAGE_UNTESTED(72); // Not hit
       // Uses 16 bit literal for function offset
       READ_PGM_2(reg2);
@@ -494,7 +528,7 @@ SUB_DO_NEXT_INSTRUCTION:
       LongPtr lpVar;
     SUB_OP_STORE_SCOPED:
       lpVar = vm_findScopedVariable(vm, reg1);
-      Value* pVar = (Value*)LongPtr_truncate(lpVar);
+      Value* pVar = (Value*)LongPtr_truncate(vm, lpVar);
       // It would be an illegal operation to write to a closure variable stored in ROM
       VM_BYTECODE_ASSERT(vm, lpVar == LongPtr_new(pVar));
       *pVar = reg2;
@@ -577,7 +611,7 @@ SUB_DO_NEXT_INSTRUCTION:
 SUB_OP_LOAD_ARG: {
   CODE_COVERAGE(32); // Hit
   reg2 /* argCountAndFlags */ = reg->argCountAndFlags;
-  if (reg1 /* argIndex */ < (uint8_t)reg2 /* argCount */) {
+  if (reg1 /* argIndex */ < (reg2 & AF_ARG_COUNT_MASK) /* argCount */) {
     CODE_COVERAGE(64); // Hit
     reg1 /* result */ = reg->pArgs[reg1 /* argIndex */];
   } else {
@@ -742,7 +776,7 @@ SUB_OP_EXTENDED_1: {
   MVM_SWITCH (reg3, VM_OP1_END - 1) {
 
 /* ------------------------------------------------------------------------- */
-/*                              VM_OP1_RETURN_x                              */
+/*                              VM_OP1_RETURN                                */
 /*   Expects:                                                                */
 /*     reg1: vm_TeOpcodeEx1                                                  */
 /* ------------------------------------------------------------------------- */
@@ -770,7 +804,7 @@ SUB_OP_EXTENDED_1: {
       CODE_COVERAGE(599); // Hit
 
       FLUSH_REGISTER_CACHE();
-      Value* pClosure = mvm_gc_allocateWithHeader(vm, 4, TC_REF_CLOSURE);
+      Value* pClosure = mvm_allocate(vm, 4, TC_REF_CLOSURE);
       CACHE_REGISTERS();
       reg1 = ShortPtr_encode(vm, pClosure);
       *pClosure++ = POP(); // The function pointer
@@ -894,7 +928,7 @@ SUB_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_OBJECT_GET_1): {
       CODE_COVERAGE(114); // Hit
       FLUSH_REGISTER_CACHE();
-      err = getProperty(vm, pStackPointer - 2, pStackPointer - 1, pStackPointer - 2);
+      err = getProperty(vm, reg->pStackPointer - 2, reg->pStackPointer - 1, reg->pStackPointer - 2);
       CACHE_REGISTERS();
       if (err != MVM_E_SUCCESS) goto SUB_EXIT;
       goto SUB_TAIL_POP_1_PUSH_0;
@@ -927,9 +961,9 @@ SUB_OP_EXTENDED_1: {
         // Note: the intermediate values are saved back to the stack so that
         // they're preserved if there is a GC collection. Even these conversions
         // can trigger a GC collection
-        pStackPointer[-2] = vm_convertToString(vm, pStackPointer[-2]);
-        pStackPointer[-1] = vm_convertToString(vm, pStackPointer[-1]);
-        reg1 = vm_concat(vm, &pStackPointer[-2], &pStackPointer[-1]);
+        reg->pStackPointer[-2] = vm_convertToString(vm, reg->pStackPointer[-2]);
+        reg->pStackPointer[-1] = vm_convertToString(vm, reg->pStackPointer[-1]);
+        reg1 = vm_concat(vm, &reg->pStackPointer[-2], &reg->pStackPointer[-1]);
         CACHE_REGISTERS();
         goto SUB_TAIL_POP_2_PUSH_REG1;
       } else {
@@ -1004,7 +1038,7 @@ SUB_OP_EXTENDED_1: {
     MVM_CASE (VM_OP1_OBJECT_SET_1): {
       CODE_COVERAGE(124); // Hit
       FLUSH_REGISTER_CACHE();
-      err = setProperty(vm, pStackPointer - 3, pStackPointer - 2, pStackPointer - 1);
+      err = setProperty(vm, reg->pStackPointer - 3, reg->pStackPointer - 2, reg->pStackPointer - 1);
       CACHE_REGISTERS();
       if (err != MVM_E_SUCCESS) {
         CODE_COVERAGE_UNTESTED(265); // Not hit
@@ -1022,32 +1056,77 @@ SUB_OP_EXTENDED_1: {
 
 } // End of SUB_OP_EXTENDED_1
 
+
+
 /* ------------------------------------------------------------------------- */
-/*                              SUB_OP_SCOPE_PUSH_OR_NEW                             */
+/*                             SUB_THROW                                     */
+/*   Expects:                                                                */
+/*     reg1: The exception value                                             */
+/* ------------------------------------------------------------------------- */
+
+SUB_THROW: {
+  // Find the closest catch block
+  regP1 = reg->pCatchTarget;
+
+  // If none, it's an uncaught exception
+  if (regP1 == NULL) {
+    CODE_COVERAGE(208); // Hit
+
+    if (out_result) {
+      *out_result = reg1;
+    }
+    err = MVM_E_UNCAUGHT_EXCEPTION;
+    goto SUB_EXIT;
+  } else {
+    CODE_COVERAGE(209); // Hit
+  }
+
+  VM_ASSERT(vm, Value_isVirtualInt14(regP1[0]));
+
+  VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
+  VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
+
+  // Unwind the stack. regP1 is the stack pointer address we want to land up at
+  while (pFrameBase > regP1) {
+    CODE_COVERAGE(211); // Hit
+
+    // Near the beginning of mvm_call, we set `catchTarget` to NULL
+    // (and then restore at the end), which should direct exceptions through
+    // the path of "uncaught exception" above, so no frame here should ever
+    // be a host frame.
+    VM_ASSERT(vm, !(reg->argCountAndFlags & AF_CALLED_FROM_HOST));
+
+    // In the current frame structure, the size of the preceding frame is
+    // saved 4 words ahead of the frame base
+    pStackPointer = pFrameBase;
+    POP_REGISTERS();
+  }
+
+  pStackPointer = regP1;
+
+  // The next catch target is the outer one.
+  UNWIND_CATCH_TARGET();
+
+  // Jump to the catch block
+  reg2 = pStackPointer[1];
+  VM_ASSERT(vm, Value_isBytecodeMappedPtrOrWellKnown(reg2));
+  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
+
+  // Push the exception to the stack for the catch block to use
+  goto SUB_TAIL_POP_0_PUSH_REG1;
+}
+
+/* ------------------------------------------------------------------------- */
+/*                              SUB_OP_SCOPE_PUSH_OR_NEW                     */
 /*   Expects:                                                                */
 /*     reg3: true if the last slot should be set to the parent closure       */
 /* ------------------------------------------------------------------------- */
 SUB_OP_SCOPE_PUSH_OR_NEW: {
   CODE_COVERAGE(645); // Hit
-
   READ_PGM_1(reg1); // Scope slot count
-  reg2 = reg1 * 2; // Scope size
   FLUSH_REGISTER_CACHE();
-  uint16_t* newScope = mvm_gc_allocateWithHeader(vm, reg2, TC_REF_CLOSURE);
+  vm_scopePushOrNew(vm, reg1, reg3);
   CACHE_REGISTERS();
-  uint16_t* p = newScope;
-  while (--reg1) {
-    *p++ = VM_VALUE_DELETED; // Initial slot values
-  }
-  if (reg3) {
-    CODE_COVERAGE(646); // Hit
-    *p = reg->closure; // Reference to parent (last slot)
-  } else {
-    CODE_COVERAGE(647); // Hit
-    *p = VM_VALUE_DELETED;
-  }
-  // Add to the scope chain
-  reg->closure = ShortPtr_encode(vm, newScope);
   goto SUB_TAIL_POP_0_PUSH_0;
 }
 
@@ -1304,7 +1383,7 @@ SUB_OP_EXTENDED_2: {
         // parameters are satisfied by arguments). If you don't trust the
         // optimizer, it's possible the callee attempts to write to the
         // caller-provided argument slots that don't exist.
-        if (reg1 >= (uint8_t)reg->argCountAndFlags) {
+        if (reg1 >= (reg->argCountAndFlags & AF_ARG_COUNT_MASK)) {
           err = vm_newError(vm, MVM_E_INVALID_BYTECODE);
           goto SUB_EXIT;
         }
@@ -1368,18 +1447,24 @@ SUB_OP_EXTENDED_2: {
     }
 
 /* ------------------------------------------------------------------------- */
-/*                             VM_OP2_CALL_3                                */
+/*                             VM_OP2_CALL_3                                 */
 /*   Expects:                                                                */
-/*     reg1: arg count                                                       */
+/*     reg1: arg count | isVoidCall flag 0x80                                */
 /* ------------------------------------------------------------------------- */
 
     MVM_CASE (VM_OP2_CALL_3): {
       CODE_COVERAGE(142); // Hit
 
-      reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
-      reg2 /* target */ = pStackPointer[-(int16_t)(uint8_t)reg1 - 1]; // The function was pushed before the arguments
+      // Note: The first 7 bits of `reg1` are the argument count, and the 8th
+      // bit, as per the instruction format, is the `AF_VOID_CALLED` flag. None
+      // of the CALL instruction formats use the high byte, so it's reserved for
+      // general activation flags. Here we set flag AF_PUSHED_FUNCTION to
+      // indicate that a `CALL_3` operation requires that the function pointer
+      // is pushed to the stack and needs to be popped at the return point.
 
-      goto SUB_CALL;
+      reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
+
+      goto SUB_CALL_DYNAMIC;
     }
 
 
@@ -1448,30 +1533,11 @@ SUB_OP_EXTENDED_2: {
     MVM_CASE (VM_OP2_ARRAY_NEW): {
       CODE_COVERAGE(100); // Hit
 
-      // Allocation size excluding header
-      uint16_t capacity = reg1;
-
-      TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Hit 2/2
       FLUSH_REGISTER_CACHE();
-      MVM_LOCAL(TsArray*, arr, GC_ALLOCATE_TYPE(vm, TsArray, TC_REF_ARRAY));
+      reg1 /* arr */ = vm_newArray(vm, reg1 /* capacity */);
       CACHE_REGISTERS();
-      reg1 = ShortPtr_encode(vm, MVM_GET_LOCAL(arr));
-      PUSH(reg1); // We need to push early to avoid the GC collecting it
 
-      MVM_GET_LOCAL(arr)->viLength = VirtualInt14_encode(vm, 0);
-      MVM_GET_LOCAL(arr)->dpData = VM_VALUE_NULL;
-
-      if (capacity) {
-        FLUSH_REGISTER_CACHE();
-        uint16_t* pData = mvm_gc_allocateWithHeader(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
-        CACHE_REGISTERS();
-        MVM_SET_LOCAL(arr, ShortPtr_decode(vm, pStackPointer[-1])); // arr may have moved during the collection
-        MVM_GET_LOCAL(arr)->dpData = ShortPtr_encode(vm, pData);
-        uint16_t* p = pData;
-        uint16_t n = capacity;
-        while (n--)
-          *p++ = VM_VALUE_DELETED;
-      }
+      PUSH(reg1 /* arr */);
 
       goto SUB_TAIL_POP_0_PUSH_0;
     }
@@ -1494,66 +1560,6 @@ SUB_OP_EXTENDED_2: {
 
 } // End of SUB_OP_EXTENDED_2
 
-
-/* ------------------------------------------------------------------------- */
-/*                             SUB_THROW                                     */
-/*   Expects:                                                                */
-/*     reg1: The exception value                                             */
-/* ------------------------------------------------------------------------- */
-
-SUB_THROW: {
-  // Find the closest catch block
-  reg2 = reg->catchTarget;
-
-  // If none, it's an uncaught exception
-  if (reg2 == VM_VALUE_UNDEFINED) {
-    CODE_COVERAGE(208); // Hit
-
-    if (out_result) {
-      *out_result = reg1;
-    }
-    err = MVM_E_UNCAUGHT_EXCEPTION;
-    goto SUB_EXIT;
-  } else {
-    CODE_COVERAGE(209); // Hit
-  }
-
-  VM_ASSERT(vm, ((intptr_t)reg2 & 1) == 1);
-
-  // Unwind the stack. regP1 is the stack pointer address we want to land up at
-  regP1 = (uint16_t*)(((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg2) & ~1);
-  VM_ASSERT(vm, pStackPointer >= getBottomOfStack(vm->stack));
-  VM_ASSERT(vm, pStackPointer < getTopOfStackSpace(vm->stack));
-
-  while (pFrameBase > regP1) {
-    CODE_COVERAGE(211); // Hit
-
-    // Near the beginning of mvm_call, we set `catchTarget` to undefined
-    // (and then restore at the end), which should direct exceptions through
-    // the path of "uncaught exception" above, so no frame here should ever
-    // be a host frame.
-    VM_ASSERT(vm, !(reg->argCountAndFlags & AF_CALLED_FROM_HOST));
-
-    // In the current frame structure, the size of the preceding frame is
-    // saved 4 words ahead of the frame base
-    pStackPointer = pFrameBase;
-    POP_REGISTERS();
-  }
-
-  pStackPointer = regP1;
-
-  // The next catch target is the outer one
-  reg->catchTarget = pStackPointer[0];
-
-  // Jump to the catch block
-  reg2 = pStackPointer[1];
-  VM_ASSERT(vm, (reg2 & 1) == 1);
-  lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2 & ~1);
-
-  // Push the exception to the stack for the catch block to use
-  goto SUB_TAIL_POP_0_PUSH_REG1;
-}
-
 /* ------------------------------------------------------------------------- */
 /*                             SUB_FIXED_ARRAY_NEW                           */
 /*   Expects:                                                                */
@@ -1562,7 +1568,7 @@ SUB_THROW: {
 
 SUB_FIXED_ARRAY_NEW: {
   FLUSH_REGISTER_CACHE();
-  uint16_t* arr = mvm_gc_allocateWithHeader(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* arr = mvm_allocate(vm, reg1 * 2, TC_REF_FIXED_LENGTH_ARRAY);
   CACHE_REGISTERS();
   uint16_t* p = arr;
   // Note: when reading a DELETED value from the array, it will read as
@@ -1651,6 +1657,150 @@ SUB_OP_EXTENDED_3: {
     }
 
 /* ------------------------------------------------------------------------- */
+/*                             VM_OP3_AWAIT                                  */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP3_AWAIT): {
+      /*
+      This instruction is invoked at a syntactic `await` point, which is after
+      the awaited expression has been pushed to the stack. If the awaited thing
+      (e.g. promise) has been elided due to CPS-optimization, the awaited value
+      will be VM_VALUE_UNDEFINED
+      */
+      goto SUB_AWAIT;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_AWAIT_CALL                             */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    MVM_CASE (VM_OP3_AWAIT_CALL): {
+      CODE_COVERAGE(667); // Hit
+      // reg1 = arg count
+      READ_PGM_1(reg1);
+      // It doesn't make sense for the arg count word to contain the
+      // AF_VOID_CALLED flag because the point of an await-call is that the
+      // result is awaited, so it's not a void call.
+      VM_ASSERT(vm, (reg1 & AF_ARG_COUNT_MASK) == reg1);
+
+      // Note: the AWAIT instruction will set up the current closure function.
+      // This is valid because the callback should only be called
+      // asynchronously. And it's efficient because the AWAIT instruction needs
+      // to do it anyway if it subscribes to the promise result of the callee.
+      reg2 = VM_VALUE_DELETED; // Poison value in case the callee calls the callback synchronously.
+
+      // The current closure can be a continuation closure by assigning its
+      // function to the resume point.
+      VM_ASSERT(vm, deepTypeOf(vm, reg->closure) == TC_REF_CLOSURE);
+      regP1 /* current scope */ = ShortPtr_decode(vm, reg->closure);
+      regP1[0] = reg2;
+
+      // Similar to VM_OP2_CALL_3 except that cpsCallback points to the current closure
+      reg3 /* cpsCallback */ = reg->closure;
+
+      goto SUB_CALL_DYNAMIC;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                             VM_OP3_ASYNC_RESUME                           */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/* ------------------------------------------------------------------------- */
+
+    // This instruction is the first instruction executed after an await point
+    // in an async function.
+    MVM_CASE (VM_OP3_ASYNC_RESUME): {
+      CODE_COVERAGE(668); // Hit
+
+      READ_PGM_1(reg1 /* stack restoration slot count */);
+      READ_PGM_1(reg2 /* top catch block */);
+
+      // Safety mechanism: wipe the closure function so that if the continuation
+      // is called illegally, it will be flagged. Note that there is already a
+      // wrapper function around the continuation closure when the host calls it,
+      // so this is just for catching internal bugs.
+      #if MVM_SAFE_MODE
+        regLP1 = vm_findScopedVariable(vm, 0);
+        regP1 = (Value*)LongPtr_truncate(vm, regLP1);
+        *regP1 = VM_VALUE_DELETED;
+      #endif
+
+      // The synchronous stack will be empty when the async function is resumed
+      VM_ASSERT(vm, pFrameBase == pStackPointer);
+
+      // Push the synchronous return value onto the stack. It doesn't really
+      // matter what this value is because the VM should only be resumed from
+      // the job queue (or the host can call a callback, but it should also not
+      // be expecting anything in particular for the result). This is kept in
+      // var[0] on the stack by common agreement with other operation. E.g.
+      // `ASYNC_RETURN` returns the value that's in this slot.
+      PUSH(VM_VALUE_UNDEFINED); // pFrameBase[0]
+
+      // Set up a catch target at this location on the stack (var slots 1 and 2)
+      VM_ASSERT(vm, pStackPointer == pFrameBase + 1);
+      // There should be no parent catch target because async functions can only
+      // be resumed from the job queue or a non-reentrant call from the host.
+      VM_ASSERT(vm, reg->pCatchTarget == NULL);
+      PUSH_CATCH_TARGET(getBuiltin(vm, BIN_ASYNC_CATCH_BLOCK));
+
+      // Restore stack (user defined catch blocks and expression temporaries).
+      // Slot 0 and 1 in the closure are for the continuation and callback. The
+      // next slots after that are reserved for dumping and restoring the stack
+      // state.
+      regP1 /* closure */ = (Value*)DynamicPtr_decode_native(vm, reg->closure);
+      VM_ASSERT(vm, vm_getAllocationSize(regP1) >= (2 + reg1) * 2);
+      regP1 += 2; // Skip over continuation and callback
+
+      TABLE_COVERAGE(reg1 ? 1 : 0, 2, 685); // Hit 2/2
+      while (reg1--) {
+        PUSH(*regP1);
+        // Wipe the closure slot. My reasoning is that async functions may be
+        // long-lived, and it's possible that the stack temporaries hold
+        // references to large structures, so we don't want them to be
+        // GC-reachable for the lifetime of the async function.
+        *regP1 = VM_VALUE_DELETED;
+        regP1++;
+      }
+
+      // Restore the catchTarget. It's statically determined how far behind the
+      // stack pointer the catch target is. It will never be null because async
+      // functions always have the root catch block.
+      TABLE_COVERAGE(reg->pCatchTarget == &pStackPointer[-reg2] ? 1 : 0, 2, 690); // Hit 2/2
+      reg->pCatchTarget = &pStackPointer[-reg2];
+      VM_ASSERT(vm, reg->pCatchTarget >= &pFrameBase[1]);
+      VM_ASSERT(vm, reg->pCatchTarget < pStackPointer);
+
+      // Push asynchronous result to the stack. Note: it's illegal for an agent
+      // to participate in CPS and not pass exactly three arguments `(this,
+      // isSuccess, result)`.
+      VM_ASSERT(vm, (reg->argCountAndFlags & AF_ARG_COUNT_MASK) == 3);
+
+      // Note: the signature here is (this, isSuccess, value)
+      reg2 /* isSuccess */ = reg->pArgs[1];
+      reg1 /* result */ = reg->pArgs[2];
+
+      if (reg2 /* isSuccess */ == VM_VALUE_FALSE) {
+        CODE_COVERAGE(669); // Hit
+        // Throw the value in reg1 (the error). The root catch block we pushed
+        // earlier will catch it.
+        goto SUB_THROW;
+      } else {
+        CODE_COVERAGE(686); // Hit
+      }
+      // Microvium CPS protocol requires that the first parameter is a boolean
+      // to indicate success or failure
+      VM_ASSERT(vm, reg2 == VM_VALUE_TRUE);
+      CODE_COVERAGE(670); // Hit
+
+      // Push the result to the stack and then continue with the function
+      goto SUB_TAIL_POP_0_PUSH_REG1;
+    }
+
+/* ------------------------------------------------------------------------- */
 /*                             VM_OP3_JUMP_2                                 */
 /*   Expects:                                                                */
 /*     reg1: signed offset                                                   */
@@ -1681,6 +1831,13 @@ SUB_OP_EXTENDED_3: {
     MVM_CASE (VM_OP3_LOAD_GLOBAL_3): {
       CODE_COVERAGE(155); // Hit
       reg1 = globals[reg1];
+      if (reg1 == VM_VALUE_DELETED) {
+        CODE_COVERAGE_ERROR_PATH(748); // Not hit
+        err = vm_newError(vm, MVM_E_UNINITIALIZED_GLOBAL);
+        goto SUB_EXIT;
+      } else {
+        CODE_COVERAGE(749); // Not hit
+      }
       goto SUB_TAIL_POP_0_PUSH_REG1;
     }
 
@@ -1782,28 +1939,9 @@ SUB_OP_EXTENDED_4: {
     MVM_CASE(VM_OP4_START_TRY): {
       CODE_COVERAGE(206); // Hit
 
-      // Capture the stack pointer value *before* pushing the catch target
-      reg1 = (uint16_t)((intptr_t)pStackPointer - (intptr_t)getBottomOfStack(vm->stack));
-
-      // Assert it didn't overflow
-      VM_ASSERT(vm, (intptr_t)reg1 == ((intptr_t)pStackPointer - (intptr_t)getBottomOfStack(vm->stack)));
-
-      // Set lower bit to `1` so that this value will be ignored by the GC. The
-      // GC doesn't look at the `catchTarget` register, but catch targets are
-      // pushed to the stack if there is a nested `try`, and the GC scans the
-      // stack.
-      VM_ASSERT(vm, (reg1 & 1) == 0); // Expect stack to be 2-byte aligned
-      reg1 |= 1;
-
-      // Location of previous catch target
-      PUSH(reg->catchTarget);
-
       // Location to jump to if there's an exception
       READ_PGM_2(reg2);
-      VM_ASSERT(vm, (reg2 & 1) == 1); // The compiler should add the 1 LSb so the GC ignores this value
-      PUSH(reg2);
-
-      reg->catchTarget = reg1;
+      PUSH_CATCH_TARGET(reg2);
 
       goto SUB_TAIL_POP_0_PUSH_0;
     } // End of VM_OP4_START_TRY
@@ -1817,12 +1955,10 @@ SUB_OP_EXTENDED_4: {
       // the latter case the stack level could be anything since `return` won't
       // go to the effort of popping intermediate variables off the stack.
 
-      regP1 = (uint16_t*)((intptr_t)getBottomOfStack(vm->stack) + (intptr_t)reg->catchTarget - 1);
-      VM_ASSERT(vm, ((intptr_t)regP1 & 1) == 0); // Expect to be 2-byte aligned
-      VM_ASSERT(vm, ((intptr_t)regP1 >= (intptr_t)pFrameBase)); // EndTry can only end a try within the current frame
-
-      pStackPointer = regP1; // Pop the stack
-      reg->catchTarget = pStackPointer[0];
+      VM_ASSERT(vm, reg->pCatchTarget != NULL); // Must be in a try block (StartTry must have been called)
+      pStackPointer = reg->pCatchTarget;
+      UNWIND_CATCH_TARGET();
+      VM_ASSERT(vm, pStackPointer >= pFrameBase); // EndTry can only end a try within the current frame
 
       goto SUB_TAIL_POP_0_PUSH_0;
     } // End of VM_OP4_END_TRY
@@ -1832,7 +1968,7 @@ SUB_OP_EXTENDED_4: {
 
       // Note: leave object on the stack in case a GC cycle is triggered by the array allocation
       FLUSH_REGISTER_CACHE();
-      err = vm_objectKeys(vm, &pStackPointer[-1]);
+      err = vm_objectKeys(vm, &reg->pStackPointer[-1]);
       // TODO: We could maybe eliminate the common CACHE_REGISTERS operation if
       // the exit path checked the flag and cached for us.
       CACHE_REGISTERS();
@@ -1844,7 +1980,7 @@ SUB_OP_EXTENDED_4: {
       CODE_COVERAGE(324); // Hit
 
       FLUSH_REGISTER_CACHE();
-      err = vm_uint8ArrayNew(vm, &pStackPointer[-1]);
+      err = vm_uint8ArrayNew(vm, &reg->pStackPointer[-1]);
       CACHE_REGISTERS();
 
       goto SUB_TAIL_POP_0_PUSH_0;
@@ -1862,7 +1998,7 @@ SUB_OP_EXTENDED_4: {
       // opcodes together according to whether they flush the register cache.
       // Also maybe they could be dispatched through a lookup table.
       FLUSH_REGISTER_CACHE();
-      TsClass* pClass = mvm_gc_allocateWithHeader(vm, sizeof (TsClass), TC_REF_CLASS);
+      TsClass* pClass = mvm_allocate(vm, sizeof (TsClass), TC_REF_CLASS);
       CACHE_REGISTERS();
       pClass->constructorFunc = pStackPointer[-2];
       pClass->staticProps = pStackPointer[-1];
@@ -1914,7 +2050,6 @@ SUB_OP_EXTENDED_4: {
 /* ------------------------------------------------------------------------- */
     MVM_CASE (VM_OP4_SCOPE_POP): {
       CODE_COVERAGE(649); // Hit
-
       reg1 = reg->closure;
       VM_ASSERT(vm, reg1 != VM_VALUE_UNDEFINED);
       LongPtr lpClosure = DynamicPtr_decode_long(vm, reg1);
@@ -1923,16 +2058,375 @@ SUB_OP_EXTENDED_4: {
       // The pointer to the parent scope is the last slot in the closure
       reg1 = LongPtr_read2_aligned(LongPtr_add(lpClosure, size - 2));
       reg->closure = reg1;
-      #if MVM_SAFE_MODE
-        VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
-        VM_ASSERT(vm, size >= 2);
-        VM_ASSERT(vm, (deepTypeOf(vm, reg1) == TC_REF_CLOSURE) || (deepTypeOf(vm, reg1) == TC_VAL_DELETED));
-      #endif
+
+      VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) == TC_REF_CLOSURE);
+      VM_ASSERT(vm, size >= 2);
+      VM_ASSERT(vm, (deepTypeOf(vm, reg1) == TC_REF_CLOSURE) || (deepTypeOf(vm, reg1) == TC_VAL_DELETED));
+
       goto SUB_TAIL_POP_0_PUSH_0;
+    }
+
+/** -------------------------------------------------------------------------
+ *                             VM_OP4_SCOPE_SAVE
+ *
+ * Saves the current closure by pushing it to the stack.
+ *
+ *   Expects:
+ *     Nothing
+ * ------------------------------------------------------------------------- */
+    MVM_CASE (VM_OP4_SCOPE_SAVE): {
+      CODE_COVERAGE(728); // Hit
+      PUSH(reg->closure);
+      goto SUB_TAIL_POP_0_PUSH_0;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                            VM_OP4_ASYNC_START                             */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/*                                                                           */
+/*   This should be the first instruction in an async function.              */
+/* ------------------------------------------------------------------------- */
+    MVM_CASE (VM_OP4_ASYNC_START): {
+      CODE_COVERAGE(696); // Hit
+      READ_PGM_1(reg1); // Closure size and parent reference flag
+
+      // Reserve a slot for the result. Note that `ASYNC_START` is the first
+      // instruction in an async function, so the result is stored at `var[0]`
+      VM_ASSERT(vm, pFrameBase == pStackPointer);
+      PUSH(VM_VALUE_UNDEFINED);
+
+      FLUSH_REGISTER_CACHE();
+
+      TABLE_COVERAGE((reg1 & 0x80) ? 1 : 0, 2, 683); // Hit 2/2
+      TABLE_COVERAGE((reg1 & 0x7F) > 2 ? 1 : 0, 2, 684); // Hit 2/2
+
+      // Acquire the callback that this async function needs to call when it's
+      // done. If caller used CPS, the callback is the one provided by the
+      // caller, otherwise this will synthesize a Promise and return a callback
+      // that resolves or rejects the promise.
+      reg2 = vm_asyncStartUnsafe(vm,
+        reg->pFrameBase /* synchronous result slot */
+      );
+      vm_push(vm, reg2); // GC-reachable, because vm_scopePushOrNew performs an allocation
+
+      // Create closure scope for async function
+      regP1 /* scope */ = vm_scopePushOrNew(vm,
+        reg1 & 0x7F, // slotCount
+        reg1 & 0x80 // isParentCapturing
+      );
+      // The callback gets stored in
+      regP1[1] /* callback */ = vm_pop(vm);
+
+      CACHE_REGISTERS();
+
+      // Async catch target (logic basically copied from VM_OP4_START_TRY)
+      VM_ASSERT(vm, pStackPointer == pFrameBase + 1);
+      PUSH_CATCH_TARGET(getBuiltin(vm, BIN_ASYNC_CATCH_BLOCK));
+
+      goto SUB_TAIL_POP_0_PUSH_0;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                            VM_OP4_ASYNC_RETURN                            */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/*                                                                           */
+/* ------------------------------------------------------------------------- */
+    MVM_CASE (VM_OP4_ASYNC_RETURN): {
+      // This operation is used in place of a normal RETURN when compiling an
+      // async function. It indirectly calls the callback function with the
+      // result instead of passing it to the synchronous caller (it does so via
+      // the job queue).
+
+      CODE_COVERAGE(732); // Not hit
+
+      reg2 /* result */ = POP();
+
+      // Pop the async catch block. We know that this is always stored in the
+      // same slot. It doesn't matter what's on top of it.
+      pStackPointer = &pFrameBase[1];
+      UNWIND_CATCH_TARGET();
+
+      PUSH(/* result */ reg2);
+      PUSH(/* isSuccess */ VM_VALUE_TRUE);
+      goto SUB_ASYNC_COMPLETE;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                            VM_OP4_ENQUEUE_JOB                             */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/*                                                                           */
+/* ------------------------------------------------------------------------- */
+    MVM_CASE (VM_OP4_ENQUEUE_JOB): {
+      // This instruction enqueues the current closure to the job queue (for the
+      // moment there is only one job queue, for executing async callbacks)
+      CODE_COVERAGE_UNTESTED(671); // Not hit
+      // Need to flush registers because `vm_enqueueJob` can trigger GC collection
+      FLUSH_REGISTER_CACHE();
+      vm_enqueueJob(vm, reg->closure);
+      CACHE_REGISTERS();
+      goto SUB_TAIL_POP_0_PUSH_0;
+    }
+
+/* ------------------------------------------------------------------------- */
+/*                            VM_OP4_ASYNC_COMPLETE                             */
+/*   Expects:                                                                */
+/*     Nothing                                                               */
+/*                                                                           */
+/* ------------------------------------------------------------------------- */
+    MVM_CASE (VM_OP4_ASYNC_COMPLETE): {
+      // This instruction implements the completion of an async function. The
+      // main functionality is in SUB_ASYNC_COMPLETE which is shared between the
+      // 3 different async completion paths: return (AsyncReturn), catch
+      // (builtin BIN_ASYNC_CATCH_BLOCK), and host-callback (builtin
+      // BIN_ASYNC_HOST_CALLBACK).
+
+      CODE_COVERAGE(697); // Hit
+
+      goto SUB_ASYNC_COMPLETE;
     }
 
   } // End of switch inside SUB_OP_EXTENDED_4
 } // End of SUB_OP_EXTENDED_4
+
+/* -------------------------------------------------------------------------
+ *                             SUB_AWAIT
+ *
+ * Persists the current stack values to the closure, unwinds the stack, and
+ * returns to the caller. If awaited value is a promise, it also subscribes to
+ * the promise.
+ *
+ *   Expects:
+ *     - value to await is at the top of the stack
+ *     - in an async function with corresponding stack and closure structure
+ *
+ * ------------------------------------------------------------------------- */
+SUB_AWAIT: {
+  CODE_COVERAGE(666); // Hit
+
+  reg1 /* value to await */ = POP();
+
+  // We need to preserve the stack by copying it to the closure. regP1 is
+  // the cursor on the stack that we're copying out of and regP2 is the
+  // cursor on the heap (closure) that we're copying into.
+
+  // We only need to preserve slots from `&pFrameBase[3]` onwards because
+  // the first 3 slots are the synchronous return value and the top-level
+  // catch block.
+  regP1 = &pFrameBase[3];
+  VM_ASSERT(vm, pStackPointer >= regP1);
+  // var[0] is the synchronous return value and var[1-2] are the top-level
+  // catch block. Don't need to copy these.
+  reg2 /*closure*/ = reg->closure;
+  VM_ASSERT(vm, reg2 != VM_VALUE_DELETED);
+  // Note: the closure must be in RAM because we're modifying it
+  regP2 = DynamicPtr_decode_native(vm, reg2 /*closure*/);
+  VM_ASSERT(vm, vm_getAllocationType(regP2) == TC_REF_CLOSURE);
+  // The closure must be large enough to store all the stack variables. The
+  // +4 here is 4 bytes for the first 2 slots of the closure which hold the
+  // continuation function pointer and the callback function pointer.
+  VM_ASSERT(vm, vm_getAllocationSize(regP2) >= ((intptr_t)pStackPointer - (intptr_t)regP1) + 4);
+
+  /*
+  Await/resume bytecode structure
+
+    - [1B]: VM_OP3_AWAIT instruction (synchronous return point)
+    - [0-3B]: padding to 4-byte boundary
+    - [2B]: function header
+    - [2B]: VM_OP3_ASYNC_RESUME + 8-bit slot count + 8-bit catchTarget info
+  */
+
+  // Round up to nearest 4-byte boundary to find the start of the
+  // continuation (since this needs to be addressable and bytecode is only
+  // addressable at 4-byte alignment). This is a bit cumbersome because I'm
+  // not assuming that LongPtr can be directly cast to an integer type.
+  reg2 /* pc offset in bytecode */ = LongPtr_sub(lpProgramCounter, vm->lpBytecode);
+  reg2 /* resume point offset in bytecode */ = (reg2 + (
+    + 2 // skip over function header
+    + 3 // round up to 4-byte boundary
+    )) & 0xFFFC;
+
+  // The resume point should be immediately preceeded by a function header
+  VM_ASSERT(vm,
+    vm_getTypeCodeFromHeaderWord(
+      LongPtr_read2_aligned(LongPtr_add(vm->lpBytecode, reg2 - 2))
+    ) == TC_REF_FUNCTION);
+
+  // The first instruction at the resume point is expected to be the async-resume instruction
+  VM_ASSERT(vm, LongPtr_read1(LongPtr_add(vm->lpBytecode, reg2)) == ((VM_OP_EXTENDED_3 << 4) | VM_OP3_ASYNC_RESUME));
+
+  regP2[0] /* resume point bytecode pointer */ = vm_encodeBytecodeOffsetAsPointer(vm, reg2);
+
+
+  // Preserve the stack
+  regP2 = &regP2[2]; // Skip continuation pointer and callback slot
+  TABLE_COVERAGE(regP1 < pStackPointer ? 1 : 0, 2, 687); // Hit 2/2
+  while (regP1 < pStackPointer) {
+    *regP2++ = *regP1++;
+  }
+
+  // Unwind the exception stack
+  pStackPointer = &pFrameBase[1]; // The catch block is always stored in slots 1-2
+  VM_ASSERT(vm, pStackPointer[1] == getBuiltin(vm, BIN_ASYNC_CATCH_BLOCK));
+  UNWIND_CATCH_TARGET();
+
+  // Optimization: if the AWAIT instruction is awaiting the result of a
+  // function call, then the call was compiled as an AWAIT_CALL instruction
+  // to pass a continuation callback to the callee. If the callee supports
+  // CPS then it will "accept" the continuation by returning
+  // VM_VALUE_DELETED as the result, to indicate an elided promise.
+  if (reg1 /* value to await */ == VM_VALUE_DELETED) {
+    CODE_COVERAGE(688); // Hit
+    // Return the synchronous return value which is specified as being in
+    // var[0] for all async functions. The synchronous return value could be
+    // VM_VALUE_UNDEFINED if we're currently in a state where we're resumed
+    // from the job queue, or if the call is a void-call, or it could be
+    // VM_VALUE_DELETED if the caller used CPS, or it could be a promise if
+    // the caller was not void-calling and not await-calling. The value is
+    // established in the `ASYNC_START` operation or `ASYNC_RESUME`
+    // operation.
+    reg1 = pFrameBase[0];
+    goto SUB_RETURN;
+  }
+
+  CODE_COVERAGE(689); // Hit
+
+  // If the value to await is not elided by a CPS-optimized call, then it
+  // must be a promise. If it's not a promise, then we have a type error.
+  // This doesn't match the ECMAScript standard because in normal JS you can
+  // await anything, but I think it's a reasonable behavior and a subset of
+  // the full spec.
+
+  TeTypeCode tc = deepTypeOf(vm, reg1 /* value to await */);
+  if (tc != TC_REF_PROPERTY_LIST) {
+    CODE_COVERAGE_ERROR_PATH(705); // Not hit
+    // TODO: type errors should actually be catchable
+    err = vm_newError(vm, MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE);
+    goto SUB_EXIT;
+  }
+  regP1 = ShortPtr_decode(vm, reg1 /* value to await */);
+  // Brand check
+  if (regP1[VM_OIS_PROTO] != getBuiltin(vm, BIN_PROMISE_PROTOTYPE)) {
+    CODE_COVERAGE_ERROR_PATH(706); // Not hit
+    err = vm_newError(vm, MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE);
+    goto SUB_EXIT;
+  }
+
+
+  FLUSH_REGISTER_CACHE();
+  mvm_subscribeToPromise(vm, reg1 /* promise */, reg->closure);
+  CACHE_REGISTERS();
+
+  // The stack has been unwound, so it should just be the synchronous return
+  // value remaining
+  VM_ASSERT(vm, pStackPointer == pFrameBase + 1);
+  reg1 = POP(); // Return value
+  goto SUB_RETURN;
+}
+
+/* -------------------------------------------------------------------------
+ *                             SUB_ASYNC_COMPLETE
+ *
+ * This subroutine implements the completion of an async function, which
+ * schedules any callbacks to be called on the job queue and then returns from
+ * the current function. This subroutine is shared between the 3 different async
+ * completion paths: return (AsyncReturn), catch (builtin
+ * BIN_ASYNC_CATCH_BLOCK), and host-callback (builtin BIN_ASYNC_HOST_CALLBACK).
+ *
+ *   Expects:
+ *
+ *     - result/error and isSuccess on the stack
+ *     - callbackOrPromise in scope[1] of the current closure
+ *     - the synchronous return value in var[0]
+ *
+ * ------------------------------------------------------------------------- */
+SUB_ASYNC_COMPLETE: {
+  CODE_COVERAGE(698); // Hit
+
+  // I think all paths leading here will get the stack into a consistent state
+  VM_ASSERT(vm, pStackPointer == pFrameBase + 3);
+
+  reg2 = POP(); // isSuccess
+  reg2 = mvm_toBool(vm, reg2) ? VM_VALUE_TRUE : VM_VALUE_FALSE; // Coerce to boolean
+  reg3 = POP(); // result/error
+  reg1 = vm_readScopedFromThisClosure(vm, 1); // callbackOrPromise
+
+  FLUSH_REGISTER_CACHE();
+  TeTypeCode tc = deepTypeOf(vm, reg1);
+  if (tc == TC_VAL_NO_OP_FUNC) {
+    // If the callback is a no-op, then we don't need to schedule it on the job
+    CODE_COVERAGE(664); // Hit
+  } else if (tc == TC_REF_CLOSURE) {
+    // The callback is a direct continuation
+    CODE_COVERAGE(665); // Hit
+    vm_scheduleContinuation(vm, reg1, reg2, reg3);
+  } else {
+    // Otherwise, the callback slot holds a promise. This happens if the current
+    // async operation was not called in an await-call or void-call, so a
+    // promise was synthesized.
+    CODE_COVERAGE(699); // Hit
+    VM_ASSERT(vm, tc == TC_REF_PROPERTY_LIST);
+
+    // Assuming promises are in RAM because we can subscribe to them any time
+    // and there is currently no static analysis that can prove otherwise.
+    Value* pPromise = ShortPtr_decode(vm, reg1);
+    // The promise is generated internally, and the slot is not accessible by
+    // user code, so it will always be a promise if it's not a function
+    // callback.
+    VM_ASSERT(vm, pPromise[VM_OIS_PROTO] == getBuiltin(vm, BIN_PROMISE_PROTOTYPE));
+    VM_ASSERT(vm, vm_getAllocationSize(pPromise) >= 8); // At least 4 slots
+
+    // The promise is guaranteed to be a in pending state because AsyncComplete
+    // is the only way to transition out of the pending state, and this will
+    // only be invoked once. This closure self-destructs by setting closure slot
+    // 0 to a no-op function, so that successive calls will have no effect.
+    VM_ASSERT(vm, pPromise[VM_OIS_PROMISE_STATUS] == VM_PROMISE_STATUS_PENDING);
+
+    Value callbackList = pPromise[VM_OIS_PROMISE_OUT];
+
+    // Mark the promise as settled
+    pPromise[VM_OIS_PROMISE_STATUS] = reg2 == VM_VALUE_TRUE ? VM_PROMISE_STATUS_RESOLVED : VM_PROMISE_STATUS_REJECTED;
+    pPromise[VM_OIS_PROMISE_OUT] = reg3; // Note: need to assign this before vm_scheduleContinuation to avoid GC issues
+
+    tc = deepTypeOf(vm, callbackList);
+    if (tc == TC_VAL_UNDEFINED) {
+      // Subscriber list is empty
+      CODE_COVERAGE(719); // Hit
+    } else if (tc == TC_REF_CLOSURE) {
+      // Single subscriber
+      CODE_COVERAGE(720); // Hit
+      vm_scheduleContinuation(vm, callbackList, reg2, reg3);
+    } else {
+      // Multiple subscribers
+      CODE_COVERAGE(721); // Hit
+      VM_ASSERT(vm, tc == TC_REF_ARRAY);
+      TsArray* pArray = (TsArray*)ShortPtr_decode(vm, callbackList);
+      int len = VirtualInt14_decode(vm, pArray->viLength);
+      vm_push(vm, reg3 /* resultOrError */); // GC-reachable
+      vm_push(vm, pArray->dpData); // GC-reachable
+      TABLE_COVERAGE(len > 2 ? 1 : 0, 2, 722); // Hit 2/2
+      for (int i = 0; i < len; i++) {
+        // Note: the subscribers list is may move due to GC collections
+        // caused by scheduling the continuation.
+        Value* subscribers = ShortPtr_decode(vm, reg->pStackPointer[-1]);
+        Value callback = subscribers[i];
+        vm_scheduleContinuation(vm, callback, reg2, reg->pStackPointer[-2]);
+      }
+      vm_pop(vm); // dpData
+      vm_pop(vm); // resultOrError
+    }
+  }
+  CACHE_REGISTERS();
+
+  // Invalidate the current closure so if it's called again it won't do anything
+  vm_writeScopedToThisClosure(vm, 0, VM_VALUE_NO_OP_FUNC);
+
+  VM_ASSERT(vm, pStackPointer == pFrameBase + 1); // I think at this point the stack should be empty except for the return value
+  reg1 = pFrameBase[0]; // Synchronous return value (e.g. the Promise)
+  goto SUB_RETURN;
+}
 
 /* ------------------------------------------------------------------------- */
 /*                             SUB_BRANCH_COMMON                             */
@@ -1980,6 +2474,11 @@ SUB_RETURN: {
   // Restore caller state
   POP_REGISTERS();
 
+  // If the catch target isn't earlier than the stack pointer then possibly the
+  // catch blocks weren't unwound properly (e.g. the compiler didn't generate
+  // matching EndTry instructions).
+  VM_ASSERT(vm, reg->pCatchTarget < pStackPointer);
+
   goto SUB_POP_ARGS;
 }
 
@@ -1996,22 +2495,32 @@ SUB_RETURN: {
 /* ------------------------------------------------------------------------- */
 SUB_POP_ARGS: {
   // Pop arguments
-  pStackPointer -= (uint8_t)reg3;
+  pStackPointer -= (reg3 & AF_ARG_COUNT_MASK);
 
   // Pop function reference
   if (reg3 & AF_PUSHED_FUNCTION) {
     CODE_COVERAGE(108); // Hit
     (void)POP();
   } else {
-    CODE_COVERAGE_UNTESTED(109); // Not hit
+    CODE_COVERAGE_UNTESTED(109); // Hit
   }
+
+  // We don't preserve this register across function calls, so when we return
+  // from a function, we no longer know what the callback is for the caller
+  // frame. VM_VALUE_DELETED is used as a poison value here.
+  reg->cpsCallback = VM_VALUE_DELETED;
 
   // Called from the host?
   if (reg3 & AF_CALLED_FROM_HOST) {
     CODE_COVERAGE(221); // Hit
     goto SUB_RETURN_TO_HOST;
+  } else if (reg3 & AF_VOID_CALLED) {
+    CODE_COVERAGE(733); // Not hit
+    // The call operation was a void call, so don't push the return value
+    goto SUB_TAIL_POP_0_PUSH_0;
   } else {
     CODE_COVERAGE(111); // Hit
+    // The call operation was a non-void-call, so push the return value
     goto SUB_TAIL_POP_0_PUSH_REG1;
   }
 }
@@ -2035,8 +2544,45 @@ SUB_RETURN_TO_HOST: {
     *out_result = reg1;
   }
 
+  // Next job in job queue
+  if ((reg->jobQueue != VM_VALUE_UNDEFINED) && (pStackPointer == getBottomOfStack(vm->stack))) {
+    CODE_COVERAGE(680); // Hit
+
+    // Whatever the result has been set to for the primary call target, we don't
+    // want to change to the result of any job
+    out_result = NULL;
+
+    FLUSH_REGISTER_CACHE();
+    reg1 /* argCountAndFlags */ = 0 | AF_CALLED_FROM_HOST; // No args, and return to host when complete
+    reg2 /* target */ = vm_dequeueJob(vm);
+    VM_ASSERT(vm, deepTypeOf(vm, reg2) == TC_REF_CLOSURE); // I expect it to be a closure, although not technically required here
+    reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
+    CACHE_REGISTERS();
+
+    goto SUB_CALL;
+  } else {
+    CODE_COVERAGE(681); // Hit
+  }
+
   goto SUB_EXIT;
 }
+
+/* ------------------------------------------------------------------------- */
+/*                                                                           */
+/*                                    SUB_CALL                               */
+/*                                                                           */
+/*   Performs a dynamic call to a given function value                       */
+/*                                                                           */
+/*   Expects:                                                                */
+/*     reg1: argCountAndFlags excluding AF_PUSHED_FUNCTION                   */
+/*     reg3: new value for CPS callback                                      */
+/* ------------------------------------------------------------------------- */
+SUB_CALL_DYNAMIC: {
+  reg1 /* argCountAndFlags */ |= AF_PUSHED_FUNCTION;
+  reg2 /* target */ = pStackPointer[-(int16_t)(reg1 & AF_ARG_COUNT_MASK) - 1]; // The function was pushed before the arguments
+  goto SUB_CALL;
+}
+
 /* ------------------------------------------------------------------------- */
 /*                                                                           */
 /*                                    SUB_NEW                                */
@@ -2056,22 +2602,10 @@ SUB_NEW: {
 
   // Can only `new` classes in Microvium
   if (deepTypeOf(vm, reg2) != TC_REF_CLASS) {
-    err = MVM_E_USING_NEW_ON_NON_CLASS;
+    err = vm_newError(vm, MVM_E_USING_NEW_ON_NON_CLASS);
     goto SUB_EXIT;
   }
 
-  regLP1 = DynamicPtr_decode_long(vm, reg2);
-  // Note: using the stack as a temporary store because things can shift
-  // during a GC collection and we these temporaries to be GC-visible. It's
-  // safe to trash these particular slots. The regP1[1] slot holds the
-  // `this` value passed by the caller, which will always be undefined
-  // because `new` doesn't allows passing a `this`, and `regP1[0]` holds the
-  // class, which we've already read.
-  regP1[0] /*func*/ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
-  regP1[1] /*props*/ = READ_FIELD_2(regLP1, TsClass, staticProps);
-
-  // Using the stack just to root this in the GC graph
-  PUSH(getBuiltin(vm, BIN_STR_PROTOTYPE));
   // We've already checked that the target of the `new` operation is a
   // class. A class cannot existed without a `prototype` property. If the
   // class was created at compile time, the "prototype" string will be
@@ -2081,23 +2615,70 @@ SUB_NEW: {
   // sequences of instructions that also includes reference to the
   // "prototype" string. So either way, the fact that we're at this point in
   // the code means that the "prototype" string must exist as a builtin.
-  VM_ASSERT(vm, pStackPointer[-1] != VM_VALUE_UNDEFINED);
+  VM_ASSERT(vm, getBuiltin(vm, BIN_STR_PROTOTYPE) != VM_VALUE_UNDEFINED);
+
+  regLP1 = DynamicPtr_decode_long(vm, reg2);
+  regP1[0] /*func*/ = READ_FIELD_2(regLP1, TsClass, constructorFunc);
+  // Note: this trashes the `this` slot, but it's ok because we set it later to the new object
+  regP1[1] /*props*/ = READ_FIELD_2(regLP1, TsClass, staticProps);
+
+  PUSH(getBuiltin(vm, BIN_STR_PROTOTYPE)); // "prototype" string
+
+  // Get the prototype property of the class. Now regP1[1] is the prototype.
   FLUSH_REGISTER_CACHE();
-  TsPropertyList* pObject = GC_ALLOCATE_TYPE(vm, TsPropertyList, TC_REF_PROPERTY_LIST);
-  pObject->dpNext = VM_VALUE_NULL;
-  getProperty(vm, &regP1[1], &pStackPointer[-1], &pObject->dpProto);
-  TeTypeCode tc = deepTypeOf(vm, pObject->dpProto);
-  if ((tc != TC_REF_PROPERTY_LIST) && (tc != TC_REF_CLASS) && (tc != TC_REF_ARRAY)) {
-    pObject->dpProto = VM_VALUE_NULL;
+  getProperty(vm, &regP1[1], &reg->pStackPointer[-1], &regP1[1]);
+
+  vm_pop(vm); // "prototype" string
+
+  TeTypeCode tc = deepTypeOf(vm, regP1[1] /* prototype */);
+  reg2 /* internalSlotCount */ = 0;
+  if (tc == TC_REF_PROPERTY_LIST) {
+    CODE_COVERAGE(723); // Hit
+    regP2 /* pPrototype */ = (Value*)ShortPtr_decode(vm, regP1[1]);
+    // Look for the magic value that tells us how many prototype slots there
+    // are.
+    if ((vm_getAllocationSize(regP2) >= 4) &&
+      (regP2[VM_OIS_PROTO_SLOT_MAGIC_KEY] == VM_PROTO_SLOT_MAGIC_KEY_VALUE)
+    ) {
+      reg2 /* internalSlotCount */ = VirtualInt14_decode(vm, regP2[VM_OIS_PROTO_SLOT_COUNT]);
+    }
+  } else if (tc == TC_VAL_NULL) {
+    CODE_COVERAGE_UNTESTED(724); // Not hit
+  } else {
+    CODE_COVERAGE_ERROR_PATH(725); // Not hit
+    err = vm_newError(vm, MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT);
+    goto SUB_EXIT;
   }
+
+  Value* pObject = mvm_allocate(vm, sizeof(TsPropertyList) + reg2 * sizeof(Value), TC_REF_PROPERTY_LIST);
+  Value* p = pObject;
+  *p++ = VM_VALUE_NULL; // dpNext
+  *p++ = regP1[1]; // dpProto
+
+  // Internal slots
+  if (reg2) {
+    CODE_COVERAGE(726); // Hit
+    regP2 /* pPrototype */ = ShortPtr_decode(vm, regP1[1] /* dpProto */);
+    // Make sure the prototype actually has the slots we want to read
+    VM_ASSERT(vm, vm_getAllocationSize(regP2) >= 4 + reg2);
+    regP2 = &regP2[4]; // Skip header and the magic number and slot count
+    while (reg2--) {
+      *p++ = *regP2++;
+    }
+  } else {
+    CODE_COVERAGE(727); // Hit
+  }
+
+  regP1[1] /* this */ = ShortPtr_encode(vm, pObject);
+
   CACHE_REGISTERS();
-  POP(); // BIN_STR_PROTOTYPE
+
   if (err != MVM_E_SUCCESS) goto SUB_EXIT;
 
-  // The first argument is the `this` value
-  regP1[1] = ShortPtr_encode(vm, pObject);
-
+  // The slot that was used for the class is now used for the function reference
+  reg1 /*argCountAndFlags*/ |= AF_PUSHED_FUNCTION;
   reg2 = regP1[0];
+  reg3 /* cpsCallback */ = VM_VALUE_UNDEFINED;
 
   goto SUB_CALL;
 }
@@ -2110,9 +2691,12 @@ SUB_NEW: {
 /*   Expects:                                                                */
 /*     reg1: argCountAndFlags for the new frame                              */
 /*     reg2: target function value to call                                   */
+/*     reg3: new value for CPS callback                                      */
 /* ------------------------------------------------------------------------- */
 SUB_CALL: {
   CODE_COVERAGE(224); // Hit
+
+  reg->cpsCallback = reg3;
 
   reg3 /* scope */ = VM_VALUE_UNDEFINED;
 
@@ -2141,6 +2725,11 @@ SUB_CALL: {
 
       // Redirect the call to closure target
       continue;
+    } else if (tc == TC_VAL_NO_OP_FUNC) {
+      CODE_COVERAGE(653); // Hit
+      reg3 /* callee argCountAndFlags */ = reg1;
+      reg1 /* result */ = VM_VALUE_UNDEFINED;
+      goto SUB_POP_ARGS;
     } else {
       CODE_COVERAGE_UNTESTED(264); // Not hit
       // Other value types are not callable
@@ -2161,29 +2750,22 @@ SUB_CALL_HOST_COMMON: {
 
   // Note: the interface with the host doesn't include the `this` pointer as the
   // first argument, so `args` points to the *next* argument.
-  reg3 /* argCount */ = (uint8_t)reg1 - 1;
+  reg3 /* argCount */ = (reg1 & AF_ARG_COUNT_MASK) - 1;
 
   // Allocating the result on the stack so that it's reachable by the GC
   Value* pResult = pStackPointer++;
   *pResult = VM_VALUE_UNDEFINED;
 
-  // Note: I'm not calling `FLUSH_REGISTER_CACHE` here, even though control is
-  // leaving the `run` function. One reason is that control is _also_ leaving
-  // the current function activation, and the local registers states have no use
-  // to the callee. The other reason is that it's "safer" and cheaper to keep
-  // the activation state local, rather than flushing it to the shared space
-  // `vm->stack->reg` where it could be trashed indirectly by the callee (see
-  // the earlier comment in this block).
-  //
-  // The only the exception to this is the stack pointer, which is obviously
-  // shared between the caller and callee, and the base pointer which is required
-  // if the host function triggers a garbage collection
-  reg->pStackPointer = pStackPointer;
-  reg->pFrameBase = pFrameBase;
+  // The function `mvm_asyncStart` needs to know the state of the callee flag
+  // AF_VOID_CALLED, but we need to save the original state to restore later.
+  uint16_t saveArgCountAndFlags = reg->argCountAndFlags;
+  reg->argCountAndFlags = reg1;
 
   VM_ASSERT(vm, reg2 < vm_getResolvedImportCount(vm));
   mvm_TfHostFunction hostFunction = vm_getResolvedImports(vm)[reg2];
   mvm_HostFunctionID hostFunctionID = vm_getHostFunctionId(vm, reg2);
+
+  FLUSH_REGISTER_CACHE();
 
   /*
   Note: this subroutine does not call PUSH_REGISTERS to save the frame boundary.
@@ -2199,34 +2781,25 @@ SUB_CALL_HOST_COMMON: {
   #if (MVM_SAFE_MODE)
     // Take a copy of the registers so we can see later that they're restored to
     // their correct values.
+    VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
     vm_TsRegisters regCopy = *reg;
     // Except that the `closure` register may point to a heap value, so we need
     // to track if it moves.
     mvm_Handle hClosureCopy;
     mvm_initializeHandle(vm, &hClosureCopy);
     mvm_handleSet(&hClosureCopy, reg->closure);
-
-    // Saving the stack pointer here is "flushing the cache registers" since it's
-    // the only one we need to preserve.
-    reg->usingCachedRegisters = false;
   #endif
 
-  regP1 /* pArgs */ = pStackPointer - reg3 - 1;
+  regP1 /* pArgs */ = reg->pStackPointer - reg3 - 1;
 
   // Call the host function
   err = hostFunction(vm, hostFunctionID, pResult, regP1, (uint8_t)reg3);
 
-  // The host function should not have left the stack unbalanced. A failure here
-  // is not really a problem with the host since the Microvium C API doesn't
-  // give the host access to the stack anyway.
-  VM_ASSERT(vm, pStackPointer == reg->pStackPointer);
-  VM_ASSERT(vm, pFrameBase == reg->pFrameBase);
-
   #if (MVM_SAFE_MODE)
-    reg->usingCachedRegisters = true;
-
+    VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
     regCopy.closure = mvm_handleGet(&hClosureCopy);
     mvm_releaseHandle(vm, &hClosureCopy);
+
     /*
     The host function should leave the VM registers in the same state.
 
@@ -2244,29 +2817,31 @@ SUB_CALL_HOST_COMMON: {
     and CACHE_REGISTERS around the host call, since the host doesn't modify or
     use these registers, even if it calls back into the VM (with the exception
     of the stack pointer which is used but restored again afterward).
-
-    Why do I care about this optimization? In part because typical Microvium
-    scripts that I've seen tend to make a _lot_ of host calls, treating host
-    functions roughly like a special-purpose instruction set and the script
-    decides the sequence of instructions.
     */
+    regCopy.cpsCallback = reg->cpsCallback; // The cpsCallback register is not preserved
+    regCopy.jobQueue = reg->jobQueue; // The job queue may change
     VM_ASSERT(vm, memcmp(&regCopy, reg, sizeof regCopy) == 0);
   #endif
+
+  CACHE_REGISTERS();
+
+  // Restore caller argCountAndFlags
+  reg->argCountAndFlags = saveArgCountAndFlags;
 
   // Represents an exception thrown by the host function that wasn't caught by
   // the host. The pResult should reference the exception object.
   if (err == MVM_E_UNCAUGHT_EXCEPTION) {
-    CODE_COVERAGE_UNTESTED(664); // Not hit
+    CODE_COVERAGE_UNTESTED(734); // Not hit
     reg1 = *pResult;
     err = MVM_E_SUCCESS;
     // The throw will unwind the stack to the closest catch block, so we don't
     // need to worry about unwinding the arguments off the stack.
     goto SUB_THROW;
   } else if (err != MVM_E_SUCCESS) {
-    CODE_COVERAGE_ERROR_PATH(665); // Not hit
+    CODE_COVERAGE_ERROR_PATH(735); // Not hit
     goto SUB_EXIT;
   } else {
-    CODE_COVERAGE(666); // Hit
+    CODE_COVERAGE(736); // Not hit
   }
 
   reg3 = reg1; // Callee argCountAndFlags
@@ -2291,16 +2866,31 @@ SUB_CALL_HOST_COMMON: {
 SUB_CALL_BYTECODE_FUNC: {
   CODE_COVERAGE(163); // Hit
 
-  regP1 /* pArgs */ = pStackPointer - (uint8_t)reg1;
+  regP1 /* pArgs */ = pStackPointer - (reg1 & AF_ARG_COUNT_MASK);
   regLP1 /* lpReturnAddress */ = lpProgramCounter;
 
   // Move PC to point to new function code
   lpProgramCounter = LongPtr_add(vm->lpBytecode, reg2);
 
-  // Check the stack space required (before we PUSH_REGISTERS)
-  READ_PGM_1(reg2 /* requiredFrameSizeWords */);
+  reg2 /* function header */ = LongPtr_read2_aligned(LongPtr_add(lpProgramCounter, -2));
+
+  // If it's a continuation (async resume point), we actually want the function
+  // header of the containing function
+  if (reg2 & VM_FUNCTION_HEADER_CONTINUATION_FLAG) {
+    CODE_COVERAGE(737); // Not hit
+    reg2 /* back pointer */ = reg2 & VM_FUNCTION_HEADER_BACK_POINTER_MASK;
+    reg2 /* function header */ = LongPtr_read2_aligned(LongPtr_add(lpProgramCounter, - reg2 * 4 - 2));
+  } else {
+    CODE_COVERAGE(738); // Not hit
+  }
+
+  // Check the stack space required (before we PUSH_REGISTERS). Note that the
+  // frame size in words is stored in the header itself
+  reg2 /* requiredFrameSizeWords */ = reg2 /* function header */ & VM_FUNCTION_HEADER_STACK_HEIGHT_MASK;
   reg2 /* requiredFrameSizeWords */ += VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS;
-  err = vm_requireStackSpace(vm, pStackPointer, reg2 /* requiredFrameSizeWords */ + 1 /* space for result slot if we call the host*/);
+  // The +5 is for various temporaries that `mvm_call` pushes to the stack, and
+  // the result slot if we call the host
+  err = vm_requireStackSpace(vm, pStackPointer, reg2 /* requiredFrameSizeWords */ + 5);
   if (err != MVM_E_SUCCESS) {
     CODE_COVERAGE_ERROR_PATH(226); // Not hit
     goto SUB_EXIT;
@@ -2477,18 +3067,141 @@ SUB_EXIT:
   // `registerValuesAtEntry` was also captured before we pushed the mvm_call
   // arguments to the stack, so this also effectively pops the arguments off the
   // stack.
+  registerValuesAtEntry.jobQueue = reg->jobQueue; // Except the job queue needs to be preserved
+  registerValuesAtEntry.closure = reg->closure; // And the closure may point to the GC so it may change physical value if there are garbage collections during the call.
   *reg = registerValuesAtEntry;
 
   // If the stack is empty, we can free it. It may not be empty if this is a
   // reentrant call, in which case there would be other frames below this one.
   if (reg->pStackPointer == getBottomOfStack(vm->stack)) {
     CODE_COVERAGE(222); // Hit
+
     vm_free(vm, vm->stack);
     vm->stack = NULL;
   }
 
   return err;
 } // End of mvm_call
+
+/**
+ * Creates a new array of length 0 and the given capacity and initializes the
+ * allocated slots to VM_VALUE_DELETED.
+ */
+static Value vm_newArray(VM* vm, uint16_t capacity) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  TABLE_COVERAGE(capacity ? 1 : 0, 2, 371); // Hit 2/2
+
+  TsArray* arr = GC_ALLOCATE_TYPE(vm, TsArray, TC_REF_ARRAY);
+  Value result = ShortPtr_encode(vm, arr);
+
+  arr->viLength = VirtualInt14_encode(vm, 0);
+  arr->dpData = VM_VALUE_NULL;
+
+  if (capacity) {
+    vm_push(vm, result); // GC-reachable
+    uint16_t* pData = mvm_allocate(vm, capacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+    result = vm_pop(vm);
+    arr = ShortPtr_decode(vm, result); // Invalidated
+    arr->dpData = ShortPtr_encode(vm, pData);
+    uint16_t* p = pData;
+    uint16_t n = capacity;
+    while (n--)
+      *p++ = VM_VALUE_DELETED;
+  }
+
+  return result;
+}
+
+/**
+ * Add an element to an array. Note that the array may need to expand, so the
+ * arguments should be passed in by reference to stable slots (e.g. stack slots
+ * or registers).
+ */
+static void vm_arrayPush(VM* vm, Value* pvArr, Value* pvItem) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  CODE_COVERAGE(710); // Hit
+
+  TsArray* pArr = ShortPtr_decode(vm, *pvArr);
+  uint16_t length = VirtualInt14_decode(vm, pArr->viLength);
+  uint16_t capacity;
+
+  if (pArr->dpData == VM_VALUE_NULL) {
+    CODE_COVERAGE_UNTESTED(711); // Not hit
+    capacity = 0;
+  } else {
+    CODE_COVERAGE(712); // Hit
+    capacity = vm_getAllocationSize(ShortPtr_decode(vm, pArr->dpData)) / 2;
+  }
+
+  // Need to expand?
+  if (length >= capacity) {
+    CODE_COVERAGE(713); // Hit
+    // Slow path
+    capacity = capacity * 2;
+    if (capacity < VM_ARRAY_INITIAL_CAPACITY) {
+      capacity = VM_ARRAY_INITIAL_CAPACITY;
+    }
+    // We're only adding 1 item to the array, so if we're doubling the capacity
+    // then we know that the new capacity will at least contain the new item.
+    VM_ASSERT(vm, capacity >= length + 1);
+
+    growArray(vm, pvArr, length + 1, capacity);
+  }
+
+  // Write the item to the array
+  pArr = ShortPtr_decode(vm, *pvArr); // May have moved
+  uint16_t* pData = ShortPtr_decode(vm, pArr->dpData);
+  pData[length] = *pvItem;
+  pArr->viLength = VirtualInt14_encode(vm, length + 1);
+}
+
+static void vm_scheduleContinuation(VM* vm, Value continuation, Value isSuccess, Value resultOrError) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  CODE_COVERAGE(714); // Hit
+
+  vm_push(vm, resultOrError); // anchor to GC
+  vm_push(vm, continuation); // anchor to GC
+
+  Value* closure = mvm_allocate(vm, 4 * 2, TC_REF_CLOSURE);
+
+  closure[0] = getBuiltin(vm, BIN_ASYNC_CONTINUE);
+  closure[1] = vm_pop(vm); // continuation
+  closure[2] = isSuccess;
+  closure[3] = vm_pop(vm); // resultOrError
+
+  vm_enqueueJob(vm, ShortPtr_encode(vm, closure));
+}
+
+
+/**
+ * Creates a new closure with `slotCount` slots and sets it as the active
+ * closure. If `captureParent` is true then the last slot of the new closure
+ * will be set to reference the previously active closure.
+ */
+static uint16_t* vm_scopePushOrNew(VM* vm, int slotCount, bool captureParent) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  int size = slotCount * 2;
+
+  uint16_t* newScope = mvm_allocate(vm, size, TC_REF_CLOSURE);
+
+  uint16_t* p = newScope;
+  while (--slotCount) { // Note: pre-decrement so will stop one short of the end
+    *p++ = VM_VALUE_DELETED; // Initial slot values
+  }
+  // Last slot
+  if (captureParent) {
+    CODE_COVERAGE(646); // Hit
+    *p = vm->stack->reg.closure; // Reference to parent (last slot)
+  } else {
+    CODE_COVERAGE(647); // Hit
+    *p = VM_VALUE_DELETED;
+  }
+  // Add to the scope chain
+  vm->stack->reg.closure = ShortPtr_encode(vm, newScope);
+
+  return newScope;
+}
 
 /**
  * Same as mvm_call but takes a `thisValue`. I expect this to be the less common
@@ -2498,7 +3211,7 @@ SUB_EXIT:
 TeError mvm_callEx(VM* vm, Value targetFunc, Value thisValue, Value* out_result, Value* args, uint8_t argCount) {
   mvm_TeError err;
 
-  CODE_COVERAGE_UNTESTED(659); // Not hit
+  CODE_COVERAGE_UNTESTED(659); // Hit
 
   if (!vm->stack) {
     CODE_COVERAGE_UNTESTED(660); // Not hit
@@ -2507,7 +3220,7 @@ TeError mvm_callEx(VM* vm, Value targetFunc, Value thisValue, Value* out_result,
       return err;
     }
   } else {
-    CODE_COVERAGE_UNTESTED(661); // Not hit
+    CODE_COVERAGE_UNTESTED(661); // Hit
   }
 
   err = vm_requireStackSpace(vm, vm->stack->reg.pStackPointer, argCount + 2);
@@ -2535,6 +3248,11 @@ const Value mvm_null = VM_VALUE_NULL;
 static inline uint16_t vm_getAllocationSize(void* pAllocation) {
   CODE_COVERAGE(12); // Hit
   return vm_getAllocationSizeExcludingHeaderFromHeaderWord(((uint16_t*)pAllocation)[-1]);
+}
+
+static inline TeTypeCode vm_getAllocationType(void* pAllocation) {
+  CODE_COVERAGE(682); // Hit
+  return vm_getTypeCodeFromHeaderWord(((uint16_t*)pAllocation)[-1]);
 }
 
 static inline uint16_t vm_getAllocationSize_long(LongPtr lpAllocation) {
@@ -2806,6 +3524,20 @@ TeError mvm_restore(mvm_VM** result, MVM_LONG_PTR_TYPE lpBytecode, size_t byteco
     CODE_COVERAGE(436); // Hit
   }
 
+  #if MVM_DEBUG_UTILS
+  // Dummy code to prevent optimizer collection of debug utils, which may only
+  // be used in the debugger and so might be optimized out unless we pretend to
+  // use them. This code should never execute but I'm hoping that the optimizer
+  // doesn't realize that.
+  if ((intptr_t)vm == -1) {
+    mvm_checkHeap(vm);
+    mvm_readHeapCount(vm);
+    mvm_checkValue(vm, 0);
+    mvm_readCallStack(vm, 0);
+    mvm_readHeap(vm, 0);
+  }
+  #endif
+
 SUB_EXIT:
   if (err != MVM_E_SUCCESS) {
     CODE_COVERAGE_ERROR_PATH(437); // Not hit
@@ -2950,7 +3682,7 @@ void mvm_free(VM* vm) {
  * @param sizeBytes Size in bytes of the allocation, *excluding* the header
  * @param typeCode The type code to insert into the header
  */
-void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode*/ typeCode) {
+MVM_HIDDEN void* mvm_allocate(VM* vm, uint16_t sizeBytes,  uint8_t /*TeTypeCode*/ typeCode) {
   uint16_t* p;
   uint16_t* end;
 
@@ -2976,22 +3708,12 @@ void* mvm_gc_allocateWithHeader(VM* vm, uint16_t sizeBytes, uint8_t /*TeTypeCode
   // since even a 1-char string (+null terminator) is a 4-byte allocation.
   VM_ASSERT(vm, sizeIncludingHeader >= 4);
 
-  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-    // Each time a GC collection _could_ occur, we do it. This is to catch
-    // insidious bugs where the only reference to something is a native
-    // reference and so the GC sees it as unreachable, but the native pointer
-    // appears to work fine until once in a blue moon a GC collection is
-    // triggered at exactly the right time.
-    mvm_runGC(vm, false);
-  #endif
-  #if MVM_SAFE_MODE
-  vm->gc_potentialCycleNumber++;
-  #endif
+  VM_POTENTIAL_GC_POINT(vm);
 
 RETRY:
   pBucket = vm->pLastBucket;
   if (!pBucket) {
-    CODE_COVERAGE_UNTESTED(185); // Not hit
+    CODE_COVERAGE(185); // Hit
     goto GROW_HEAP_AND_RETRY;
   }
   p = pBucket->pEndOfUsedSpace;
@@ -3013,8 +3735,8 @@ GROW_HEAP_AND_RETRY:
   goto RETRY;
 }
 
-// Slow fallback for gc_allocateWithConstantHeader
-static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
+// Slow fallback for mvm_allocateWithConstantHeader
+static void* mvm_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
   CODE_COVERAGE(188); // Hit
 
   // If we happened to trigger a GC collection, we need to know that the
@@ -3023,11 +3745,11 @@ static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
 
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
   TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
-  return mvm_gc_allocateWithHeader(vm, size, tc);
+  return mvm_allocate(vm, size, tc);
 }
 
 /*
- * This function is like mvm_gc_allocateWithHeader except that it's optimized for
+ * This function is like mvm_allocate except that it's optimized for
  * situations where:
  *
  *   1. The header can be precomputed to a C constant, rather than assembling it
@@ -3040,8 +3762,10 @@ static void* gc_allocateWithConstantHeaderSlow(VM* vm, uint16_t header) {
  * Note: the size is passed separately rather than computed from the header
  * because this function is optimized for cases where the size is known at
  * compile time (and even better if this function is inlined).
+ *
+ * WARNING: this does not initialize the data in the allocation.
  */
-static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader) {
+static inline void* mvm_allocateWithConstantHeader(VM* vm, uint16_t header, uint16_t sizeIncludingHeader) {
   CODE_COVERAGE(189); // Hit
 
   uint16_t* p;
@@ -3055,21 +3779,11 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
   VM_ASSERT(vm, sizeIncludingHeader >= 4);
   VM_ASSERT(vm, vm_getAllocationSizeExcludingHeaderFromHeaderWord(header) == sizeIncludingHeader - 2);
 
-  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-    // Each time a GC collection _could_ occur, we do it. This is to catch
-    // insidious bugs where the only reference to something is a native
-    // reference and so the GC sees it as unreachable, but the native pointer
-    // appears to work fine until once in a blue moon a GC collection is
-    // triggered at exactly the right time.
-    mvm_runGC(vm, false);
-  #endif
-  #if MVM_SAFE_MODE
-    vm->gc_potentialCycleNumber++;
-  #endif
+  VM_POTENTIAL_GC_POINT(vm);
 
   TsBucket* pBucket = vm->pLastBucket;
   if (!pBucket) {
-    CODE_COVERAGE_UNTESTED(190); // Not hit
+    CODE_COVERAGE(190); // Hit
     goto SLOW;
   }
   p = pBucket->pEndOfUsedSpace;
@@ -3085,7 +3799,7 @@ static inline void* gc_allocateWithConstantHeader(VM* vm, uint16_t header, uint1
 
 SLOW:
   CODE_COVERAGE(192); // Hit
-  return gc_allocateWithConstantHeaderSlow(vm, header);
+  return mvm_allocateWithConstantHeaderSlow(vm, header);
 }
 
 // Looks for a variable in the closure scope chain based on its index. Scope
@@ -3113,6 +3827,26 @@ static LongPtr vm_findScopedVariable(VM* vm, uint16_t varIndex) {
       scope = LongPtr_read2_aligned(LongPtr_add(lpArr, arraySize - 2));
     }
   }
+}
+
+// Read a scoped variable from the current closure. Assumes the current closure
+// is stored in RAM.
+static inline Value vm_readScopedFromThisClosure(VM* vm, uint16_t varIndex) {
+  CODE_COVERAGE(700); // Hit
+  Value* closure = ShortPtr_decode(vm, vm->stack->reg.closure);
+  Value* slot = &closure[varIndex];
+  VM_ASSERT(vm, slot == LongPtr_truncate(vm, vm_findScopedVariable(vm, varIndex)));
+  return *slot;
+}
+
+// Read a scoped variable from the current closure. Assumes the current closure
+// is stored in RAM.
+static inline void vm_writeScopedToThisClosure(VM* vm, uint16_t varIndex, Value value) {
+  CODE_COVERAGE(701); // Hit
+  Value* closure = ShortPtr_decode(vm, vm->stack->reg.closure);
+  Value* slot = &closure[varIndex];
+  VM_ASSERT(vm, slot == LongPtr_truncate(vm, vm_findScopedVariable(vm, varIndex)));
+  *slot = value;
 }
 
 static inline void* getBucketDataBegin(TsBucket* bucket) {
@@ -3211,7 +3945,7 @@ static void gc_createNextBucket(VM* vm, uint16_t bucketSize, uint16_t minBucketS
 
   // If this tips us over the top of the heap, then we run a collection
   if (heapSize + bucketSize > MVM_MAX_HEAP_SIZE) {
-    CODE_COVERAGE_UNTESTED(197); // Not hit
+    CODE_COVERAGE_UNTESTED(197); // Hit
     mvm_runGC(vm, false);
     heapSize = getHeapSize(vm);
   }
@@ -3323,6 +4057,14 @@ static uint16_t pointerOffsetInHeap(VM* vm, TsBucket* pLastBucket, void* ptr) {
   return 0;
 }
 #endif // MVM_INCLUDE_SNAPSHOT_CAPABILITY || (!MVM_NATIVE_POINTER_IS_16_BIT && !MVM_USE_SINGLE_RAM_PAGE)
+
+// Encodes a bytecode offset as a Value
+static inline Value vm_encodeBytecodeOffsetAsPointer(VM* vm, uint16_t offset) {
+  // Only offsets with 4-byte alignment can be represented as VM values
+  VM_ASSERT(vm, offset & 0xFFFC);
+  // Bytecode pointers end in binary 01
+  return offset | 1;
+}
 
 #if MVM_NATIVE_POINTER_IS_16_BIT
   static inline void* ShortPtr_decode(VM* vm, ShortPtr ptr) {
@@ -3488,7 +4230,7 @@ static LongPtr DynamicPtr_decode_long(VM* vm, DynamicPtr ptr) {
 static void* DynamicPtr_decode_native(VM* vm, DynamicPtr ptr) {
   CODE_COVERAGE(253); // Hit
   LongPtr lp = DynamicPtr_decode_long(vm, ptr);
-  void* p = LongPtr_truncate(lp);
+  void* p = LongPtr_truncate(vm, lp);
   // Assert that the resulting native pointer is equivalent to the long pointer.
   // I.e. that we didn't lose anything in the truncation (i.e. that it doesn't
   // point to ROM).
@@ -3502,9 +4244,11 @@ static inline LongPtr LongPtr_new(void* p) {
   CODE_COVERAGE(284); // Hit
   return MVM_LONG_PTR_NEW(p);
 }
-static inline void* LongPtr_truncate(LongPtr lp) {
+static inline void* LongPtr_truncate(VM* vm, LongPtr lp) {
   CODE_COVERAGE(332); // Hit
-  return MVM_LONG_PTR_TRUNCATE(lp);
+  void* result = MVM_LONG_PTR_TRUNCATE(lp);
+  VM_ASSERT(vm, lp == LongPtr_new(result));
+  return result;
 }
 static inline LongPtr LongPtr_add(LongPtr lp, int16_t offset) {
   CODE_COVERAGE(333); // Hit
@@ -3637,6 +4381,10 @@ static void gc_processShortPtrValue(gc_TsGCCollectionState* gc, Value* pValue) {
     return;
   } else {
     CODE_COVERAGE(465); // Hit
+    // Tombstones always have exactly the header `TOMBSTONE_HEADER`. If it has
+    // the type-code of TC_REF_TOMBSTONE but is not a tombstone then it's likely
+    // a corrupt header or pValue does not point to a legitimate allocation.
+    VM_ASSERT(vm, vm_getTypeCodeFromHeaderWord(headerWord) != TC_REF_TOMBSTONE);
   }
   // Otherwise, we need to move the allocation
 
@@ -3748,7 +4496,7 @@ SUB_MOVE_ALLOCATION:
         uint16_t* end = writePtr + childPropCount;
         // Check we have space for the new properties
         if (end > gc->lastBucketEndCapacity) {
-          CODE_COVERAGE_UNTESTED(479); // Not hit
+          CODE_COVERAGE(479); // Hit
           // If we don't have space, we need to revert and try again. The
           // "revert" isn't explict. It depends on the fact that the gc.writePtr
           // hasn't been committed yet, and no mutations have been applied to
@@ -3837,6 +4585,11 @@ void mvm_runGC(VM* vm, bool squeeze) {
   interpreted in terms of _fromspace_. Forwarding pointers and pointers in
   processed allocations always reference _tospace_.
   */
+
+  #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
+  mvm_checkHeap(vm);
+  #endif
+
   uint16_t n;
   uint16_t* p;
 
@@ -3854,7 +4607,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
   uint16_t estimatedSize = vm->heapSizeUsedAfterLastGC;
 
   #if MVM_VERY_EXPENSIVE_MEMORY_CHECKS
-    // Move the heap address space by 2 bytes on each cycle.
+    // Move the heap address space by 2 bytes on each cycle (overflows at 256).
     vm->gc_heap_shift += 2;
     if (vm->gc_heap_shift == 0) {
       // Minimum of 2 bytes just so we have consistency when it overflows
@@ -3873,12 +4626,16 @@ void mvm_runGC(VM* vm, bool squeeze) {
     *gc.lastBucket->pEndOfUsedSpace = vm_makeHeaderWord(vm, TC_REF_STRING, vm->gc_heap_shift - 2);
   #endif // MVM_VERY_EXPENSIVE_MEMORY_CHECKS
 
-  if (estimatedSize) {
-    CODE_COVERAGE(493); // Hit
-    gc_newBucket(&gc, estimatedSize, 0);
+  if (!estimatedSize) {
+    CODE_COVERAGE(494); // Hit
+    // Actually the value-copying algorithm can't deal with creating the heap from nothing, and
+    // I don't want to slow it down by adding extra checks, so we always create at least a small
+    // heap.
+    estimatedSize = 64;
   } else {
-    CODE_COVERAGE_UNTESTED(494); // Not hit
+    CODE_COVERAGE(493); // Hit
   }
+  gc_newBucket(&gc, estimatedSize, 0);
 
   // Roots in global variables (including indirection handles)
   // Note: Interned strings are referenced from a handle and so will be GC'd here
@@ -3906,8 +4663,10 @@ void mvm_runGC(VM* vm, bool squeeze) {
     vm_TsRegisters* reg = &stack->reg;
     VM_ASSERT(vm, reg->usingCachedRegisters == false);
 
-    // Roots in scope
+    // Roots in registers
     gc_processValue(&gc, &reg->closure);
+    gc_processValue(&gc, &reg->cpsCallback);
+    gc_processValue(&gc, &reg->jobQueue);
 
     // Roots on call stack
     uint16_t* beginningOfStack = getBottomOfStack(stack);
@@ -3966,23 +4725,30 @@ void mvm_runGC(VM* vm, bool squeeze) {
       VM_ASSERT(vm, p < bucket->pEndOfUsedSpace);
       uint16_t header = *p++;
       uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
-      uint16_t words = (size + 1) >> 1;
+
+      uint16_t* next = p + ((size + 1) >> 1); // round up
 
       // Note: we're comparing the header words here to compare the type code.
       // The RHS here is constant
       if (header < (uint16_t)(TC_REF_DIVIDER_CONTAINER_TYPES << 12)) { // Non-container types
         CODE_COVERAGE(502); // Hit
-        p += words;
+        p = next;
         continue;
-      } else {
-        // Else, container types
+      } else { // Else, container types
         CODE_COVERAGE(505); // Hit
-      }
 
-      while (words--) { // Hot loop
-        if (Value_isShortPtr(*p))
-          gc_processValue(&gc, p);
-        p++;
+        // Note: we round down in calculating the number of words in the container
+        // that may contain a valid pointer. In particular this allows zero-length
+        // containers to have a size of 1 byte, which is rounded up to a 2-byte
+        // allocation (the minimum size large enough for the tombstone) but rounded
+        // down to zer when treated as the container dimension.
+        uint16_t words = size >> 1; // round down
+        while (words--) { // Hot loop
+          if (Value_isShortPtr(*p))
+            gc_processValue(&gc, p);
+          p++;
+        }
+        p = next;
       }
     }
 
@@ -3993,7 +4759,7 @@ void mvm_runGC(VM* vm, bool squeeze) {
 
   // Release old heap
   TsBucket* oldBucket = vm->pLastBucket;
-  TABLE_COVERAGE(oldBucket ? 1 : 0, 2, 507); // Hit 1/2
+  TABLE_COVERAGE(oldBucket ? 1 : 0, 2, 507); // Hit 2/2
   while (oldBucket) {
     TsBucket* prev = oldBucket->prev;
     vm_free(vm, oldBucket);
@@ -4068,7 +4834,9 @@ TeError vm_createStackAndRegisters(VM* vm) {
   reg->lpProgramCounter = vm->lpBytecode; // This is essentially treated as a null value
   reg->argCountAndFlags = 0;
   reg->closure = VM_VALUE_UNDEFINED;
-  reg->catchTarget = VM_VALUE_UNDEFINED;
+  reg->pCatchTarget = NULL;
+  reg->cpsCallback = VM_VALUE_DELETED;
+  reg->jobQueue = VM_VALUE_UNDEFINED;
   VM_ASSERT(vm, reg->pArgs == 0);
 
   return MVM_E_SUCCESS;
@@ -4146,8 +4914,8 @@ TeError vm_resolveExport(VM* vm, mvm_VMExportID id, Value* result) {
     mvm_VMExportID exportID = LongPtr_read2_aligned(exportTableEntry);
     if (exportID == id) {
       CODE_COVERAGE(235); // Hit
-      LongPtr pExportvalue = LongPtr_add(exportTableEntry, 2);
-      mvm_VMExportID exportValue = LongPtr_read2_aligned(pExportvalue);
+      LongPtr pExportValue = LongPtr_add(exportTableEntry, 2);
+      mvm_VMExportID exportValue = LongPtr_read2_aligned(pExportValue);
       *result = exportValue;
       return MVM_E_SUCCESS;
     } else {
@@ -4267,10 +5035,13 @@ static Value vm_intToStr(VM* vm, int32_t i) {
   CODE_COVERAGE(618); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
 
-  char buf[32];
+  // 32-bit integer can be no more than 10 digits and a minus sign, followed by
+  // a null terminator if we want to use it as a C string.
+  char buf[12];
   size_t size;
 
-  size = MVM_SNPRINTF(buf, sizeof buf, "%" PRId32, i);
+  size = MVM_INT32TOSTRING(buf, i);
+
   VM_ASSERT(vm, size < sizeof buf);
 
   return mvm_newString(vm, buf, size);
@@ -4291,7 +5062,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       return vm_intToStr(vm, i);
     }
     case TC_REF_FLOAT64: {
-      CODE_COVERAGE(248); // Hit
+      CODE_COVERAGE(248); // Not hit
       #if MVM_SUPPORT_FLOAT
       return vm_float64ToStr(vm, value);
       #else
@@ -4374,7 +5145,7 @@ static Value vm_convertToString(VM* vm, Value value) {
       break;
     }
     case TC_VAL_NAN: {
-      CODE_COVERAGE(262); // Hit
+      CODE_COVERAGE(262); // Not hit
       constStr = "NaN";
       break;
     }
@@ -4390,6 +5161,11 @@ static Value vm_convertToString(VM* vm, Value value) {
     case TC_VAL_STR_PROTO: {
       CODE_COVERAGE_UNTESTED(267); // Not hit
       return value;
+    }
+    case TC_VAL_NO_OP_FUNC: {
+      CODE_COVERAGE(654); // Hit
+      constStr = "[Function]";
+      break;
     }
     case TC_VAL_DELETED: {
       return VM_UNEXPECTED_INTERNAL_ERROR(vm);
@@ -4627,6 +5403,10 @@ bool mvm_toBool(VM* vm, Value value) {
       CODE_COVERAGE_UNTESTED(269); // Not hit
       return true;
     }
+    case TC_VAL_NO_OP_FUNC: {
+      CODE_COVERAGE_UNTESTED(655); // Not hit
+      return true;
+    }
     default: return VM_UNEXPECTED_INTERNAL_ERROR(vm);
   }
 }
@@ -4676,7 +5456,7 @@ static inline mvm_HostFunctionID vm_getHostFunctionId(VM* vm, uint16_t hostFunct
 mvm_TeType mvm_typeOf(VM* vm, Value value) {
   TeTypeCode tc = deepTypeOf(vm, value);
   VM_ASSERT(vm, tc < sizeof typeByTC);
-  TABLE_COVERAGE(tc, TC_END, 42); // Hit 16/26
+  TABLE_COVERAGE(tc, TC_END, 42); // Hit 17/27
   return (mvm_TeType)typeByTC[tc];
 }
 
@@ -4762,23 +5542,22 @@ const char* mvm_toStringUtf8(VM* vm, Value value, size_t* out_sizeBytes) {
   if (out_sizeBytes)
     *out_sizeBytes = size;
 
-  void* pTarget = LongPtr_truncate(lpTarget);
+  void* pTarget = LongPtr_truncate(vm, lpTarget);
   // Is the string in RAM? (i.e. the truncated pointer is the same as the full pointer)
   if (LongPtr_new(pTarget) == lpTarget) {
     CODE_COVERAGE(624); // Hit
-    return (const char*)pTarget;
   } else {
     CODE_COVERAGE_UNTESTED(625); // Not hit
     // Allocate a new string in local memory (with additional null terminator)
     vm_allocString(vm, size, &pTarget);
     memcpy_long(pTarget, lpTarget, size);
-
-    return (const char*)pTarget;
   }
+  // Set bounds on the string, including the null terminator
+  return MVM_POINTER_MAKE_IMMUTABLE(MVM_POINTER_SET_BOUNDS((const char*)pTarget, size+1));
 }
 
 size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value) {
-  CODE_COVERAGE_UNTESTED(620); // Not hit
+  CODE_COVERAGE_UNTESTED(620); // Hit
   VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
   size_t size;
   vm_toStringUtf8_long(vm, value, &size);
@@ -4786,7 +5565,7 @@ size_t mvm_stringSizeUtf8(mvm_VM* vm, mvm_Value value) {
 }
 
 Value mvm_newBoolean(bool source) {
-  CODE_COVERAGE_UNTESTED(44); // Not hit
+  CODE_COVERAGE(44); // Hit
   return source ? VM_VALUE_TRUE : VM_VALUE_FALSE;
 }
 
@@ -4798,7 +5577,7 @@ Value vm_allocString(VM* vm, size_t sizeBytes, void** out_pData) {
   }
 
   // Note: allocating 1 extra byte for the extra null terminator
-  char* pData = mvm_gc_allocateWithHeader(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
+  char* pData = mvm_allocate(vm, (uint16_t)sizeBytes + 1, TC_REF_STRING);
   *out_pData = pData;
   // Null terminator
   pData[sizeBytes] = '\0';
@@ -4833,7 +5612,7 @@ static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
   Value value = LongPtr_read2_aligned(lpBuiltin);
 
   // Check if the builtin accesses a RAM value via a handle
-  Value* target = getHandleTargetOrNull(vm, value);
+  Value* target = vm_getHandleTargetOrNull(vm, value);
   if (target) {
     CODE_COVERAGE(212); // Hit
     return *target;
@@ -4846,25 +5625,56 @@ static Value getBuiltin(VM* vm, mvm_TeBuiltins builtinID) {
 /**
  * If the value is a handle, this returns a pointer to the global variable
  * referenced by the handle. Otherwise, this returns NULL.
+ *
+ * See also vm_resolveIndirections if you're only reading the value.
  */
-static inline Value* getHandleTargetOrNull(VM* vm, Value value) {
+static Value* vm_getHandleTargetOrNull(VM* vm, Value value) {
   CODE_COVERAGE(527); // Hit
+
+  // Check low bits
   if (!Value_isBytecodeMappedPtrOrWellKnown(value)) {
-    CODE_COVERAGE_UNTESTED(528); // Not hit
+    CODE_COVERAGE(528); // Hit
     return NULL;
-  } else {
+  }
+
+  if (value < VM_VALUE_WELLKNOWN_END) {
     CODE_COVERAGE(529); // Hit
-  }
-  uint16_t globalsOffset = getSectionOffset(vm->lpBytecode, BCS_GLOBALS);
-  uint16_t globalsEndOffset = getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_GLOBALS));
-  if ((value < globalsOffset) || (value >= globalsEndOffset)) {
-    CODE_COVERAGE(530); // Hit
     return NULL;
-  } else {
-    CODE_COVERAGE(531); // Hit
   }
+
+  // See if it points earlier than the globals section, then it's pointing to a
+  // ROM allocation, which is not a handle.
+  uint16_t globalsOffset = getSectionOffset(vm->lpBytecode, BCS_GLOBALS);
+  if (value < globalsOffset) {
+    CODE_COVERAGE(530); // Hit
+    VM_ASSERT(vm, value >= getSectionOffset(vm->lpBytecode, BCS_ROM));
+    return NULL;
+  }
+
+  CODE_COVERAGE(531); // Hit
+
+  // The globals section should be the last addressable section in the ROM, so a
+  // pointer should not pointer later than the end of the globals section.
+  VM_ASSERT(vm, value < getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_GLOBALS)));
+
   uint16_t globalIndex = (value - globalsOffset) / 2;
   return &vm->globals[globalIndex];
+}
+
+/**
+ * If `value` points to a handle, this returns the value in the handle.
+ *
+ * See also `vm_getHandleTargetOrNull` if you want to write to the value.
+ */
+static Value vm_resolveIndirections(VM* vm, Value value) {
+  CODE_COVERAGE(729); // Hit
+  Value* target = vm_getHandleTargetOrNull(vm, value);
+  if (!target) {
+    CODE_COVERAGE(730); // Hit
+    return value;
+  }
+  CODE_COVERAGE(731); // Hit
+  return *target;
 }
 
 
@@ -4887,7 +5697,7 @@ static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
   CODE_COVERAGE(532); // Hit
   Value slotContents = LongPtr_read2_aligned(lpSlot);
   // Work out if the target slot is actually a handle.
-  Value* handleTarget = getHandleTargetOrNull(vm, slotContents);
+  Value* handleTarget = vm_getHandleTargetOrNull(vm, slotContents);
   if (handleTarget) {
     CODE_COVERAGE(533); // Hit
     // Set the corresponding global variable
@@ -4900,7 +5710,7 @@ static void setSlot_long(VM* vm, LongPtr lpSlot, Value value) {
 
   // We never mutate through a long pointer, because anything mutable must be in
   // RAM and anything in RAM must be addressable by a short pointer
-  Value* pSlot = LongPtr_truncate(lpSlot);
+  Value* pSlot = LongPtr_truncate(vm, lpSlot);
 
   // Check the truncation hasn't lost anything. If this fails, the slot could be
   // in ROM. If this passes, the slot
@@ -4975,7 +5785,7 @@ SUB_GET_PROPERTY:
       int16_t index = VirtualInt14_decode(vm, propertyName);
 
       if ((index < 0) || (index >= length)) {
-        CODE_COVERAGE(343); // Hit
+        CODE_COVERAGE(343); // Not hit
         *out_propertyValue = VM_VALUE_UNDEFINED;
         return MVM_E_SUCCESS;
       }
@@ -5194,7 +6004,7 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
   }
   VM_ASSERT(vm, newCapacity != 0);
 
-  uint16_t* pNewData = mvm_gc_allocateWithHeader(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
+  uint16_t* pNewData = mvm_allocate(vm, newCapacity * 2, TC_REF_FIXED_LENGTH_ARRAY);
   // Copy values from the old array. Note that the above allocation can trigger
   // a GC collection which moves the array, so we need to decode the value again
   TsArray* arr = DynamicPtr_decode_native(vm, *pvArr);
@@ -5225,6 +6035,11 @@ static void growArray(VM* vm, Value* pvArr, uint16_t newLength, uint16_t newCapa
   arr->viLength = VirtualInt14_encode(vm, newLength);
 }
 
+/**
+ * Gets an array of the keys of an object. Does not enumerate internal
+ * properties, which are identified as any property with a key that is a
+ * negative int14.
+ */
 MVM_HIDDEN TeError vm_objectKeys(VM* vm, Value* inout_slot) {
   CODE_COVERAGE(636); // Hit
   Value obj;
@@ -5256,40 +6071,46 @@ SUB_OBJECT_KEYS:
   // frequently be O(1) and only loop once
   do {
     LongPtr lpPropList = DynamicPtr_decode_long(vm, propList);
-    propsSize += vm_getAllocationSize_long(lpPropList) - sizeof(TsPropertyList);
+    uint16_t segmentSize = vm_getAllocationSize_long(lpPropList) - sizeof(TsPropertyList);
+
+    // Skip internal properties
+    LongPtr lpProp = LongPtr_add(lpPropList, sizeof(TsPropertyList));
+    while (segmentSize) {
+      Value propKey = LongPtr_read2_aligned(lpProp);
+      // Internal slots are always the first slots, so when we find the first non-internal slot then we've reached the end of the internal slots
+      if ((propKey & 0x8003) != 0x8003) break;
+      VM_ASSERT(vm, segmentSize >= 4); // Internal slots must always come in pairs
+      segmentSize -= 4;
+      lpProp = LongPtr_add(lpProp, 4);
+    }
+
+    propsSize += segmentSize;
     propList = LongPtr_read2_aligned(lpPropList) /* dpNext */;
     TABLE_COVERAGE(propList != VM_VALUE_NULL ? 1 : 0, 2, 640); // Hit 2/2
   } while (propList != VM_VALUE_NULL);
 
-  // Each prop is 4 bytes, and each entry in the array is 2 bytes
+  // Each prop is 4 bytes, and each entry in the key array is 2 bytes
   uint16_t arrSize = propsSize >> 1;
 
-  // If the array is empty, an empty allocation is illegal. A 1-byte allocation
-  // will be rounded down when asking the size, but rounded up in the allocation
-  // unit.
+  // If the array is empty, an empty allocation is illegal because allocations
+  // need to be big enough to hold the tombstone. A 1-byte allocation will be
+  // rounded down when asking the size, but rounded up in the allocation unit.
   if (!arrSize) {
     CODE_COVERAGE(641); // Hit
     arrSize = 1;
+  } else {
+    CODE_COVERAGE(691); // Hit
   }
 
   // Allocate the new array.
-  uint16_t* p = mvm_gc_allocateWithHeader(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
+  Value* pArr = mvm_allocate(vm, arrSize, TC_REF_FIXED_LENGTH_ARRAY);
   obj = *inout_slot; // Invalidated by potential GC collection
-
-  // This is an awkward edge case. When the property list is empty, arrSize is
-  // 1 byte because a zero-byte allocation is illegal, and 1 byte will be rounded
-  // down when getting the length but rounded up as an allocation unit. But unlike
-  // a 1-byte string, a fixed-length-array is a container type and so the GC will
-  // try visit the single slot, so we need to set it to undefined.
-  if (arrSize == 1) {
-    CODE_COVERAGE(658); // Hit
-    *p = VM_VALUE_UNDEFINED;
-  }
 
   // Populate the array
 
   propList = obj;
-  *inout_slot = ShortPtr_encode(vm, p);
+  *inout_slot = ShortPtr_encode(vm, pArr);
+  Value* p = pArr;
   do {
     LongPtr lpPropList = DynamicPtr_decode_long(vm, propList);
     propList = LongPtr_read2_aligned(lpPropList) /* dpNext */;
@@ -5298,14 +6119,25 @@ SUB_OBJECT_KEYS:
     LongPtr lpProp = LongPtr_add(lpPropList, sizeof(TsPropertyList));
     TABLE_COVERAGE(propsSize != 0 ? 1 : 0, 2, 642); // Hit 2/2
     while (propsSize) {
-      *p = LongPtr_read2_aligned(lpProp);
-      p++; // Move to next entry in array
+      Value value = LongPtr_read2_aligned(lpProp);
+      // Skip internal properties, which are negative int14. A negative int14
+      // will have the low 2 bits set to say that it's an int14 and teh high bit
+      // set to say that it's negative.
+      if ((value & 0x8003) != 0x8003) {
+        CODE_COVERAGE(692); // Hit
+        *p = value;
+        p++; // Move to next entry in array
+      } else {
+        CODE_COVERAGE(693); // Hit
+      }
       // Each property cell is 4 bytes
       lpProp /* prop */ = LongPtr_add(lpProp /* prop */, 4);
       propsSize -= 4;
     }
     TABLE_COVERAGE(propList != VM_VALUE_NULL ? 1 : 0, 2, 643); // Hit 2/2
   } while (propList != VM_VALUE_NULL);
+
+  VM_ASSERT(vm, (p - pArr) * 4 == propsSize);
 
   return MVM_E_SUCCESS;
 }
@@ -5520,7 +6352,7 @@ static TeError vm_validateStr(VM* vm, const char* utf8, size_t size) {
   return MVM_E_SUCCESS;
 }
 // Full unicode
-#else MVM_TEXT_SUPPORT == 2
+#else // MVM_TEXT_SUPPORT == 2
 static TeError vm_validateStr(VM* vm, const char* utf8, size_t size) {
   const uint8_t* p = (const uint8_t*)utf8;
   while (size > 0) {
@@ -5795,7 +6627,7 @@ SUB_SET_PROPERTY:
             // path used when we push into arrays or just assign values to an
             // array in a loop.
             uint16_t newCapacity = oldCapacity * 2;
-            if (newCapacity < 4) newCapacity = 4;
+            if (newCapacity < VM_ARRAY_INITIAL_CAPACITY) newCapacity = VM_ARRAY_INITIAL_CAPACITY;
             if (newCapacity < newLength) newCapacity = newLength;
             growArray(vm, &*pObject, newLength, newCapacity);
             MVM_SET_LOCAL(vPropertyValue, *pPropertyValue); // Value could have changed due to GC collection
@@ -5841,6 +6673,7 @@ static TeError toPropertyName(VM* vm, Value* value) {
 
   // This function may trigger a GC cycle because it may add a cell to the string intern table
   VM_ASSERT(vm, !vm->stack || !vm->stack->reg.usingCachedRegisters);
+  VM_POTENTIAL_GC_POINT(vm);
 
   // Property names in microvium are either integer indexes or non-integer interned strings
   TeTypeCode type = deepTypeOf(vm, *value);
@@ -6033,6 +6866,7 @@ static void toInternedString(VM* vm, Value* pValue) {
   // Add the string to the linked list of interned strings
   TsInternedStringCell* pCell = GC_ALLOCATE_TYPE(vm, TsInternedStringCell, TC_REF_FIXED_LENGTH_ARRAY);
   value = *pValue; // Invalidated by potential GC collection
+  vInternedStrings = getBuiltin(vm, BIN_INTERNED_STRINGS);  // Invalidated by potential GC collection
   // Push onto linked list2
   pCell->spNext = vInternedStrings;
   pCell->str = value;
@@ -6108,7 +6942,7 @@ static bool vm_ramStringIsNonNegativeInteger(VM* vm, Value str) {
 
 // Convert a string to an integer
 TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
-  CODE_COVERAGE(404); // Hit
+  CODE_COVERAGE(404); // Not hit
 
   TeTypeCode type = deepTypeOf(vm, value);
   VM_ASSERT(vm, type == TC_REF_STRING || type == TC_REF_INTERNED_STRING);
@@ -6148,7 +6982,7 @@ TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
 
   // Decimal point
   if ((LongPtr_read1(s) == ',') || (LongPtr_read1(s) == '.')) {
-    CODE_COVERAGE(653); // Hit
+    CODE_COVERAGE(739); // Not hit
     isFloat = true;
     s = LongPtr_add(s, 1);
   }
@@ -6162,13 +6996,13 @@ TeError strToInt32(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
   // Check if we reached the end of the string. If we haven't reached the end of
   // the string then there is a non-digit character in the string.
   if (LongPtr_sub(s, start) != len) {
-    CODE_COVERAGE(654); // Hit
+    CODE_COVERAGE(740); // Not hit
     return MVM_E_NAN;
   }
 
   // This function cannot handle floating point numbers
   if (isFloat) {
-    CODE_COVERAGE_UNTESTED(655); // Not hit
+    CODE_COVERAGE_UNTESTED(741); // Not hit
     return MVM_E_FLOAT64;
   }
 
@@ -6197,15 +7031,15 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     }
     MVM_CASE(TC_REF_STRING):
     MVM_CASE(TC_REF_INTERNED_STRING): {
-      CODE_COVERAGE(403); // Hit
+      CODE_COVERAGE(403); // Not hit
       return strToInt32(vm, value, out_result);
     }
     MVM_CASE(TC_VAL_STR_LENGTH): {
-      CODE_COVERAGE(270); // Hit
+      CODE_COVERAGE(270); // Not hit
       return MVM_E_NAN;
     }
     MVM_CASE(TC_VAL_STR_PROTO): {
-      CODE_COVERAGE(271); // Hit
+      CODE_COVERAGE(271); // Not hit
       return MVM_E_NAN;
     }
     MVM_CASE(TC_REF_PROPERTY_LIST): {
@@ -6271,6 +7105,10 @@ TeError toInt32Internal(mvm_VM* vm, mvm_Value value, int32_t* out_result) {
     }
     MVM_CASE(TC_VAL_DELETED): {
       CODE_COVERAGE_UNTESTED(419); // Not hit
+      return MVM_E_NAN;
+    }
+    MVM_CASE(TC_VAL_NO_OP_FUNC): {
+      CODE_COVERAGE(742); // Not hit
       return MVM_E_NAN;
     }
     default:
@@ -6369,6 +7207,7 @@ static const TeEqualityAlgorithm equalityAlgorithmByTypeCode[TC_END] = {
   EA_NONE,                       // TC_VAL_DELETED            = 0x17
   EA_COMPARE_STRING,             // TC_VAL_STR_LENGTH         = 0x18
   EA_COMPARE_STRING,             // TC_VAL_STR_PROTO          = 0x19
+  EA_COMPARE_NON_PTR_TYPE,       // TC_VAL_NO_OP_FUNC         = 0x1A
 };
 
 bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
@@ -6382,8 +7221,8 @@ bool mvm_equal(mvm_VM* vm, mvm_Value a, mvm_Value b) {
 
   TABLE_COVERAGE(algorithmA, 6, 556); // Hit 4/6
   TABLE_COVERAGE(algorithmB, 6, 557); // Hit 4/6
-  TABLE_COVERAGE(aType, TC_END, 558); // Hit 6/26
-  TABLE_COVERAGE(bType, TC_END, 559); // Hit 8/26
+  TABLE_COVERAGE(aType, TC_END, 558); // Hit 7/27
+  TABLE_COVERAGE(bType, TC_END, 559); // Hit 9/27
 
   // If the values aren't even in the same class of comparison, they're not
   // equal. In particular, strings will not be equal to non-strings.
@@ -6554,12 +7393,14 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
     CODE_COVERAGE(581); // Hit
     uint16_t header = *p++;
     uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
-    uint16_t words = (size + 1) / 2;
+    int words = size / 2; // Note: round **down** to nearest word
+    uint16_t* next = p + (size + 1) / 2; // Note: round **up** to nearest word
+    TABLE_COVERAGE(next == p + words ? 1 : 0, 2, 694); // Hit 2/2
     TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
 
     if (tc < TC_REF_DIVIDER_CONTAINER_TYPES) { // Non-container types
       CODE_COVERAGE(582); // Hit
-      p += words;
+      p = next;
       continue;
     } else {
       // Else, container types
@@ -6571,6 +7412,7 @@ static void serializePointers(VM* vm, mvm_TsBytecodeHeader* bc) {
         serializePtr(vm, p);
       p++;
     }
+    p = next;
   }
 }
 
@@ -6621,7 +7463,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
   uint8_t* pHeapStart = (uint8_t*)pNewBytecode + pNewBytecode->sectionOffsets[BCS_HEAP];
   uint8_t* pTarget = pHeapStart + heapSize;
   uint16_t cursor = heapSize;
-  TABLE_COVERAGE(pBucket ? 1 : 0, 2, 586); // Hit 1/2
+  TABLE_COVERAGE(pBucket ? 1 : 0, 2, 586); // Hit 2/2
   while (pBucket) {
     CODE_COVERAGE(504); // Hit
     uint16_t offsetStart = pBucket->offsetStart;
@@ -6656,7 +7498,7 @@ void* mvm_createSnapshot(mvm_VM* vm, size_t* out_size) {
 
 #if MVM_INCLUDE_DEBUG_CAPABILITY
 
-void mvm_dbg_setBreakpoint(VM* vm, uint16_t bytecodeAddress) {
+void mvm_dbg_setBreakpoint(VM* vm, int bytecodeAddress) {
   CODE_COVERAGE_UNTESTED(588); // Not hit
 
   // These checks on the bytecode address are assertions rather than user faults
@@ -6664,8 +7506,8 @@ void mvm_dbg_setBreakpoint(VM* vm, uint16_t bytecodeAddress) {
   // derived from some kind of debug symbol file. In a production environment,
   // setting a breakpoint on an address that's never executed (e.g. because it's
   // not executable) is not a VM failure.
-  VM_ASSERT(vm, bytecodeAddress >= getSectionOffset(vm->lpBytecode, BCS_ROM));
-  VM_ASSERT(vm, bytecodeAddress < getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_ROM)));
+  VM_ASSERT(vm, (bytecodeAddress == - 1) || (bytecodeAddress >= getSectionOffset(vm->lpBytecode, BCS_ROM)));
+  VM_ASSERT(vm, (bytecodeAddress == -1) || (bytecodeAddress < getSectionOffset(vm->lpBytecode, vm_sectionAfter(vm, BCS_ROM))));
 
   mvm_dbg_removeBreakpoint(vm, bytecodeAddress);
   TsBreakpoint* breakpoint = vm_malloc(vm, sizeof (TsBreakpoint));
@@ -6784,7 +7626,7 @@ static Value vm_cloneContainer(VM* vm, Value* pArr) {
   LongPtr* lpSource = DynamicPtr_decode_long(vm, *pArr);
   uint16_t headerWord = readAllocationHeaderWord_long(lpSource);
   uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-  uint16_t* newArray = mvm_gc_allocateWithHeader(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
+  uint16_t* newArray = mvm_allocate(vm, size, vm_getTypeCodeFromHeaderWord(headerWord));
 
   // May have moved during allocation
   lpSource = DynamicPtr_decode_long(vm, *pArr);
@@ -6808,7 +7650,7 @@ static Value vm_safePop(VM* vm, Value* pStackPointerAfterDecr) {
   return *pStackPointerAfterDecr;
 }
 
-static inline void vm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber) {
+static inline void mvm_checkValueAccess(VM* vm, uint8_t potentialCycleNumber) {
   VM_ASSERT(vm, vm->gc_potentialCycleNumber == potentialCycleNumber);
 }
 
@@ -6857,11 +7699,11 @@ static mvm_TeError vm_uint8ArrayNew(VM* vm, Value* slot) {
   uint16_t size = *slot;
   if (!Value_isVirtualUInt12(size)) {
     CODE_COVERAGE_ERROR_PATH(345); // Not hit
-    return MVM_E_INVALID_UINT8_ARRAY_LENGTH;
+    return vm_newError(vm, MVM_E_INVALID_UINT8_ARRAY_LENGTH);
   }
   size = VirtualInt14_decode(vm, size);
 
-  uint8_t* p = mvm_gc_allocateWithHeader(vm, size, TC_REF_UINT8_ARRAY);
+  uint8_t* p = mvm_allocate(vm, size, TC_REF_UINT8_ARRAY);
   *slot = ShortPtr_encode(vm, p);
   memset(p, 0, size);
 
@@ -6874,8 +7716,8 @@ mvm_Value mvm_uint8ArrayFromBytes(mvm_VM* vm, const uint8_t* data, size_t sizeBy
     MVM_FATAL_ERROR(vm, MVM_E_ALLOCATION_TOO_LARGE);
     return VM_VALUE_UNDEFINED;
   }
-  // Note: mvm_gc_allocateWithHeader will also check the size
-  uint8_t* p = mvm_gc_allocateWithHeader(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
+  // Note: mvm_allocate will also check the size
+  uint8_t* p = mvm_allocate(vm, (uint16_t)sizeBytes, TC_REF_UINT8_ARRAY);
   Value result = ShortPtr_encode(vm, p);
   memcpy(p, data, sizeBytes);
   return result;
@@ -6891,7 +7733,7 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
 
   if (!Value_isShortPtr(uint8ArrayValue)) {
     CODE_COVERAGE_ERROR_PATH(574); // Not hit
-    return MVM_E_TYPE_ERROR;
+    return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 
   void* p = ShortPtr_decode(vm, uint8ArrayValue);
@@ -6899,13 +7741,664 @@ mvm_TeError mvm_uint8ArrayToBytes(mvm_VM* vm, mvm_Value uint8ArrayValue, uint8_t
   TeTypeCode typeCode = vm_getTypeCodeFromHeaderWord(headerWord);
   if (typeCode != TC_REF_UINT8_ARRAY) {
     CODE_COVERAGE_ERROR_PATH(575); // Not hit
-    return MVM_E_TYPE_ERROR;
+    return vm_newError(vm, MVM_E_TYPE_ERROR);
   }
 
-  *out_size = (size_t)vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
-  *out_data = p;
+  size_t size = (size_t)vm_getAllocationSizeExcludingHeaderFromHeaderWord(headerWord);
+  *out_size = size;
+  *out_data = MVM_POINTER_SET_BOUNDS(p, size);
+
   return MVM_E_SUCCESS;
 }
+
+/**
+ * The internal version of asyncStart.
+ *
+ * Differs in the following ways:
+ *
+ * - `vm_asyncStartUnsafe` doesn't add an additional wrapper to the callback.
+ * - `vm_asyncStartUnsafe` may return a promise value, whereas `mvm_asyncStart`
+ *   will wrap that promise in a callback.
+ */
+static mvm_Value vm_asyncStartUnsafe(mvm_VM* vm, mvm_Value* out_result) {
+  CODE_COVERAGE(743); // Not hit
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  #if MVM_SAFE_MODE
+    if (!vm || !vm->stack) MVM_FATAL_ERROR(vm, MVM_E_REQUIRES_ACTIVE_VM);
+  #endif
+  vm_TsRegisters* reg = &vm->stack->reg;
+
+
+  Value cpsCallback = reg->cpsCallback;
+  // Mark that the callback has been "consumed". This is not strictly
+  // necessary but adds a layer of safety because it could indicate a mistake
+  // if `mvm_asyncStart` is called multiple times (especially since the
+  // callback should only be called exactly once).
+  reg->cpsCallback = VM_VALUE_DELETED;
+
+  mvm_TeType tc = mvm_typeOf(vm, cpsCallback);
+
+  // The callback is a continuation function (optimized hot-path)
+  if (tc == VM_T_FUNCTION) {
+    CODE_COVERAGE(744); // Not hit
+    // Else, the callback will be a function. This path indicates the situation
+    // where the caller supports CPS and has given the callee the callback via
+    // the `cpsCallback` register.
+    VM_ASSERT(vm, mvm_typeOf(vm, cpsCallback) == VM_T_FUNCTION);
+    // The synchronous result (the promise) is elided because the caller
+    // communicated that they support CPS
+    *out_result = VM_VALUE_DELETED;
+
+    return cpsCallback;
+  }
+
+  // Void call - no callback so we return `VM_VALUE_NO_OP_FUNC`
+  if (reg->argCountAndFlags & AF_VOID_CALLED) {
+    // The callback is undefined if the caller is void-calling
+    VM_ASSERT(vm, cpsCallback == VM_VALUE_UNDEFINED);
+
+    // This path indicates the situation where the caller is a void call and
+    // does not need the promise result.
+    CODE_COVERAGE(658); // Hit
+
+    // This is not strictly necessary because the synchronous result is not used
+    // in a void call, but it's consistent.
+    *out_result = VM_VALUE_DELETED;
+
+    // In this situation, there's nothing actually waiting to be called back
+    // (the JS code is not awaiting the result of the host call), but we return
+    // a dummy function so that the API is consistent.
+    return VM_VALUE_NO_OP_FUNC;
+  }
+
+  if (cpsCallback == VM_VALUE_DELETED) {
+    // This path indicates the situation where the callback for the current
+    // activation record is no longer accessible, either because of a nested
+    // function call or because the host already called `mvm_asyncStart`.
+    CODE_COVERAGE_ERROR_PATH(745); // Not hit
+    MVM_FATAL_ERROR(vm, MVM_E_ASYNC_START_ERROR);
+    return 0;
+  }
+
+  // Otherwise, the caller does not support CPS (the caller is not a void call
+  // and not an await-call) and so is expecting a promise result. We need to
+  // instantiate a promise and then create a closure callback that resolves the
+  // promise.
+  CODE_COVERAGE(746); // Not hit
+
+  VM_ASSERT(vm, cpsCallback == VM_VALUE_UNDEFINED);
+  Value promiseProto = getBuiltin(vm, BIN_PROMISE_PROTOTYPE);
+  if (promiseProto == VM_VALUE_UNDEFINED) {
+    MVM_FATAL_ERROR(vm, MVM_E_ASYNC_WITHOUT_AWAIT);
+  }
+  VM_ASSERT(vm, deepTypeOf(vm, promiseProto) == TC_REF_PROPERTY_LIST);
+  Value promise = vm_objectCreate(vm, promiseProto, 2);
+  Value* pPromise = (Value*)ShortPtr_decode(vm, promise);
+  // Internal slots
+  pPromise[VM_OIS_PROMISE_STATUS] = VM_PROMISE_STATUS_PENDING;
+  pPromise[VM_OIS_PROMISE_OUT] = VM_VALUE_UNDEFINED; // No subscribers yet
+
+  // Note: both the synchronous result and callback are represented by the
+  // promise in this scenario. As the "callback", the promise essentially
+  // represents the group of subscribers to invoke.
+  *out_result = promise; // The promise to put in var[0] to return to the caller of the async function
+  return promise; // The promise to put in slot[1] of the closure to invoke when the async operation completes
+}
+
+/**
+ * Create a new object with the given prototype and number of internal slots.
+ *
+ * internalSlotCount must be a multiple of 2 because it's overloading the
+ * key/value pairs of the object.
+ *
+ * @warning It does NOT initialize the internal slots.
+ */
+static Value vm_objectCreate(VM* vm, Value prototype, int internalSlotCount) {
+  VM_ASSERT(vm, (internalSlotCount % 2) == 0);
+  size_t size = sizeof(TsPropertyList) + internalSlotCount * sizeof(Value);
+  vm_push(vm, prototype); // GC reachable
+  TsPropertyList* pObject = mvm_allocate(vm, (uint16_t)size, TC_REF_PROPERTY_LIST);
+  pObject->dpProto = vm_pop(vm); // prototype
+  pObject->dpNext = VM_VALUE_NULL;
+
+  return ShortPtr_encode(vm, pObject);
+}
+
+// Same as vm_asyncStartUnsafe but adds an additional wrapper closure
+mvm_Value mvm_asyncStart(mvm_VM* vm, mvm_Value* out_result) {
+  mvm_Value callbackOrPromise = vm_asyncStartUnsafe(vm, out_result);
+
+  if (callbackOrPromise == VM_VALUE_NO_OP_FUNC) {
+    CODE_COVERAGE(702); // Hit
+    return VM_VALUE_NO_OP_FUNC;
+  }
+
+  mvm_Value asyncHostCallback = getBuiltin(vm, BIN_ASYNC_HOST_CALLBACK);
+  CODE_COVERAGE(695); // Hit
+  if (asyncHostCallback == VM_VALUE_UNDEFINED) {
+    CODE_COVERAGE_UNTESTED(703); // Not hit
+
+    // If the builtin is missing, it means the compiler found no await points
+    // in the program and assumed that the async machinery was not needed.
+    MVM_FATAL_ERROR(vm, MVM_E_ASYNC_WITHOUT_AWAIT);
+    return VM_VALUE_NO_OP_FUNC;
+  }
+
+  CODE_COVERAGE(704); // Hit
+
+  // Anchor on stack
+  vm_push(vm, callbackOrPromise);
+
+  uint16_t* pClosure = mvm_allocate(vm, 4, TC_REF_CLOSURE);
+  pClosure[0] = asyncHostCallback;
+  pClosure[1] = vm_pop(vm); // callbackOrPromise
+  mvm_Value closureValue = ShortPtr_encode(vm, pClosure);
+
+  return closureValue;
+}
+
+static mvm_Value* vm_push(mvm_VM* vm, mvm_Value value) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  VM_ASSERT(vm, vm && vm->stack);
+  vm_TsRegisters* reg = &vm->stack->reg;
+  VM_ASSERT(vm, reg->pStackPointer < getTopOfStackSpace(vm->stack));
+  mvm_Value* result = reg->pStackPointer++;
+  *result = value;
+  return result;
+}
+
+static mvm_Value vm_pop(mvm_VM* vm) {
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  VM_ASSERT(vm, vm && vm->stack);
+  vm_TsRegisters* reg = &vm->stack->reg;
+  VM_ASSERT(vm, reg->pStackPointer > getBottomOfStack(vm->stack));
+  return *--reg->pStackPointer;
+}
+
+/**
+ * Enqueue the given job to the job queue (for the moment there is only one job
+ * queue, for executing async callbacks). The job must be of type TC_REF_CLOSURE
+ */
+static void vm_enqueueJob(VM* vm, Value jobClosure) {
+  Value* firstNode;
+  Value firstNodeRef;
+
+  CODE_COVERAGE(672); // Hit
+
+  // The job queue exists in the ephemeral registers. There is no way to enqueue
+  // job while the VM is idle (no stack). But obviously you can call a VM
+  // function that triggers a job to be enqueued
+  VM_ASSERT(vm, vm->stack);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+  vm_TsRegisters* reg = &vm->stack->reg;
+  Value jobQueue = reg->jobQueue;
+
+  // Note: jobs are always closures
+  VM_ASSERT(vm, deepTypeOf(vm, jobClosure) == TC_REF_CLOSURE);
+
+  TeTypeCode type = deepTypeOf(vm, jobQueue);
+
+  // Hot path (I think)
+  if (type == TC_VAL_UNDEFINED) {
+    CODE_COVERAGE(673); // Hit
+    // No jobs yet - the new job is the only job
+    reg->jobQueue = jobClosure;
+    return;
+  }
+
+  vm_push(vm, jobClosure); // GC-reachable
+
+  // Note: jobs are always closures
+  if (type == TC_REF_CLOSURE) {
+    CODE_COVERAGE(674); // Hit
+
+    // There is already one job. We need to promote the queue to a linked list
+    // (cycle). Each element in the linked cycle is a triple with [prev, job,
+    // next]. Here there is only one node in the cycle, so the next and prev are
+    // itself.
+    firstNode = (Value*)mvm_allocate(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
+    firstNodeRef = ShortPtr_encode(vm, firstNode);
+    firstNode[0] = firstNodeRef; // prev
+    firstNode[1] = reg->jobQueue; // job
+    firstNode[2] = firstNodeRef; // next
+    reg->jobQueue = firstNodeRef;
+    VM_EXEC_SAFE_MODE(jobQueue = VM_VALUE_DELETED); // Invalidated
+    VM_EXEC_SAFE_MODE(type = 0); // Invalidated
+    /* no return */
+  } else {
+    CODE_COVERAGE(675); // Hit
+  }
+
+  // If it's not undefined or a closure, it must be a linked list (linked cycle)
+  // of jobs.
+  VM_ASSERT(vm, deepTypeOf(vm, reg->jobQueue) == TC_REF_FIXED_LENGTH_ARRAY);
+
+  // Create a new node in the linked cycle
+  Value* newNode = mvm_allocate(vm, 2 * 3, TC_REF_FIXED_LENGTH_ARRAY);
+  VM_EXEC_SAFE_MODE(firstNodeRef = VM_VALUE_DELETED); // Invalidated
+  VM_EXEC_SAFE_MODE(firstNode = 0); // Invalidated
+  VM_EXEC_SAFE_MODE(jobClosure = VM_VALUE_DELETED); // Invalidated
+
+  // Note: the job queue is always in RAM.
+  firstNodeRef = reg->jobQueue;
+  firstNode = ShortPtr_decode(vm, firstNodeRef);
+
+  // We insert the new job at the "end" of the list. Since the list is actually
+  // a cycle, this means inserting it before the first node. This is the main
+  // reason we store this as a cycle rather than a flat list -- it gives us
+  // access to the last node of the list without using another register.
+  Value lastNodeRef = firstNode[0] /* prev */;
+  Value* lastNode = ShortPtr_decode(vm, lastNodeRef);
+
+  Value newNodeRef = ShortPtr_encode(vm, newNode);
+  newNode[0] = lastNodeRef;  // prev
+  newNode[1] = vm_pop(vm) /* jobClosure */; // job
+  newNode[2] = firstNodeRef; // next
+  lastNode[2] = newNodeRef;  // last.next
+  firstNode[0] = newNodeRef; // first.prev
+}
+
+/**
+ * Dequeues the first job from the job queue and returns it.
+ *
+ * WARNING: the result is not otherwise GC reachable, so don't run a GC cycle
+ * until it's anchored to the reachability graph.
+ *
+ * WARNING: this should only be called if there is an actual job (i.e. the queue
+ * register is not VM_VALUE_UNDEFINED). This function doesn't handle that case
+ * because it's expected to be the hot case.
+ */
+static Value vm_dequeueJob(VM* vm) {
+  CODE_COVERAGE(676); // Hit
+
+  // The job queue exists in the ephemeral registers. There is no way to enqueue
+  // job while the VM is idle (no stack). But obviously you can call a VM
+  // function that triggers a job to be enqueued
+  VM_ASSERT(vm, vm->stack);
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  vm_TsRegisters* reg = &vm->stack->reg;
+  Value jobQueue = reg->jobQueue;
+
+  // Caller should check if there isn't a job first (hot path)
+  VM_ASSERT(vm, reg->jobQueue != VM_VALUE_UNDEFINED);
+
+  TeTypeCode tc = deepTypeOf(vm, jobQueue);
+
+  // Note: jobs are only closures (not other callable types)
+  if (tc == TC_REF_CLOSURE) {
+    CODE_COVERAGE(677); // Hit
+    reg->jobQueue = VM_VALUE_UNDEFINED;
+    return jobQueue;
+  }
+
+  // Otherwise the queue is a linked cycle (see vm_enqueueJob). Each node in the
+  // cycle is a triple of [prev, job, next]
+  VM_ASSERT(vm, tc == TC_REF_FIXED_LENGTH_ARRAY);
+  Value* first = ShortPtr_decode(vm, jobQueue);
+
+  // First job in the queue
+  Value result = first[1] /* job */;
+
+  // Cycle of 1? Then this dequeue empties the queue
+  if (ShortPtr_decode(vm, first[0] /* prev */) == first) {
+    CODE_COVERAGE(678); // Hit
+    VM_ASSERT(vm, first[0] == jobQueue);
+    reg->jobQueue = VM_VALUE_UNDEFINED; // Job queue is empty
+    VM_ASSERT(vm, deepTypeOf(vm, first[1]) == TC_REF_CLOSURE);
+    return result;
+  } else {
+    CODE_COVERAGE(679); // Hit
+    // Warning: `second` might be the same as `last` if there are only 2 cells in the cycle
+    Value* last = ShortPtr_decode(vm, first[0]);
+    Value* second = ShortPtr_decode(vm, first[2]);
+    last[2] /* next */ = first[2] /* next */;
+    second[0] /* prev */ = first[0] /* prev */;
+    reg->jobQueue = first[2];
+    return result;
+  }
+}
+
+/**
+ * Checks the Microvium heap for corruption.
+ *
+ * This function walks the heap and checks that all RAM pointer values point to
+ * legitimate allocations.
+ */
+#if MVM_DEBUG_UTILS
+void mvm_checkHeap(mvm_VM* vm) {
+  // Allocation map is 1 bit per word. The bit is set if the word is the
+  // beginning of an allocation.
+  uint16_t heapSize = getHeapSize(vm);
+  uint8_t* allocationMap = (uint8_t*)malloc((heapSize + 15) / 16);
+  memset(allocationMap, 0, (heapSize + 15) / 16);
+  #define setAllocationMapBit(address) (allocationMap[(address) / 16] |=  (1 << ((address) % 16 / 2)))
+  #define getAllocationMapBit(address) ((allocationMap[(address) / 16] & (1 << ((address) % 16 / 2))) != 0)
+
+  TsBucket* firstBucket = vm->pLastBucket;
+  while (firstBucket && firstBucket->prev) {
+    firstBucket = firstBucket->prev;
+  }
+
+  // 1st pass to find allocations
+  TsBucket* bucket = firstBucket;
+  while (bucket) {
+    uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
+    Value* p = (Value*)bucketBegin;
+    Value* bucketEnd = bucket->pEndOfUsedSpace;
+    uint16_t offsetStart = bucket->offsetStart;
+    while (p < bucketEnd) {
+      uint16_t header = *p++;
+      uint16_t offset = (uint16_t)((uint8_t*)p - bucketBegin) + offsetStart;
+      setAllocationMapBit(offset);
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      Value* next = p + ((size + 1) / 2);
+      if (next > bucketEnd) {
+        MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+        goto cleanup;
+      }
+      p = next;
+    }
+    bucket = bucket->next;
+  }
+
+  // 2st pass to check pointers
+  bucket = firstBucket;
+  while (bucket) {
+    uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
+    Value* p = (Value*)bucketBegin;
+    Value* bucketEnd = bucket->pEndOfUsedSpace;
+    while (p < bucketEnd) {
+      uint16_t header = *p++;
+      Value* pAlloc = p;
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
+      Value* next = pAlloc + ((size + 1) / 2); // Round up
+      if (next > bucketEnd) {
+        MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+      }
+      if (tc >= TC_REF_DIVIDER_CONTAINER_TYPES) {
+        uint16_t words = size / 2; // Round down
+        for (uint16_t slotNumber = 0; slotNumber < words; slotNumber++) {
+          Value value = pAlloc[slotNumber];
+          if (Value_isShortPtr(value)) {
+            Value* target = ShortPtr_decode(vm, value);
+            uint16_t offset = pointerOffsetInHeap(vm, vm->pLastBucket, target);
+            if (!getAllocationMapBit(offset)) {
+              MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+              goto cleanup;
+            }
+          }
+        }
+        p = next;
+      }
+      p = next;
+    }
+    bucket = bucket->next;
+  }
+
+cleanup:
+  free(allocationMap);
+}
+#endif // MVM_DEBUG_UTILS
+
+/**
+ * If the value is a RAM pointer, validates that it points to a valid heap
+ * allocation.
+ *
+ * WARNING: Very expensive, since it walks the whole heap to find the
+ * allocation.
+ */
+#if MVM_DEBUG_UTILS
+void mvm_checkValue(mvm_VM* vm, mvm_Value value) {
+  if (!Value_isShortPtr(value)) {
+    return;
+  }
+
+  TsBucket* firstBucket = vm->pLastBucket;
+  while (firstBucket && firstBucket->prev) {
+    firstBucket = firstBucket->prev;
+  }
+
+  TsBucket* bucket = firstBucket;
+  while (bucket) {
+    uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
+    Value* p = (Value*)bucketBegin;
+    Value* bucketEnd = bucket->pEndOfUsedSpace;
+    while (p < bucketEnd) {
+      uint16_t header = *p++;
+      if (ShortPtr_encode(vm, p) == value) {
+        return; // Found
+      }
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      Value* next = p + ((size + 1) / 2);
+      if (next > bucketEnd) {
+        MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+        return;
+      }
+      p = next;
+    }
+    bucket = bucket->next;
+  }
+
+  // Not found. Therefore corrupt.
+  MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+}
+#endif // MVM_DEBUG_UTILS
+
+/**
+ * Parses the call stack and returns a pointer to the set of frame.
+ *
+ * The first returned frame is the active frame, and the rest proceed in
+ * descending order.
+ *
+ * If the registers are currently cached, the first frame will be rubbish.
+ *
+ * The memory is malloced but re-used on each call to `mvm_readCallStack`,
+ * so the caller should not free it.
+ *
+ * A zero programCounter indicates the end of the call stack, which can be
+ * useful for using this in debug watch. Also the `out_frameCount` is optional.
+ *
+ * If there are no frames, returns NULL.
+ */
+#if MVM_DEBUG_UTILS
+mvm_TsCallStackFrame* mvm_readCallStack(VM* vm, int* out_frameCount) {
+  static mvm_TsCallStackFrame* frames = 0;
+  static int allocatedFramesCount = 0;
+
+  vm_TsStack* stack = vm->stack;
+  if (!stack) {
+    if (out_frameCount) {
+      *out_frameCount = 0;
+    }
+    return NULL;
+  }
+  vm_TsRegisters* reg = &stack->reg;
+  uint16_t* beginningOfStack = getBottomOfStack(stack);
+
+  // Count number of required frames
+  int frameCount = 1;
+  uint16_t* pFrameBase = reg->pFrameBase;
+  while (pFrameBase > beginningOfStack) {
+    frameCount++;
+    pFrameBase -= 4;
+    pFrameBase = pFrameBase - (*pFrameBase) / 2;
+  }
+
+  if (out_frameCount) {
+    *out_frameCount = frameCount;
+  }
+
+  // Allocate enough space. One extra as a kind of "null terminator" for debug purposes
+  if (allocatedFramesCount < frameCount + 1) {
+    free(frames);
+    allocatedFramesCount = frameCount + 1;
+    frames = (mvm_TsCallStackFrame*)malloc(sizeof(mvm_TsCallStackFrame) * allocatedFramesCount);
+  }
+
+  memset(frames, 0, sizeof(mvm_TsCallStackFrame) * allocatedFramesCount);
+
+  mvm_TsCallStackFrame* pFrame = frames;
+  VM_ASSERT(vm, pFrame >= frames);
+
+  Value* pStackPointer = reg->pStackPointer;
+  uint16_t programCounter = (uint16_t)LongPtr_sub(reg->lpProgramCounter, vm->lpBytecode);
+  Value* pArgs = reg->pArgs;
+  uint16_t argCountAndFlags = reg->argCountAndFlags;
+  uint16_t argCount = (argCountAndFlags & AF_ARG_COUNT_MASK);
+  Value closure = reg->closure;
+
+  pFrameBase = reg->pFrameBase;
+  while (true) {
+    VM_ASSERT(vm, pFrame >= frames);
+    VM_ASSERT(vm, pFrame < frames + frameCount);
+
+    pFrame->programCounter = programCounter;
+    pFrame->frameBase = pFrameBase;
+    pFrame->frameDepth = (int)(pStackPointer - pFrameBase);
+    pFrame->argCount = argCount;
+    pFrame->args = pArgs;
+    pFrame->closure = closure == VM_VALUE_UNDEFINED ? NULL : ShortPtr_decode(vm, closure);
+    pFrame->closureSlotCount = closure == VM_VALUE_UNDEFINED ? 0 : vm_getAllocationSize(ShortPtr_decode(vm, closure)) / 2;
+
+    pFrame++;
+
+    // Unwind frame
+    VM_ASSERT(vm, VM_FRAME_BOUNDARY_VERSION == 2);
+    pStackPointer = pFrameBase;
+    if (pStackPointer <= beginningOfStack) {
+      break;
+    }
+
+    programCounter = *(--pStackPointer);
+    argCountAndFlags = *(--pStackPointer);
+    argCount = (argCountAndFlags & AF_ARG_COUNT_MASK);
+    closure = *(--pStackPointer);
+    pStackPointer--;
+    pFrameBase = (uint16_t*)((uint8_t*)pStackPointer - *pStackPointer);
+    pArgs = pFrameBase - VM_FRAME_BOUNDARY_SAVE_SIZE_WORDS - argCount;
+
+  }
+
+  VM_ASSERT(vm, pFrameBase == beginningOfStack);
+  VM_ASSERT(vm, pFrame == frames + frameCount);
+
+  return frames;
+}
+#endif // MVM_DEBUG_UTILS
+
+/**
+ * Counts the number of allocations in the heap
+ *
+ * WARNING: Expensive, since it walks the whole heap.
+ */
+#if MVM_DEBUG_UTILS
+int mvm_readHeapCount(VM* vm) {
+  TsBucket* firstBucket = vm->pLastBucket;
+  while (firstBucket && firstBucket->prev) {
+    firstBucket = firstBucket->prev;
+  }
+
+  TsBucket* bucket = firstBucket;
+  int count = 0;
+  while (bucket) {
+    uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
+    Value* p = (Value*)bucketBegin;
+    Value* bucketEnd = bucket->pEndOfUsedSpace;
+    while (p < bucketEnd) {
+      uint16_t header = *p++;
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      count++;
+
+      Value* next = p + ((size + 1) / 2);
+      if (next > bucketEnd) {
+        MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+        return 0;
+      }
+      p = next;
+    }
+    bucket = bucket->next;
+  }
+
+  return count;
+}
+#endif // MVM_DEBUG_UTILS
+
+/**
+ * Parse the whole heap. Will return a pointer to the heap allocation info
+ * array, which is malloced and re-used on each call to `mvm_readHeap`, so the
+ * caller should not free it.
+ *
+ * The `out_count` is optional. The number of returned heap allocations is N+1
+ * with the last one being a sentinel with all fields zeroed.
+ */
+#if MVM_DEBUG_UTILS
+mvm_TsHeapAllocationInfo* mvm_readHeap(VM* vm, int* out_count) {
+  static mvm_TsHeapAllocationInfo* heap = 0;
+  static int allocatedHeapCount = 0;
+
+  if (out_count) {
+    *out_count = -1; // Initial value. Will be overridden.
+  }
+
+  if (heap) {
+    free(heap);
+    heap = 0;
+    allocatedHeapCount = 0;
+  }
+
+  int count = mvm_readHeapCount(vm);
+  allocatedHeapCount = count + 1;
+  heap = (mvm_TsHeapAllocationInfo*)malloc(sizeof(mvm_TsHeapAllocationInfo) * allocatedHeapCount);
+  if (!heap) return heap;
+  memset(heap, 0, sizeof(mvm_TsHeapAllocationInfo) * allocatedHeapCount);
+
+  TsBucket* firstBucket = vm->pLastBucket;
+  while (firstBucket && firstBucket->prev) {
+    firstBucket = firstBucket->prev;
+  }
+
+  TsBucket* bucket = firstBucket;
+  int i = 0;
+  while (bucket) {
+    uint8_t* bucketBegin = (uint8_t*)getBucketDataBegin(bucket);
+    Value* p = (Value*)bucketBegin;
+    Value* bucketEnd = bucket->pEndOfUsedSpace;
+    uint16_t offsetStart = bucket->offsetStart;
+    while (p < bucketEnd) {
+      uint16_t header = *p++;
+      uint16_t offset = (uint16_t)((uint8_t*)p - bucketBegin) + offsetStart;
+      uint16_t size = vm_getAllocationSizeExcludingHeaderFromHeaderWord(header);
+      TeTypeCode tc = vm_getTypeCodeFromHeaderWord(header);
+
+      VM_ASSERT(vm, i < allocatedHeapCount - 1);
+      heap[i++] = (mvm_TsHeapAllocationInfo){
+        .a = (uint16_t)((intptr_t)p),
+        .t = tc,
+        .s = size,
+        .offset = offset,
+        .address = p,
+      };
+
+      Value* next = p + ((size + 1) / 2);
+      if (next > bucketEnd) {
+        MVM_FATAL_ERROR(vm, MVM_E_HEAP_CORRUPT);
+        return NULL;
+      }
+      p = next;
+    }
+    bucket = bucket->next;
+  }
+
+  if (out_count) {
+    *out_count = count;
+  }
+
+  return heap;
+}
+#endif // MVM_DEBUG_UTILS
 
 #ifdef MVM_GAS_COUNTER
 void mvm_stopAfterNInstructions(mvm_VM* vm, int32_t n) {
@@ -6916,3 +8409,78 @@ int32_t mvm_getInstructionCountRemaining(mvm_VM* vm) {
   return vm->stopAfterNInstructions;
 }
 #endif // MVM_GAS_COUNTER
+
+/**
+ * Subscribe a callback to a promise.
+ */
+MVM_HIDDEN void mvm_subscribeToPromise(VM* vm, Value vPromise, Value vCallback) {
+  CODE_COVERAGE_UNTESTED(747); // Not hit
+  VM_ASSERT_NOT_USING_CACHED_REGISTERS(vm);
+
+  VM_ASSERT(vm, deepTypeOf(vm, vPromise) == TC_REF_PROPERTY_LIST);
+  VM_ASSERT(vm, mvm_typeOf(vm, vCallback) == VM_T_FUNCTION);
+
+  Value* pPromise = ShortPtr_decode(vm, vPromise);
+  // Check that the promise is a promise
+  VM_ASSERT(vm, pPromise[VM_OIS_PROTO] == getBuiltin(vm, BIN_PROMISE_PROTOTYPE));
+
+  vm_TePromiseStatus promiseStatus = pPromise[VM_OIS_PROMISE_STATUS];
+
+  if (promiseStatus == VM_PROMISE_STATUS_PENDING) {
+    CODE_COVERAGE(707); // Hit
+
+    // Subscribe to the promise
+    Value vSubscribers = pPromise[VM_OIS_PROMISE_OUT];
+    if (vSubscribers == VM_VALUE_UNDEFINED) {
+      CODE_COVERAGE(715); // Hit
+      // No subscribers yet (hot path)
+      pPromise[VM_OIS_PROMISE_OUT] = vCallback;
+    } else {
+      CODE_COVERAGE(716); // Hit
+
+      // Warning: the stack work here is a bit awkward but required because when
+      // we call `vm_newArray` or `vm_arrayPush` it may trigger a garbage
+      // collection which may move the promise object or the array itself. So we
+      // need these to be GC-reachable in slots that have stable addresses (i.e.
+      // stack slots).
+
+      Value* pvCallback = vm_push(vm, vCallback);
+      Value* pvPromise = vm_push(vm, vPromise);
+      Value* pvSubscribers = vm_push(vm, vSubscribers);
+
+      TeTypeCode tc = deepTypeOf(vm, vSubscribers);
+      if (tc == TC_REF_CLOSURE) { // Single subscriber. Upgrade to array
+        CODE_COVERAGE(717); // Hit
+        Value vNewArray = vm_newArray(vm, 2); // capacity = 2; [old subscriber, new subscriber]
+        Value* pvNewArray = vm_push(vm, vNewArray);
+        // Put the single subscriber into the array
+        vm_arrayPush(vm, pvNewArray, pvSubscribers);
+        vNewArray = vm_pop(vm);
+        pPromise = ShortPtr_decode(vm, *pvPromise); // May have moved
+        pPromise[VM_OIS_PROMISE_OUT] = vNewArray;
+        *pvSubscribers = vNewArray;
+      } else { // Already an array -- nothing to do
+        CODE_COVERAGE(718); // Hit
+        VM_ASSERT(vm, tc == TC_REF_ARRAY);
+      }
+      vm_arrayPush(vm, pvSubscribers, pvCallback);
+      vm_pop(vm); // vSubscribers
+      vm_pop(vm); // vPromise
+      vm_pop(vm); // vCallback
+    }
+  } else { // Resolved or rejected
+    CODE_COVERAGE(708); // Hit
+    VM_ASSERT(vm, (promiseStatus == VM_PROMISE_STATUS_RESOLVED) || (promiseStatus == VM_PROMISE_STATUS_REJECTED));
+    TABLE_COVERAGE(promiseStatus == VM_PROMISE_STATUS_RESOLVED ? 1 : 0, 2, 709); // Hit 2/2
+
+    Value resultOrError = pPromise[VM_OIS_PROMISE_OUT];
+    Value isSuccess = (promiseStatus == VM_PROMISE_STATUS_RESOLVED) ? VM_VALUE_TRUE : VM_VALUE_FALSE;
+
+    // Immediately schedule this async function to resume on the job queue
+    vm_scheduleContinuation(vm, vCallback, isSuccess, resultOrError);
+  }
+
+  // The whole function is a potential GC point because it may allocate a new
+  // array for the subscription.
+  VM_POTENTIAL_GC_POINT(vm);
+}

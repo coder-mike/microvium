@@ -1,9 +1,9 @@
 export 0 = &function run;
 
-slot ['global:Reflect'] = &allocation 1;
+slot ['global:Reflect'] = &allocation 3;
 slot ['global:assertEqual'] = host function 3;
-slot keysBeforeSnapshot = &allocation 9;
-slot objBeforeSnapshot = &allocation 8;
+slot keysBeforeSnapshot = &allocation 13;
+slot objBeforeSnapshot = &allocation 12;
 
 function Array_push() {
   entry:
@@ -19,7 +19,7 @@ function Array_push() {
     Return();
 }
 
-function Reflect_ownKeys() {
+function ['Reflect.ownKeys']() {
   entry:
     LoadArg(index 1);
     ObjectKeys();
@@ -37,32 +37,29 @@ function run() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'keysBeforeSnapshot');
     Literal(lit 0);
     ObjectGet();
     Literal(lit 'x');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'keysBeforeSnapshot');
     Literal(lit 1);
     ObjectGet();
     Literal(lit 'y');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
+    Literal(lit undefined);
     LoadGlobal(name 'global:Reflect');
-    LoadVar(index 3);
+    LoadVar(index 4);
     Literal(lit 'ownKeys');
     ObjectGet();
-    LoadVar(index 3);
-    LoadGlobal(name 'objBeforeSnapshot');
-    Call(count 2);
     StoreVar(index 3);
+    LoadGlobal(name 'objBeforeSnapshot');
+    Call(count 2, flag false);
     StoreVar(index 0);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -70,24 +67,21 @@ function run() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 0);
     ObjectGet();
     Literal(lit 'x');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 1);
     ObjectGet();
     Literal(lit 'y');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     ObjectNew();
     LoadVar(index 3);
     Literal(lit 'a');
@@ -98,14 +92,14 @@ function run() {
     Literal(lit 10);
     ObjectSet();
     StoreVar(index 1);
+    Literal(lit undefined);
     LoadGlobal(name 'global:Reflect');
-    LoadVar(index 3);
+    LoadVar(index 4);
     Literal(lit 'ownKeys');
     ObjectGet();
-    LoadVar(index 3);
-    LoadVar(index 1);
-    Call(count 2);
     StoreVar(index 3);
+    LoadVar(index 1);
+    Call(count 2, flag false);
     StoreVar(index 2);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -113,43 +107,54 @@ function run() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit 0);
     ObjectGet();
     Literal(lit 'a');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit 1);
     ObjectGet();
     Literal(lit 'b');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadGlobal(name 'global:Reflect');
+    LoadVar(index 6);
+    Literal(lit 'ownKeys');
+    ObjectGet();
+    StoreVar(index 5);
+    ObjectNew();
+    Call(count 2, flag false);
+    Literal(lit 'length');
+    ObjectGet();
+    Literal(lit 0);
+    Call(count 3, flag true);
     Pop(count 3);
     Literal(lit undefined);
     Return();
 }
 
-allocation 1 = {
-  ownKeys: &function Reflect_ownKeys,
-};
-
-allocation 5 = {
-  push: &function Array_push,
-};
-
-allocation 8 = {
+allocation 12 = {
   x: 5,
   y: 10,
 };
 
-allocation 9 = [
+allocation 13 = [
   'x',
   'y',
 ];
+
+allocation 3 = {
+  ownKeys: &function ['Reflect.ownKeys'],
+};
+
+allocation 7 = {
+  push: &function Array_push,
+};

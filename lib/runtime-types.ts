@@ -3,6 +3,7 @@ const assert = (x: boolean) => { if (!x) throw new Error('Assertion failed')}
 
 export type UInt4 = number;
 export type UInt8 = number;
+export type UInt7 = number;
 export type UInt12 = number;
 export type UInt14 = number;
 export type UInt16 = number;
@@ -15,6 +16,7 @@ export type SInt16 = number;
 export type SInt32 = number;
 
 export const UInt4 = (n: UInt4): UInt4 => (assert(isUInt4(n)), n);
+export const UInt7 = (n: UInt7): UInt8 => (assert(isUInt7(n)), n);
 export const UInt8 = (n: UInt8): UInt8 => (assert(isUInt8(n)), n);
 export const UInt12 = (n: UInt12): UInt12 => (assert(isUInt12(n)), n);
 export const UInt14 = (n: UInt14): UInt14 => (assert(isUInt14(n)), n);
@@ -83,11 +85,17 @@ export enum mvm_TeError {
   /* 49 */ MVM_E_WRONG_BYTECODE_VERSION, // The version of bytecode is different to what the engine supports
   /* 50 */ MVM_E_USING_NEW_ON_NON_CLASS, // The `new` operator can only be used on classes
   /* 51 */ MVM_E_INSTRUCTION_COUNT_REACHED, // The instruction count set by `mvm_stopAfterNInstructions` has been reached
-  /* 52 */ MVM_E_STRING_NOT_VALID_UTF8, // The given string has an encoding problem. String data in Microvium must be valid UTF-8.
-  /* 53 */ MVM_E_INVALID_ASCII, // The engine is using `MVM_TEXT_SUPPORT = 0` but some string is not valid ASCII.
-  /* 54 */ MVM_E_INVALID_BMP_UTF8, // The engine is using `MVM_TEXT_SUPPORT = 1` but some string has characters that are not in the Unicode Basic Multilingual Plane.
-  /* 55 */ MVM_E_INVALID_UTF8, // A string contains invalid UTF-8. Only properly-formed UTF-8 strings are supported in Microvium.
-
+  /* 52 */ MVM_E_REQUIRES_ACTIVE_VM, // The given operation requires that the VM has active calls on the stack
+  /* 53 */ MVM_E_ASYNC_START_ERROR, // mvm_asyncStart must be called exactly once at the beginning of a host function that is called from JS
+  /* 54 */ MVM_E_ASYNC_WITHOUT_AWAIT, // mvm_asyncStart can only be used with a script that has await points. Add at least one (reachable) await point to the script.
+  /* 55 */ MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE, // Can only await a promise in Microvium
+  /* 56 */ MVM_E_HEAP_CORRUPT, // Microvium's internal heap is not in a consistent state
+  /* 57 */ MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT, // The prototype property of a class must be null or a plain object
+  /* 58 */ MVM_E_UNINITIALIZED_GLOBAL, // A global variable was not set before it was used.
+  /* 59 */ MVM_E_STRING_NOT_VALID_UTF8, // The given string has an encoding problem. String data in Microvium must be valid UTF-8.
+  /* 60 */ MVM_E_INVALID_ASCII, // The engine is using `MVM_TEXT_SUPPORT = 0` but some string is not valid ASCII.
+  /* 61 */ MVM_E_INVALID_BMP_UTF8, // The engine is using `MVM_TEXT_SUPPORT = 1` but some string has characters that are not in the Unicode Basic Multilingual Plane.
+  /* 62 */ MVM_E_INVALID_UTF8, // A string contains invalid UTF-8. Only properly-formed UTF-8 strings are supported in Microvium.
 };
 
 
@@ -192,6 +200,17 @@ export enum TeTypeCode {
   TC_VAL_STR_LENGTH         = 0x18, // The string "length"
   TC_VAL_STR_PROTO          = 0x19, // The string "__proto__"
 
+  /**
+   * TC_VAL_NO_OP_FUNC
+   *
+   * Represents a function that does nothing and returns undefined.
+   *
+   * This is required by async-await for the case where you void-call an async
+   * function and it needs to synthesize a dummy callback that does nothing,
+   * particularly for a host async function to call back.
+   */
+  TC_VAL_NO_OP_FUNC         = 0x1A,
+
   TC_END,
 };
 
@@ -216,6 +235,10 @@ export enum mvm_TeBuiltins {
   BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
   BIN_STR_PROTOTYPE, // If the string "prototype" is interned, this builtin points to it.
+  BIN_ASYNC_CONTINUE, // A function used to construct a closure for the job queue to complete async operations
+  BIN_ASYNC_CATCH_BLOCK, // A block, bundled as a function, for the root try-catch in async functions
+  BIN_ASYNC_HOST_CALLBACK, // Bytecode to use as the callback for host async operations
+  BIN_PROMISE_PROTOTYPE,
 
   BIN_BUILTIN_COUNT
 };
@@ -230,6 +253,7 @@ export enum vm_TeWellKnownValues {
   VM_VALUE_DELETED       = ((TeTypeCode.TC_VAL_DELETED - 0x11) << 2) | 1,
   VM_VALUE_STR_LENGTH    = ((TeTypeCode.TC_VAL_STR_LENGTH - 0x11) << 2) | 1,
   VM_VALUE_STR_PROTO     = ((TeTypeCode.TC_VAL_STR_PROTO - 0x11) << 2) | 1,
+  VM_VALUE_NO_OP_FUNC    = ((TeTypeCode.TC_VAL_NO_OP_FUNC - 0x11) << 2) | 1,
 
   VM_VALUE_WELLKNOWN_END
 };
@@ -238,6 +262,12 @@ export function isUInt4(value: number): boolean {
   return (value | 0) === value
     && value >= 0
     && value <= 0xF;
+}
+
+export function isUInt7(value: number): boolean {
+  return (value | 0) === value
+    && value >= 0
+    && value <= 0x7F;
 }
 
 export function isSInt8(value: number): boolean {
@@ -329,6 +359,8 @@ export enum mvm_TeBytecodeSection {
   /**
    * Builtins
    *
+   * See `mvm_TeBuiltins`
+   *
    * Table of `Value`s that need to be directly identifiable by the engine, such
    * as the Array prototype.
    *
@@ -395,6 +427,10 @@ export enum mvm_TeBytecodeSection {
    *
    * The handles appear as the *last* global slots, and will generally not be
    * referenced by `LOAD_GLOBAL` instructions.
+   *
+   * WARNING: the globals section is the last section before the heap, so no ROM
+   * pointer should point after the globals section. Some functions (e.g.
+   * vm_getHandleTargetOrNull) assume this to be true.
    */
   BCS_GLOBALS,
 

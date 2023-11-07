@@ -114,6 +114,7 @@
       <ConformanceMode>true</ConformanceMode>
       <FloatingPointModel>Strict</FloatingPointModel>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -1,15 +1,22 @@
 import * as IL from './il';
-import { hardAssert, stringifyIdentifier, assertUnreachable, entries, notUndefined, unexpected } from './utils';
-import { isUInt16 } from './runtime-types';
 import { VirtualMachine } from './virtual-machine';
 import { ModuleSourceText } from '../lib';
+
+export const VM_OIS_PROMISE_STATUS = 2;
+export const VM_OIS_PROMISE_OUT = 3;
+export const VM_OIS_PROTO_SLOT_MAGIC_KEY = 2;
+export const VM_OIS_PROTO_SLOT_COUNT = 3;
+export const VM_PROMISE_STATUS_PENDING = IL.numberValue(-1);
+export const VM_PROMISE_STATUS_RESOLVED = IL.numberValue(-2);
+export const VM_PROMISE_STATUS_REJECTED = IL.numberValue(-3);
+export const VM_PROTO_SLOT_MAGIC_KEY_VALUE = IL.numberValue(-0x2000);
 
 export type GlobalSlotID = string;
 
 export type PropertyKey = string;
 export type Index = number;
 
-export type ResolveFFIImport = (hostFunctionID: IL.HostFunctionID) => HostFunctionHandler;
+export type ResolveFFIImport = (hostFunctionID: IL.HostFunctionID) => HostFunctionHandler | undefined;
 
 export type ModuleResolver = (moduleSource: ModuleRelativeSource) => ModuleObject;
 
@@ -24,7 +31,7 @@ export type Frame = InternalFrame | ExternalFrame;
 
 export interface InternalFrame {
   type: 'InternalFrame';
-  frameNumber: number;
+  frameNumber: number; // 1 for first frame
   args: IL.Value[];
   scope: IL.Value;
   block: IL.Block;
@@ -34,12 +41,13 @@ export interface InternalFrame {
   nextOperationIndex: number;
   operationBeingExecuted: IL.Operation;
   variables: IL.Value[];
+  isVoidCall: boolean;
 }
 
 // Indicates where control came from external code
 export interface ExternalFrame {
   type: 'ExternalFrame';
-  frameNumber: number;
+  frameNumber: number; // 1 for first frame
   callerFrame: Frame | undefined;
   result: IL.Value;
 }

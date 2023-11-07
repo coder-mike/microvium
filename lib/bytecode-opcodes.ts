@@ -104,7 +104,7 @@ export enum vm_TeOpcode {
   VM_OP_EXTENDED_1          = 0x6, // (+ 4-bit vm_TeOpcodeEx1)
   VM_OP_EXTENDED_2          = 0x7, // (+ 4-bit vm_TeOpcodeEx2)
   VM_OP_EXTENDED_3          = 0x8, // (+ 4-bit vm_TeOpcodeEx3)
-  VM_OP_CALL_5              = 0x9, // (+ 4-bit arg count)
+  VM_OP_CALL_5              = 0x9, // (+ 4-bit arg count + 16-bit target)
 
   VM_OP_DIVIDER_1, // <-- ops after this point pop at least one argument (reg2)
 
@@ -199,9 +199,9 @@ export enum vm_TeOpcodeEx3 {
   VM_OP3_POP_N               = 0x0, // (+ 8-bit pop count) Pops N items off the stack
   VM_OP3_SCOPE_DISCARD       = 0x1, // Set the closure reg to undefined
   VM_OP3_SCOPE_CLONE         = 0x2,
-  VM_OP3_AWAIT_RESERVED      = 0x3,
-  VM_OP3_AWAIT_CALL_RESERVED = 0x4, // (+ 8-bit arg count)
-  VM_OP3_ASYNC_RETURN_RESERVED = 0x5,
+  VM_OP3_AWAIT               = 0x3, // (no literal operands)
+  VM_OP3_AWAIT_CALL          = 0x4, // (+ 8-bit arg count)
+  VM_OP3_ASYNC_RESUME        = 0x5, // (+ 8-bit stack restoration slot count)
 
   VM_OP3_RESERVED_3          = 0x6,
 
@@ -226,20 +226,27 @@ export enum vm_TeOpcodeEx3 {
 
 // This is a bucket of less frequently used instructions that didn't fit into the other opcodes
 export enum vm_TeOpcodeEx4 {
-  VM_OP4_START_TRY           = 0x0, // (+ 16-bit label to the catch block)
-  VM_OP4_END_TRY             = 0x1, // (No literal operands)
-  VM_OP4_OBJECT_KEYS         = 0x2, // (No literal operands)
-  VM_OP4_UINT8_ARRAY_NEW     = 0x3, // (No literal operands)
+  VM_OP4_START_TRY           = 0x00, // (+ 16-bit label to the catch block)
+  VM_OP4_END_TRY             = 0x01, // (No literal operands)
+  VM_OP4_OBJECT_KEYS         = 0x02, // (No literal operands)
+  VM_OP4_UINT8_ARRAY_NEW     = 0x03, // (No literal operands)
 
   // (constructor, props) -> TsClass
-  VM_OP4_CLASS_CREATE        = 0x4, // Creates TsClass (does not in instantiate a class)
+  VM_OP4_CLASS_CREATE        = 0x04, // Creates TsClass (does not in instantiate a class)
 
-  VM_OP4_TYPE_CODE_OF        = 0x5, // Opcode for mvm_typeOf
+  VM_OP4_TYPE_CODE_OF        = 0x05, // Opcode for mvm_typeOf
 
-  VM_OP4_LOAD_REG_CLOSURE    = 0x6, // (No literal operands)
+  VM_OP4_LOAD_REG_CLOSURE    = 0x06, // (No literal operands)
 
-  VM_OP4_SCOPE_PUSH          = 0x7, // (+ 8-but unsigned slot count) also sets last slot to parent scope
-  VM_OP4_SCOPE_POP           = 0x8, // Sets the closure reg to the parent of the current closure
+  VM_OP4_SCOPE_PUSH          = 0x07, // (+ 8-bit unsigned slot count) also sets last slot to parent scope
+  VM_OP4_SCOPE_POP           = 0x08, // Sets the closure reg to the parent of the current closure
+  VM_OP4_SCOPE_SAVE          = 0x09, // Pops the current closure off the closure stack and pushes it to the variable stack
+
+  VM_OP4_ASYNC_START         = 0x0A, // + 7-bit closure slot count and 1-bit flag for parent-capturing.
+  VM_OP4_ASYNC_RETURN        = 0x0B, // (No literal operands)
+  VM_OP4_ENQUEUE_JOB         = 0x0C, // (No literal operands)
+  VM_OP4_ASYNC_COMPLETE      = 0x0D, // (No literal operands)
+
 
   VM_OP4_END
 };

@@ -25,28 +25,29 @@ function ['#entry']() {
     Literal(lit &function testArrays);   // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:1:1
     StoreGlobal(name 'testArrays');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:1:1
     // ---
+    // description: >
+    // Testing basic array operations
     // runExportedFunction: 0
+    // assertionCount: 104
     // ---
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:5:5
-    StoreGlobal(name 'a');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:5:5
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:6:5
-    StoreGlobal(name 'b');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:6:5
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:7:5
-    StoreGlobal(name 'c');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:7:5
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:8:5
-    StoreGlobal(name 'd');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:8:5
-    LoadGlobal(name 'init');             // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:10:1
-    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:10:1
-    Call(count 1);                       // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:10:1
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:10:1
-    LoadGlobal(name 'vmExport');         // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:11:1
-    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:11:1
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:11:10
-    LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/arrays.test.mvm.js:11:13
-    Call(count 3);                       // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:11:13
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:11:13
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:42:1
-    Return();                            // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:42:1
+    StoreGlobal(name 'a');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:8:5
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:9:5
+    StoreGlobal(name 'b');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:9:5
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:10:5
+    StoreGlobal(name 'c');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:10:5
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:11:5
+    StoreGlobal(name 'd');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:11:5
+    LoadGlobal(name 'init');             // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:13:1
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:13:1
+    Call(count 1, flag true);            // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:13:1
+    LoadGlobal(name 'vmExport');         // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:14:1
+    Literal(lit undefined);              // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:14:1
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:14:10
+    LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/arrays.test.mvm.js:14:13
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:14:13
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:45:1
+    Return();                            // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:45:1
 }
 
 function run() {
@@ -55,630 +56,574 @@ function run() {
     // restoration, the first time will be running against the arrays in the
     // snapshot, while the second time will be running against newly-allocated
     // arrays.
-    LoadGlobal(name 'testArrays');       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:18:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:18:3
-    Call(count 1);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:18:3
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:18:3
-    LoadGlobal(name 'testArrays');       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:19:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:19:3
-    Call(count 1);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:19:3
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:19:3
-    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:20:2
-    Return();                            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:20:2
+    LoadGlobal(name 'testArrays');       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:21:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:21:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:21:3
+    LoadGlobal(name 'testArrays');       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:22:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:22:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:22:3
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:23:2
+    Return();                            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:23:2
 }
 
 function init() {
   entry:
-    ArrayNew();                          // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:23:7
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:23:7
-    StoreGlobal(name 'a');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:23:7
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:23:7
-    ArrayNew();                          // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:24:7
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:24:7
-    Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:24:7
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:24:8
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:24:8
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:24:8
-    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:24:8
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:24:11
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:24:11
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:24:11
-    Literal(lit 2);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:24:11
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:24:14
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:24:14
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:24:14
-    StoreGlobal(name 'b');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:24:14
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:24:14
-    ArrayNew();                          // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:25:7
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:25:7
-    Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:25:7
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:25:8
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:25:8
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:25:8
-    Literal(lit 2);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:25:8
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:25:13
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:25:13
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:25:13
-    Literal(lit 'length');               // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:25:13
-    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:25:13
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:25:13
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:25:13
-    StoreGlobal(name 'c');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:25:13
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:25:13
     ArrayNew();                          // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:26:7
     LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:26:7
-    Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:26:7
-    ArrayNew();                          // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:27:5
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/arrays.test.mvm.js:27:5
-    Literal(lit 0);                      // 6                 ./test/end-to-end/tests/arrays.test.mvm.js:27:5
-    ArrayNew();                          // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
-    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
-    Literal(lit 0);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
-    Literal(lit 1);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:29:9
-    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:29:9
-    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:29:9
-    Literal(lit 1);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:29:9
-    Literal(lit 2);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:30:9
-    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:30:9
-    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:30:9
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/arrays.test.mvm.js:30:9
-    Literal(lit 1);                      // 6                 ./test/end-to-end/tests/arrays.test.mvm.js:30:9
-    ArrayNew();                          // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:32:7
-    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:32:7
-    Literal(lit 0);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:32:7
-    Literal(lit 3);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:33:9
-    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:33:9
-    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:33:9
-    Literal(lit 1);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:33:9
-    Literal(lit 4);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:34:9
-    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:34:9
-    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:34:9
-    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/arrays.test.mvm.js:34:9
-    Literal(lit 2);                      // 6                 ./test/end-to-end/tests/arrays.test.mvm.js:34:9
-    Literal(lit 5);                      // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:36:7
-    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:36:7
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:36:7
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:36:7
-    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:36:7
-    Literal(lit 6);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:38:5
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:38:5
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:38:5
-    StoreGlobal(name 'd');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:38:5
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:38:5
-    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:40:2
-    Return();                            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:40:2
+    StoreGlobal(name 'a');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:26:7
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:26:7
+    ArrayNew();                          // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:27:8
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:27:11
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    Literal(lit 2);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:27:14
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    StoreGlobal(name 'b');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:27:7
+    ArrayNew();                          // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:28:8
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Literal(lit 2);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:28:13
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Literal(lit 'length');               // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    StoreGlobal(name 'c');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:28:7
+    ArrayNew();                          // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    ArrayNew();                          // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    Literal(lit 0);                      // 6                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    ArrayNew();                          // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
+    Literal(lit 0);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
+    Literal(lit 1);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:32:9
+    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
+    Literal(lit 1);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
+    Literal(lit 2);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:33:9
+    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:31:7
+    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    Literal(lit 1);                      // 6                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    ArrayNew();                          // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
+    Literal(lit 0);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
+    Literal(lit 3);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:36:9
+    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
+    LoadVar(index 6);                    // 8                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
+    Literal(lit 1);                      // 9                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
+    Literal(lit 4);                      // 10                ./test/end-to-end/tests/arrays.test.mvm.js:37:9
+    ObjectSet();                         // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:35:7
+    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    LoadVar(index 3);                    // 5                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    Literal(lit 2);                      // 6                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    Literal(lit 5);                      // 7                 ./test/end-to-end/tests/arrays.test.mvm.js:39:7
+    ObjectSet();                         // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:30:5
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    Literal(lit 6);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:41:5
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    StoreGlobal(name 'd');               // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:29:7
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:43:2
+    Return();                            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:43:2
 }
 
 function testArrays() {
   entry:
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:43:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:43:3
-    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:43:15
-    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:43:15
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:43:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:43:25
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:43:25
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:43:25
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:44:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:44:3
-    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:44:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:44:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:44:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:44:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:44:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:44:21
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:46:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:46:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:46:15
+    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:46:15
     Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:46:15
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:46:15
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:46:25
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:46:25
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:46:25
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:46:25
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:46:25
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:47:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:47:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:47:15
+    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:47:15
     Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:47:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:47:17
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:47:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:47:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:47:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:48:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:48:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:48:15
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:48:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:48:17
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:48:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:48:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:48:21
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:47:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:47:21
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:49:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:49:3
     LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:49:15
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:49:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:49:17
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:49:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:49:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:49:21
+    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:49:15
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:49:15
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:49:25
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:49:25
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:50:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:50:3
     LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:50:15
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:50:17
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:50:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:50:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:50:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:50:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:50:21
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:50:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:50:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:51:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:51:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:51:15
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:51:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:51:17
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:51:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:51:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:52:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:52:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:52:15
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:52:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:52:17
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:52:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:52:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:53:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:53:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:53:15
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:53:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:53:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:53:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:53:21
     // Mutation
-    Literal(lit 24);                     // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:53:10
-    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:53:3
-    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:53:5
-    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:53:5
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:53:5
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:53:5
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:54:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:54:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:54:15
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:54:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:54:17
-    Literal(lit 24);                     // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:54:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:54:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:54:21
+    Literal(lit 24);                     // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:56:10
+    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:56:3
+    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:56:5
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:56:5
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:56:5
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:56:5
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:57:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:57:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:57:15
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:57:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:57:17
+    Literal(lit 24);                     // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:57:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:57:21
     // Extend the array
-    Literal(lit 5);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:57:10
-    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:57:3
-    Literal(lit 4);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:57:5
-    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:57:5
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:57:5
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:57:5
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:58:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:58:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:58:15
-    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:58:15
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:58:15
-    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:58:25
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:58:25
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:58:25
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:59:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:59:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:59:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:59:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:59:17
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:59:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:59:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:59:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:60:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:60:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:60:15
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:60:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:60:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:60:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:60:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:60:21
+    Literal(lit 5);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:60:10
+    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:60:3
+    Literal(lit 4);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:60:5
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:60:5
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:60:5
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:60:5
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:61:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:61:3
     LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:61:15
-    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:61:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:61:17
-    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:61:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:61:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:61:21
+    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:61:15
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:61:15
+    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:61:25
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:61:25
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:62:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:62:3
     LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:62:15
-    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:62:17
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:62:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:62:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:62:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:62:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:62:21
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:62:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:62:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:63:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:63:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:63:15
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:63:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:63:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:63:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:63:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:64:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:64:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:64:15
+    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:64:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:64:17
+    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:64:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:64:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:65:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:65:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:65:15
+    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:65:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:65:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:65:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:65:21
     // Write to a hole
-    Literal(lit 4);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:65:10
-    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:65:3
-    Literal(lit 3);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:65:5
-    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:65:5
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:65:5
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:65:5
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:66:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:66:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:66:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:66:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:66:17
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:66:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:66:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:66:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:67:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:67:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:67:15
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:67:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:67:17
-    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:67:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:67:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:67:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:68:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:68:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:68:15
-    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:68:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:68:17
-    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:68:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:68:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:68:21
+    Literal(lit 4);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:68:10
+    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:68:3
+    Literal(lit 3);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:68:5
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:68:5
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:68:5
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:68:5
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:69:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:69:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:69:15
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:69:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:69:17
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:69:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:69:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:70:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:70:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:70:15
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:70:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:70:17
+    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:70:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:70:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:71:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:71:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:71:15
+    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:71:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:71:17
+    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:71:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:71:21
     // Shorten the array
-    Literal(lit 3);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:71:14
-    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:71:3
-    Literal(lit 'length');               // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:71:3
-    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:71:3
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:71:3
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:71:3
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:72:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:72:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:72:15
-    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:72:15
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:72:15
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:72:25
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:72:25
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:72:25
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:73:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:73:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:73:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:73:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:73:17
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:73:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:73:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:73:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:74:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:74:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:74:15
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:74:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:74:17
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:74:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:74:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:74:21
+    Literal(lit 3);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:74:14
+    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:74:3
+    Literal(lit 'length');               // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:74:3
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:74:3
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:74:3
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:74:3
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:75:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:75:3
     LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:75:15
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:75:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:75:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:75:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:75:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:75:21
+    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:75:15
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:75:15
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:75:25
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:75:25
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:76:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:76:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:76:15
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:76:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:76:17
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:76:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:76:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:77:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:77:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:77:15
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:77:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:77:17
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:77:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:77:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:78:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:78:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:78:15
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:78:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:78:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:78:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:78:21
     // Make the array longer by setting the length (this is likely not to increase
     // the _capacity_ of the array, since the capacity is probably still large
     // from earlier, so this tests that making the array shorter and then longer
     // does not expose stale values)
-    Literal(lit 5);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:81:14
-    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:81:3
-    Literal(lit 'length');               // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:81:3
-    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:81:3
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:81:3
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:81:3
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:82:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:82:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:82:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:82:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:82:17
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:82:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:82:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:82:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:83:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:83:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:83:15
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:83:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:83:17
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:83:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:83:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:83:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:84:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:84:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:84:15
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:84:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:84:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:84:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:84:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:84:21
+    Literal(lit 5);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:84:14
+    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:84:3
+    Literal(lit 'length');               // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:84:3
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:84:3
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:84:3
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:84:3
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:85:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:85:3
     LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:85:15
-    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:85:17
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:85:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:85:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:85:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:85:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:85:21
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:85:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:85:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:86:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:86:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:86:15
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:86:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:86:17
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:86:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:86:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:87:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:87:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:87:15
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:87:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:87:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:87:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:87:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:88:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:88:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:88:15
+    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:88:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:88:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:88:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:88:21
     // Make the array longer by setting the length, but to a value that exceeds the original capacity
-    Literal(lit 8);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:88:14
-    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:88:3
-    Literal(lit 'length');               // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:88:3
-    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:88:3
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:88:3
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:88:3
-    Literal(lit 8);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:89:10
-    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:89:3
-    Literal(lit 7);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:89:5
-    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:89:5
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:89:5
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:89:5
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:90:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:90:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:90:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:90:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:90:17
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:90:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:90:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:90:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:91:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:91:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:91:15
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:91:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:91:17
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:91:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:91:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:91:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:92:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:92:3
-    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:92:15
-    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:92:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:92:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:92:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:92:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:92:21
+    Literal(lit 8);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:91:14
+    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:91:3
+    Literal(lit 'length');               // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:91:3
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:91:3
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:91:3
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:91:3
+    Literal(lit 8);                      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:92:10
+    LoadGlobal(name 'b');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:92:3
+    Literal(lit 7);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:92:5
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:92:5
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:92:5
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:92:5
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:93:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:93:3
     LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:93:15
-    Literal(lit 7);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:93:17
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:93:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:93:17
-    Literal(lit 8);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:93:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:93:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:93:21
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:93:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:93:21
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:94:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:94:3
     LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:94:15
-    Literal(lit 8);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:94:17
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:94:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:94:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:94:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:94:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:94:21
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:94:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:94:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:95:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:95:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:95:15
+    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:95:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:95:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:95:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:95:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:96:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:96:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:96:15
+    Literal(lit 7);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:96:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:96:17
+    Literal(lit 8);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:96:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:96:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:97:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:97:3
+    LoadGlobal(name 'b');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:97:15
+    Literal(lit 8);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:97:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:97:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:97:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:97:21
     // Grow an empty array (`a` is an empty array so far)
-    Literal(lit 10);                     // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:97:10
-    LoadGlobal(name 'a');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:97:3
-    Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:97:5
-    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:97:5
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:97:5
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:97:5
-    Literal(lit 20);                     // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:98:10
-    LoadGlobal(name 'a');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:98:3
-    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:98:5
-    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:98:5
-    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:98:5
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:98:5
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:99:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:99:3
-    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:99:15
-    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:99:15
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:99:15
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:99:25
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:99:25
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:99:25
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:100:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:100:3
-    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:100:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:100:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:100:17
-    Literal(lit 10);                     // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:100:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:100:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:100:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:101:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:101:3
-    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:101:15
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:101:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:101:17
-    Literal(lit 20);                     // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:101:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:101:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:101:21
+    Literal(lit 10);                     // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:100:10
+    LoadGlobal(name 'a');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:100:3
+    Literal(lit 0);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:100:5
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:100:5
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:100:5
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:100:5
+    Literal(lit 20);                     // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:101:10
+    LoadGlobal(name 'a');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:101:3
+    Literal(lit 1);                      // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:101:5
+    LoadVar(index 0);                    // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:101:5
+    ObjectSet();                         // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:101:5
+    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:101:5
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:102:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:102:3
     LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:102:15
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:102:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:102:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:102:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:102:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:102:21
-    // Test elision
+    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:102:15
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:102:15
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:102:25
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:102:25
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:103:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:103:3
+    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:103:15
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:103:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:103:17
+    Literal(lit 10);                     // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:103:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:103:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:104:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:104:3
+    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:104:15
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:104:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:104:17
+    Literal(lit 20);                     // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:104:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:104:21
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:105:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:105:3
-    LoadGlobal(name 'c');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:105:15
-    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:105:15
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:105:15
-    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:105:25
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:105:25
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:105:25
-    // Length is 4, even though it ends in a hole
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:106:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:106:3
-    LoadGlobal(name 'c');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:106:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:106:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:106:17
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:106:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:106:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:106:21
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:107:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:107:3
-    LoadGlobal(name 'c');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:107:15
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:107:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:107:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:107:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:107:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:107:21
+    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:105:15
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:105:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:105:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:105:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:105:21
+    // Test elision
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:108:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:108:3
     LoadGlobal(name 'c');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:108:15
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:108:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:108:17
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:108:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:108:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:108:21
+    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:108:15
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:108:15
+    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:108:25
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:108:25
+    // Length is 4, even though it ends in a hole
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:109:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:109:3
     LoadGlobal(name 'c');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:109:15
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:109:17
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:109:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:109:17
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:109:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:109:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:109:21
-    // Test Array.push
-    LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:112:3
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:109:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:109:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:110:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:110:3
+    LoadGlobal(name 'c');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:110:15
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:110:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:110:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:110:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:110:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:111:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:111:3
+    LoadGlobal(name 'c');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:111:15
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:111:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:111:17
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:111:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:111:21
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:112:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:112:3
-    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:112:10
-    Literal(lit '__proto__');            // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:112:10
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:112:10
-    Literal(lit null);                   // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:112:26
-    BinOp(op '!==');                     // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:112:26
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:112:26
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:112:26
-    LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:113:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:113:3
-    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:113:10
-    Literal(lit '__proto__');            // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:113:10
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:113:10
-    Literal(lit 'push');                 // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:113:10
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:113:10
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:113:31
-    BinOp(op '!==');                     // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:113:31
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:113:31
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:113:31
-    LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:114:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:114:3
-    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:114:10
-    Literal(lit 'push');                 // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:114:10
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:114:10
-    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:114:21
-    BinOp(op '!==');                     // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:114:21
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:114:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:114:21
-    LoadGlobal(name 'a');                // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:115:3
-    LoadVar(index 0);                    // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:115:3
-    Literal(lit 'push');                 // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:115:3
-    ObjectGet();                         // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:115:3
-    LoadVar(index 0);                    // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:115:3
-    Literal(lit 30);                     // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:115:10
-    Call(count 2);                       // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:115:10
-    StoreVar(index 0);                   // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:115:10
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:115:10
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:116:3
+    LoadGlobal(name 'c');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:112:15
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:112:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:112:17
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:112:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:112:21
+    // Test Array.push
+    LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:115:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:115:3
+    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:115:10
+    Literal(lit '__proto__');            // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:115:10
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:115:10
+    Literal(lit null);                   // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:115:26
+    BinOp(op '!==');                     // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:115:26
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:115:26
+    LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:116:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:116:3
-    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:116:15
-    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:116:15
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:116:15
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:116:25
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:116:25
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:116:25
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:117:3
+    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:116:10
+    Literal(lit '__proto__');            // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:116:10
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:116:10
+    Literal(lit 'push');                 // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:116:10
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:116:10
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:116:31
+    BinOp(op '!==');                     // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:116:31
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:116:31
+    LoadGlobal(name 'assert');           // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:117:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:117:3
-    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:117:15
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:117:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:117:17
-    Literal(lit 30);                     // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:117:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:117:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:117:21
-    // See that the nested arrays are correct
+    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:117:10
+    Literal(lit 'push');                 // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:117:10
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:117:10
+    Literal(lit undefined);              // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:117:21
+    BinOp(op '!==');                     // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:117:21
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:117:21
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:118:3
+    LoadGlobal(name 'a');                // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:118:3
+    LoadVar(index 1);                    // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:118:3
+    Literal(lit 'push');                 // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:118:3
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:118:3
+    StoreVar(index 0);                   // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:118:3
+    Literal(lit 30);                     // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:118:10
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:118:10
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:119:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:119:3
+    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:119:15
+    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:119:15
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:119:15
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:119:25
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:119:25
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:120:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:120:3
-    LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:120:15
-    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:120:15
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:120:15
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:120:25
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:120:25
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:120:25
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:121:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:121:3
-    LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:121:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:121:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:121:17
-    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:121:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:121:17
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:121:28
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:121:28
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:121:28
-    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:122:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:122:3
-    LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:122:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:122:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:122:17
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:122:20
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:122:20
-    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:122:20
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:122:20
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:122:31
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:122:31
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:122:31
+    LoadGlobal(name 'a');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:120:15
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:120:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:120:17
+    Literal(lit 30);                     // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:120:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:120:21
+    // See that the nested arrays are correct
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:123:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:123:3
     LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:123:15
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:123:17
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:123:17
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:123:20
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:123:20
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:123:23
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:123:23
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:123:27
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:123:27
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:123:27
+    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:123:15
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:123:15
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:123:25
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:123:25
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:124:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:124:3
     LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:124:15
     Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:124:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:124:17
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:124:20
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:124:20
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:124:23
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:124:23
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:124:27
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:124:27
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:124:27
+    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:124:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:124:17
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:124:28
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:124:28
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:125:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:125:3
     LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:125:15
     Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:125:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:125:17
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:125:20
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:125:20
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:125:20
-    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:125:23
-    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:125:23
-    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:125:27
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:125:27
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:125:27
+    Literal(lit 'length');               // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:125:20
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:125:20
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:125:31
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:125:31
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:126:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:126:3
     LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:126:15
     Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:126:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:126:17
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:126:20
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:126:20
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:126:20
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:126:23
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:126:23
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:126:23
-    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:126:27
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:126:27
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:126:27
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:126:27
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:126:27
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:127:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:127:3
     LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:127:15
     Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:127:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:127:17
-    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:127:20
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:127:20
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:127:20
-    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:127:24
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:127:24
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:127:24
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:127:23
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:127:23
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:127:27
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:127:27
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:128:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:128:3
     LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:128:15
-    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:128:17
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:128:17
     ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:128:17
-    Literal(lit 6);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:128:21
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:128:21
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:128:21
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:128:20
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:128:20
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:128:23
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:128:23
+    Literal(lit 3);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:128:27
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:128:27
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:129:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:129:3
+    LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:129:15
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:129:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:129:17
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:129:20
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:129:20
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:129:23
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:129:23
+    Literal(lit 4);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:129:27
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:129:27
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:130:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:130:3
+    LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:130:15
+    Literal(lit 0);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:130:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:130:17
+    Literal(lit 2);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:130:20
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:130:20
+    Literal(lit 5);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:130:24
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:130:24
+    LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:131:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:131:3
+    LoadGlobal(name 'd');                // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:131:15
+    Literal(lit 1);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:131:17
+    ObjectGet();                         // 3                 ./test/end-to-end/tests/arrays.test.mvm.js:131:17
+    Literal(lit 6);                      // 4                 ./test/end-to-end/tests/arrays.test.mvm.js:131:21
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:131:21
     // Reset the arrays to their initial state, because this test runs multiple
     // times (before and after the snapshot)
-    LoadGlobal(name 'init');             // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:132:3
-    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:132:3
-    Call(count 1);                       // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:132:3
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:132:3
-    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:133:2
-    Return();                            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:133:2
+    LoadGlobal(name 'init');             // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:135:3
+    Literal(lit undefined);              // 2                 ./test/end-to-end/tests/arrays.test.mvm.js:135:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:135:3
+    Literal(lit undefined);              // 1                 ./test/end-to-end/tests/arrays.test.mvm.js:136:2
+    Return();                            // 0                 ./test/end-to-end/tests/arrays.test.mvm.js:136:2
 }

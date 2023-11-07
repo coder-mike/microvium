@@ -1,747 +1,698 @@
-Bytecode size: 1186 B
+Bytecode size: 1134 B
 
 Addr    Size
 ==== =======
 0000   1c  - # Header
-0000       1     bytecodeVersion: 7
+0000       1     bytecodeVersion: 8
 0001       1     headerSize: 28
-0002       1     requiredEngineVersion: 8
+0002       1     requiredEngineVersion: 0
 0003       1     reserved: 0
-0004       2     bytecodeSize: 1186
-0006       2     expectedCRC: 4231
+0004       2     bytecodeSize: 1134
+0006       2     expectedCRC: d764
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 0020
 0010       2     BCS_SHORT_CALL_TABLE: 0024
 0012       2     BCS_BUILTINS: 0024
-0014       2     BCS_STRING_TABLE: 002a
-0016       2     BCS_ROM: 002c
-0018       2     BCS_GLOBALS: 042a
-001a       2     BCS_HEAP: 0442
+0014       2     BCS_STRING_TABLE: 0032
+0016       2     BCS_ROM: 0034
+0018       2     BCS_GLOBALS: 03f6
+001a       2     BCS_HEAP: 040e
 001c    4  - # Import Table
 001c       2     [0]: 2
 001e       2     [1]: 3
 0020    4  - # Export Table
-0020       4     [0]: &0050
-0024    6  - # Builtins
-0024       2     [BIN_INTERNED_STRINGS]: &0440
-0026       2     [BIN_ARRAY_PROTO]: &043c
+0020       4     [0]: &0058
+0024    e  - # Builtins
+0024       2     [BIN_INTERNED_STRINGS]: &040c
+0026       2     [BIN_ARRAY_PROTO]: &0408
 0028       2     [BIN_STR_PROTOTYPE]: undefined
-002a    2  - # String Table
-002a       2     [0]: &0030
-002c       2 <unused>
-002e  3fb  - # ROM allocations
-002e       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-0030       5     Value: 'push'
-0035       1     <unused>
-0036       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0038       2     Value: Import Table [0] (&001c)
-003a       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-003c       2     Value: Import Table [1] (&001e)
-003e       2     Header [Size: 13, Type: TC_REF_FUNCTION]
-0040    d  -     # Function 0040
-0040       1         maxStackDepth: 4
-0041    c  -         # Block 0041
-0041       1             LoadArg(index 1)
-0042       1             LoadArg(index 0)
-0043       1             LoadArg(index 0)
-0044       3             Literal('length')
-0047       1             ObjectGet()
-0048       1             LoadVar(index 0)
-0049       1             ObjectSet()
-004a       1             Pop(count 1)
-004b       1             Literal(lit undefined)
-004c       1             Return()
-004d       1     <unused>
-004e       2     Header [Size: 17, Type: TC_REF_FUNCTION]
-0050   11  -     # Function 0050
-0050       1         maxStackDepth: 2
-0051   10  -         # Block 0051
-0051       3             LoadGlobal [7]
-0054       1             Literal(lit undefined)
-0055       2             Call(count 1)
-0057       1             Pop(count 1)
+002a       2     [BIN_ASYNC_CONTINUE]: undefined
+002c       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
+002e       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
+0030       2     [BIN_PROMISE_PROTOTYPE]: undefined
+0032    2  - # String Table
+0032       2     [0]: &0038
+0034       2 <unused>
+0036  3c0  - # ROM allocations
+0036       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
+0038       5     Value: 'push'
+003d       1     <unused>
+003e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0040       2     Value: Import Table [0] (&001c)
+0042       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0044       2     Value: Import Table [1] (&001e)
+0046       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+0048    c  -     # Function 0048
+0048       0         maxStackDepth: 4
+0048       0         isContinuation: 0
+0048    c  -         # Block 0048
+0048       1             LoadArg(index 1)
+0049       1             LoadArg(index 0)
+004a       1             LoadArg(index 0)
+004b       3             Literal('length')
+004e       1             ObjectGet()
+004f       1             LoadVar(index 0)
+0050       1             ObjectSet()
+0051       1             Pop(count 1)
+0052       1             Literal(lit undefined)
+0053       1             Return()
+0054       2     <unused>
+0056       2     Header [Size: 2, Type: TC_REF_FUNCTION]
+0058    e  -     # Function 0058
+0058       0         maxStackDepth: 2
+0058       0         isContinuation: 0
+0058    e  -         # Block 0058
 0058       3             LoadGlobal [7]
 005b       1             Literal(lit undefined)
-005c       2             Call(count 1)
-005e       1             Pop(count 1)
-005f       1             Literal(lit undefined)
-0060       1             Return()
-0061       1     <unused>
-0062       2     Header [Size: 98, Type: TC_REF_FUNCTION]
-0064   62  -     # Function 0064
-0064       1         maxStackDepth: 10
-0065   61  -         # Block 0065
-0065       2             ArrayNew() [capacity=0]
-0067       1             LoadVar(index 0)
-0068       3             StoreGlobal [2]
-006b       1             Pop(count 1)
-006c       2             ArrayNew() [capacity=3]
-006e       1             LoadVar(index 0)
-006f       1             Literal(lit 0)
-0070       1             Literal(lit 1)
-0071       1             ObjectSet()
-0072       1             LoadVar(index 0)
+005c       2             Call(count 1, flag true)
+005e       3             LoadGlobal [7]
+0061       1             Literal(lit undefined)
+0062       2             Call(count 1, flag true)
+0064       1             Literal(lit undefined)
+0065       1             Return()
+0066       2     Header [Size: 10, Type: TC_REF_FUNCTION]
+0068   61  -     # Function 0068
+0068       0         maxStackDepth: 10
+0068       0         isContinuation: 0
+0068   61  -         # Block 0068
+0068       2             ArrayNew() [capacity=0]
+006a       1             LoadVar(index 0)
+006b       3             StoreGlobal [2]
+006e       1             Pop(count 1)
+006f       2             ArrayNew() [capacity=3]
+0071       1             LoadVar(index 0)
+0072       1             Literal(lit 0)
 0073       1             Literal(lit 1)
-0074       1             Literal(lit 2)
-0075       1             ObjectSet()
-0076       1             LoadVar(index 0)
+0074       1             ObjectSet()
+0075       1             LoadVar(index 0)
+0076       1             Literal(lit 1)
 0077       1             Literal(lit 2)
-0078       1             Literal(lit 3)
-0079       1             ObjectSet()
-007a       1             LoadVar(index 0)
-007b       3             StoreGlobal [3]
-007e       1             Pop(count 1)
-007f       2             ArrayNew() [capacity=4]
-0081       1             LoadVar(index 0)
-0082       1             Literal(lit 0)
-0083       1             Literal(lit 1)
-0084       1             ObjectSet()
-0085       1             LoadVar(index 0)
-0086       1             Literal(lit 2)
-0087       1             Literal(lit 3)
-0088       1             ObjectSet()
-0089       1             LoadVar(index 0)
-008a       3             Literal('length')
-008d       1             Literal(lit 4)
-008e       1             ObjectSet()
-008f       1             LoadVar(index 0)
-0090       3             StoreGlobal [4]
-0093       1             Pop(count 1)
-0094       2             ArrayNew() [capacity=2]
-0096       1             LoadVar(index 0)
-0097       1             Literal(lit 0)
-0098       2             ArrayNew() [capacity=3]
-009a       1             LoadVar(index 3)
-009b       1             Literal(lit 0)
-009c       2             ArrayNew() [capacity=2]
-009e       1             LoadVar(index 6)
-009f       1             Literal(lit 0)
-00a0       1             Literal(lit 1)
-00a1       1             ObjectSet()
-00a2       1             LoadVar(index 6)
+0078       1             ObjectSet()
+0079       1             LoadVar(index 0)
+007a       1             Literal(lit 2)
+007b       1             Literal(lit 3)
+007c       1             ObjectSet()
+007d       1             LoadVar(index 0)
+007e       3             StoreGlobal [3]
+0081       1             Pop(count 1)
+0082       2             ArrayNew() [capacity=4]
+0084       1             LoadVar(index 0)
+0085       1             Literal(lit 0)
+0086       1             Literal(lit 1)
+0087       1             ObjectSet()
+0088       1             LoadVar(index 0)
+0089       1             Literal(lit 2)
+008a       1             Literal(lit 3)
+008b       1             ObjectSet()
+008c       1             LoadVar(index 0)
+008d       3             Literal('length')
+0090       1             Literal(lit 4)
+0091       1             ObjectSet()
+0092       1             LoadVar(index 0)
+0093       3             StoreGlobal [4]
+0096       1             Pop(count 1)
+0097       2             ArrayNew() [capacity=2]
+0099       1             LoadVar(index 0)
+009a       1             Literal(lit 0)
+009b       2             ArrayNew() [capacity=3]
+009d       1             LoadVar(index 3)
+009e       1             Literal(lit 0)
+009f       2             ArrayNew() [capacity=2]
+00a1       1             LoadVar(index 6)
+00a2       1             Literal(lit 0)
 00a3       1             Literal(lit 1)
-00a4       1             Literal(lit 2)
-00a5       1             ObjectSet()
-00a6       1             ObjectSet()
-00a7       1             LoadVar(index 3)
-00a8       1             Literal(lit 1)
-00a9       2             ArrayNew() [capacity=2]
-00ab       1             LoadVar(index 6)
-00ac       1             Literal(lit 0)
-00ad       1             Literal(lit 3)
-00ae       1             ObjectSet()
-00af       1             LoadVar(index 6)
-00b0       1             Literal(lit 1)
-00b1       1             Literal(lit 4)
-00b2       1             ObjectSet()
-00b3       1             ObjectSet()
-00b4       1             LoadVar(index 3)
-00b5       1             Literal(lit 2)
-00b6       1             Literal(lit 5)
-00b7       1             ObjectSet()
-00b8       1             ObjectSet()
-00b9       1             LoadVar(index 0)
-00ba       1             Literal(lit 1)
-00bb       3             Literal(6)
-00be       1             ObjectSet()
-00bf       1             LoadVar(index 0)
-00c0       3             StoreGlobal [5]
-00c3       1             Pop(count 1)
-00c4       1             Literal(lit undefined)
-00c5       1             Return()
-00c6       2     Header [Size: 865, Type: TC_REF_FUNCTION]
-00c8  361  -     # Function 00c8
-00c8       1         maxStackDepth: 4
-00c9  360  -         # Block 00c9
-00c9       3             LoadGlobal [1]
-00cc       1             Literal(lit undefined)
-00cd       3             LoadGlobal [2]
-00d0       3             Literal('length')
-00d3       1             ObjectGet()
-00d4       1             Literal(lit 0)
-00d5       2             Call(count 3)
-00d7       1             Pop(count 1)
-00d8       3             LoadGlobal [1]
-00db       1             Literal(lit undefined)
-00dc       3             LoadGlobal [2]
-00df       1             Literal(lit 0)
-00e0       1             ObjectGet()
-00e1       1             Literal(lit undefined)
-00e2       2             Call(count 3)
-00e4       1             Pop(count 1)
-00e5       3             LoadGlobal [1]
-00e8       1             Literal(lit undefined)
-00e9       3             LoadGlobal [3]
-00ec       3             Literal('length')
-00ef       1             ObjectGet()
-00f0       1             Literal(lit 3)
-00f1       2             Call(count 3)
-00f3       1             Pop(count 1)
+00a4       1             ObjectSet()
+00a5       1             LoadVar(index 6)
+00a6       1             Literal(lit 1)
+00a7       1             Literal(lit 2)
+00a8       1             ObjectSet()
+00a9       1             ObjectSet()
+00aa       1             LoadVar(index 3)
+00ab       1             Literal(lit 1)
+00ac       2             ArrayNew() [capacity=2]
+00ae       1             LoadVar(index 6)
+00af       1             Literal(lit 0)
+00b0       1             Literal(lit 3)
+00b1       1             ObjectSet()
+00b2       1             LoadVar(index 6)
+00b3       1             Literal(lit 1)
+00b4       1             Literal(lit 4)
+00b5       1             ObjectSet()
+00b6       1             ObjectSet()
+00b7       1             LoadVar(index 3)
+00b8       1             Literal(lit 2)
+00b9       1             Literal(lit 5)
+00ba       1             ObjectSet()
+00bb       1             ObjectSet()
+00bc       1             LoadVar(index 0)
+00bd       1             Literal(lit 1)
+00be       3             Literal(6)
+00c1       1             ObjectSet()
+00c2       1             LoadVar(index 0)
+00c3       3             StoreGlobal [5]
+00c6       1             Pop(count 1)
+00c7       1             Literal(lit undefined)
+00c8       1             Return()
+00c9       1     <unused>
+00ca       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+00cc  32a  -     # Function 00cc
+00cc       0         maxStackDepth: 4
+00cc       0         isContinuation: 0
+00cc  32a  -         # Block 00cc
+00cc       3             LoadGlobal [1]
+00cf       1             Literal(lit undefined)
+00d0       3             LoadGlobal [2]
+00d3       3             Literal('length')
+00d6       1             ObjectGet()
+00d7       1             Literal(lit 0)
+00d8       2             Call(count 3, flag true)
+00da       3             LoadGlobal [1]
+00dd       1             Literal(lit undefined)
+00de       3             LoadGlobal [2]
+00e1       1             Literal(lit 0)
+00e2       1             ObjectGet()
+00e3       1             Literal(lit undefined)
+00e4       2             Call(count 3, flag true)
+00e6       3             LoadGlobal [1]
+00e9       1             Literal(lit undefined)
+00ea       3             LoadGlobal [3]
+00ed       3             Literal('length')
+00f0       1             ObjectGet()
+00f1       1             Literal(lit 3)
+00f2       2             Call(count 3, flag true)
 00f4       3             LoadGlobal [1]
 00f7       1             Literal(lit undefined)
 00f8       3             LoadGlobal [3]
 00fb       1             Literal(lit 0)
 00fc       1             ObjectGet()
 00fd       1             Literal(lit 1)
-00fe       2             Call(count 3)
-0100       1             Pop(count 1)
-0101       3             LoadGlobal [1]
-0104       1             Literal(lit undefined)
-0105       3             LoadGlobal [3]
-0108       1             Literal(lit 1)
-0109       1             ObjectGet()
-010a       1             Literal(lit 2)
-010b       2             Call(count 3)
-010d       1             Pop(count 1)
-010e       3             LoadGlobal [1]
-0111       1             Literal(lit undefined)
-0112       3             LoadGlobal [3]
-0115       1             Literal(lit 2)
-0116       1             ObjectGet()
-0117       1             Literal(lit 3)
-0118       2             Call(count 3)
-011a       1             Pop(count 1)
-011b       3             LoadGlobal [1]
-011e       1             Literal(lit undefined)
-011f       3             LoadGlobal [3]
-0122       1             Literal(lit 3)
-0123       1             ObjectGet()
-0124       1             Literal(lit undefined)
-0125       2             Call(count 3)
-0127       1             Pop(count 1)
-0128       3             Literal(24)
-012b       3             LoadGlobal [3]
-012e       1             Literal(lit 1)
-012f       1             LoadVar(index 0)
-0130       1             ObjectSet()
-0131       1             Pop(count 1)
-0132       3             LoadGlobal [1]
-0135       1             Literal(lit undefined)
-0136       3             LoadGlobal [3]
-0139       1             Literal(lit 1)
-013a       1             ObjectGet()
-013b       3             Literal(24)
-013e       2             Call(count 3)
-0140       1             Pop(count 1)
-0141       1             Literal(lit 5)
-0142       3             LoadGlobal [3]
-0145       1             Literal(lit 4)
-0146       1             LoadVar(index 0)
-0147       1             ObjectSet()
-0148       1             Pop(count 1)
-0149       3             LoadGlobal [1]
-014c       1             Literal(lit undefined)
-014d       3             LoadGlobal [3]
-0150       3             Literal('length')
-0153       1             ObjectGet()
-0154       1             Literal(lit 5)
-0155       2             Call(count 3)
-0157       1             Pop(count 1)
-0158       3             LoadGlobal [1]
-015b       1             Literal(lit undefined)
-015c       3             LoadGlobal [3]
-015f       1             Literal(lit 0)
-0160       1             ObjectGet()
-0161       1             Literal(lit 1)
-0162       2             Call(count 3)
-0164       1             Pop(count 1)
-0165       3             LoadGlobal [1]
-0168       1             Literal(lit undefined)
-0169       3             LoadGlobal [3]
-016c       1             Literal(lit 3)
-016d       1             ObjectGet()
-016e       1             Literal(lit undefined)
-016f       2             Call(count 3)
-0171       1             Pop(count 1)
-0172       3             LoadGlobal [1]
-0175       1             Literal(lit undefined)
-0176       3             LoadGlobal [3]
-0179       1             Literal(lit 4)
-017a       1             ObjectGet()
-017b       1             Literal(lit 5)
-017c       2             Call(count 3)
-017e       1             Pop(count 1)
-017f       3             LoadGlobal [1]
-0182       1             Literal(lit undefined)
+00fe       2             Call(count 3, flag true)
+0100       3             LoadGlobal [1]
+0103       1             Literal(lit undefined)
+0104       3             LoadGlobal [3]
+0107       1             Literal(lit 1)
+0108       1             ObjectGet()
+0109       1             Literal(lit 2)
+010a       2             Call(count 3, flag true)
+010c       3             LoadGlobal [1]
+010f       1             Literal(lit undefined)
+0110       3             LoadGlobal [3]
+0113       1             Literal(lit 2)
+0114       1             ObjectGet()
+0115       1             Literal(lit 3)
+0116       2             Call(count 3, flag true)
+0118       3             LoadGlobal [1]
+011b       1             Literal(lit undefined)
+011c       3             LoadGlobal [3]
+011f       1             Literal(lit 3)
+0120       1             ObjectGet()
+0121       1             Literal(lit undefined)
+0122       2             Call(count 3, flag true)
+0124       3             Literal(24)
+0127       3             LoadGlobal [3]
+012a       1             Literal(lit 1)
+012b       1             LoadVar(index 0)
+012c       1             ObjectSet()
+012d       1             Pop(count 1)
+012e       3             LoadGlobal [1]
+0131       1             Literal(lit undefined)
+0132       3             LoadGlobal [3]
+0135       1             Literal(lit 1)
+0136       1             ObjectGet()
+0137       3             Literal(24)
+013a       2             Call(count 3, flag true)
+013c       1             Literal(lit 5)
+013d       3             LoadGlobal [3]
+0140       1             Literal(lit 4)
+0141       1             LoadVar(index 0)
+0142       1             ObjectSet()
+0143       1             Pop(count 1)
+0144       3             LoadGlobal [1]
+0147       1             Literal(lit undefined)
+0148       3             LoadGlobal [3]
+014b       3             Literal('length')
+014e       1             ObjectGet()
+014f       1             Literal(lit 5)
+0150       2             Call(count 3, flag true)
+0152       3             LoadGlobal [1]
+0155       1             Literal(lit undefined)
+0156       3             LoadGlobal [3]
+0159       1             Literal(lit 0)
+015a       1             ObjectGet()
+015b       1             Literal(lit 1)
+015c       2             Call(count 3, flag true)
+015e       3             LoadGlobal [1]
+0161       1             Literal(lit undefined)
+0162       3             LoadGlobal [3]
+0165       1             Literal(lit 3)
+0166       1             ObjectGet()
+0167       1             Literal(lit undefined)
+0168       2             Call(count 3, flag true)
+016a       3             LoadGlobal [1]
+016d       1             Literal(lit undefined)
+016e       3             LoadGlobal [3]
+0171       1             Literal(lit 4)
+0172       1             ObjectGet()
+0173       1             Literal(lit 5)
+0174       2             Call(count 3, flag true)
+0176       3             LoadGlobal [1]
+0179       1             Literal(lit undefined)
+017a       3             LoadGlobal [3]
+017d       1             Literal(lit 5)
+017e       1             ObjectGet()
+017f       1             Literal(lit undefined)
+0180       2             Call(count 3, flag true)
+0182       1             Literal(lit 4)
 0183       3             LoadGlobal [3]
-0186       1             Literal(lit 5)
-0187       1             ObjectGet()
-0188       1             Literal(lit undefined)
-0189       2             Call(count 3)
-018b       1             Pop(count 1)
-018c       1             Literal(lit 4)
-018d       3             LoadGlobal [3]
-0190       1             Literal(lit 3)
-0191       1             LoadVar(index 0)
-0192       1             ObjectSet()
-0193       1             Pop(count 1)
-0194       3             LoadGlobal [1]
-0197       1             Literal(lit undefined)
-0198       3             LoadGlobal [3]
-019b       1             Literal(lit 0)
-019c       1             ObjectGet()
-019d       1             Literal(lit 1)
-019e       2             Call(count 3)
-01a0       1             Pop(count 1)
-01a1       3             LoadGlobal [1]
-01a4       1             Literal(lit undefined)
-01a5       3             LoadGlobal [3]
-01a8       1             Literal(lit 3)
-01a9       1             ObjectGet()
-01aa       1             Literal(lit 4)
-01ab       2             Call(count 3)
-01ad       1             Pop(count 1)
-01ae       3             LoadGlobal [1]
-01b1       1             Literal(lit undefined)
-01b2       3             LoadGlobal [3]
-01b5       1             Literal(lit 4)
-01b6       1             ObjectGet()
-01b7       1             Literal(lit 5)
-01b8       2             Call(count 3)
-01ba       1             Pop(count 1)
-01bb       1             Literal(lit 3)
+0186       1             Literal(lit 3)
+0187       1             LoadVar(index 0)
+0188       1             ObjectSet()
+0189       1             Pop(count 1)
+018a       3             LoadGlobal [1]
+018d       1             Literal(lit undefined)
+018e       3             LoadGlobal [3]
+0191       1             Literal(lit 0)
+0192       1             ObjectGet()
+0193       1             Literal(lit 1)
+0194       2             Call(count 3, flag true)
+0196       3             LoadGlobal [1]
+0199       1             Literal(lit undefined)
+019a       3             LoadGlobal [3]
+019d       1             Literal(lit 3)
+019e       1             ObjectGet()
+019f       1             Literal(lit 4)
+01a0       2             Call(count 3, flag true)
+01a2       3             LoadGlobal [1]
+01a5       1             Literal(lit undefined)
+01a6       3             LoadGlobal [3]
+01a9       1             Literal(lit 4)
+01aa       1             ObjectGet()
+01ab       1             Literal(lit 5)
+01ac       2             Call(count 3, flag true)
+01ae       1             Literal(lit 3)
+01af       3             LoadGlobal [3]
+01b2       3             Literal('length')
+01b5       1             LoadVar(index 0)
+01b6       1             ObjectSet()
+01b7       1             Pop(count 1)
+01b8       3             LoadGlobal [1]
+01bb       1             Literal(lit undefined)
 01bc       3             LoadGlobal [3]
 01bf       3             Literal('length')
-01c2       1             LoadVar(index 0)
-01c3       1             ObjectSet()
-01c4       1             Pop(count 1)
-01c5       3             LoadGlobal [1]
-01c8       1             Literal(lit undefined)
-01c9       3             LoadGlobal [3]
-01cc       3             Literal('length')
-01cf       1             ObjectGet()
-01d0       1             Literal(lit 3)
-01d1       2             Call(count 3)
-01d3       1             Pop(count 1)
-01d4       3             LoadGlobal [1]
-01d7       1             Literal(lit undefined)
-01d8       3             LoadGlobal [3]
-01db       1             Literal(lit 0)
-01dc       1             ObjectGet()
-01dd       1             Literal(lit 1)
-01de       2             Call(count 3)
-01e0       1             Pop(count 1)
-01e1       3             LoadGlobal [1]
-01e4       1             Literal(lit undefined)
-01e5       3             LoadGlobal [3]
-01e8       1             Literal(lit 2)
-01e9       1             ObjectGet()
-01ea       1             Literal(lit 3)
-01eb       2             Call(count 3)
-01ed       1             Pop(count 1)
-01ee       3             LoadGlobal [1]
-01f1       1             Literal(lit undefined)
-01f2       3             LoadGlobal [3]
-01f5       1             Literal(lit 3)
-01f6       1             ObjectGet()
+01c2       1             ObjectGet()
+01c3       1             Literal(lit 3)
+01c4       2             Call(count 3, flag true)
+01c6       3             LoadGlobal [1]
+01c9       1             Literal(lit undefined)
+01ca       3             LoadGlobal [3]
+01cd       1             Literal(lit 0)
+01ce       1             ObjectGet()
+01cf       1             Literal(lit 1)
+01d0       2             Call(count 3, flag true)
+01d2       3             LoadGlobal [1]
+01d5       1             Literal(lit undefined)
+01d6       3             LoadGlobal [3]
+01d9       1             Literal(lit 2)
+01da       1             ObjectGet()
+01db       1             Literal(lit 3)
+01dc       2             Call(count 3, flag true)
+01de       3             LoadGlobal [1]
+01e1       1             Literal(lit undefined)
+01e2       3             LoadGlobal [3]
+01e5       1             Literal(lit 3)
+01e6       1             ObjectGet()
+01e7       1             Literal(lit undefined)
+01e8       2             Call(count 3, flag true)
+01ea       1             Literal(lit 5)
+01eb       3             LoadGlobal [3]
+01ee       3             Literal('length')
+01f1       1             LoadVar(index 0)
+01f2       1             ObjectSet()
+01f3       1             Pop(count 1)
+01f4       3             LoadGlobal [1]
 01f7       1             Literal(lit undefined)
-01f8       2             Call(count 3)
-01fa       1             Pop(count 1)
-01fb       1             Literal(lit 5)
-01fc       3             LoadGlobal [3]
-01ff       3             Literal('length')
-0202       1             LoadVar(index 0)
-0203       1             ObjectSet()
-0204       1             Pop(count 1)
-0205       3             LoadGlobal [1]
-0208       1             Literal(lit undefined)
-0209       3             LoadGlobal [3]
-020c       1             Literal(lit 0)
-020d       1             ObjectGet()
-020e       1             Literal(lit 1)
-020f       2             Call(count 3)
-0211       1             Pop(count 1)
-0212       3             LoadGlobal [1]
+01f8       3             LoadGlobal [3]
+01fb       1             Literal(lit 0)
+01fc       1             ObjectGet()
+01fd       1             Literal(lit 1)
+01fe       2             Call(count 3, flag true)
+0200       3             LoadGlobal [1]
+0203       1             Literal(lit undefined)
+0204       3             LoadGlobal [3]
+0207       1             Literal(lit 2)
+0208       1             ObjectGet()
+0209       1             Literal(lit 3)
+020a       2             Call(count 3, flag true)
+020c       3             LoadGlobal [1]
+020f       1             Literal(lit undefined)
+0210       3             LoadGlobal [3]
+0213       1             Literal(lit 3)
+0214       1             ObjectGet()
 0215       1             Literal(lit undefined)
-0216       3             LoadGlobal [3]
-0219       1             Literal(lit 2)
-021a       1             ObjectGet()
-021b       1             Literal(lit 3)
-021c       2             Call(count 3)
-021e       1             Pop(count 1)
-021f       3             LoadGlobal [1]
-0222       1             Literal(lit undefined)
-0223       3             LoadGlobal [3]
-0226       1             Literal(lit 3)
-0227       1             ObjectGet()
-0228       1             Literal(lit undefined)
-0229       2             Call(count 3)
-022b       1             Pop(count 1)
-022c       3             LoadGlobal [1]
-022f       1             Literal(lit undefined)
-0230       3             LoadGlobal [3]
-0233       1             Literal(lit 4)
-0234       1             ObjectGet()
-0235       1             Literal(lit undefined)
-0236       2             Call(count 3)
-0238       1             Pop(count 1)
-0239       3             Literal(8)
-023c       3             LoadGlobal [3]
-023f       3             Literal('length')
-0242       1             LoadVar(index 0)
-0243       1             ObjectSet()
-0244       1             Pop(count 1)
-0245       3             Literal(8)
-0248       3             LoadGlobal [3]
-024b       3             Literal(7)
-024e       1             LoadVar(index 0)
-024f       1             ObjectSet()
-0250       1             Pop(count 1)
-0251       3             LoadGlobal [1]
-0254       1             Literal(lit undefined)
-0255       3             LoadGlobal [3]
-0258       1             Literal(lit 0)
-0259       1             ObjectGet()
-025a       1             Literal(lit 1)
-025b       2             Call(count 3)
-025d       1             Pop(count 1)
-025e       3             LoadGlobal [1]
-0261       1             Literal(lit undefined)
-0262       3             LoadGlobal [3]
-0265       1             Literal(lit 2)
-0266       1             ObjectGet()
-0267       1             Literal(lit 3)
-0268       2             Call(count 3)
-026a       1             Pop(count 1)
-026b       3             LoadGlobal [1]
-026e       1             Literal(lit undefined)
-026f       3             LoadGlobal [3]
-0272       1             Literal(lit 4)
-0273       1             ObjectGet()
-0274       1             Literal(lit undefined)
-0275       2             Call(count 3)
-0277       1             Pop(count 1)
-0278       3             LoadGlobal [1]
+0216       2             Call(count 3, flag true)
+0218       3             LoadGlobal [1]
+021b       1             Literal(lit undefined)
+021c       3             LoadGlobal [3]
+021f       1             Literal(lit 4)
+0220       1             ObjectGet()
+0221       1             Literal(lit undefined)
+0222       2             Call(count 3, flag true)
+0224       3             Literal(8)
+0227       3             LoadGlobal [3]
+022a       3             Literal('length')
+022d       1             LoadVar(index 0)
+022e       1             ObjectSet()
+022f       1             Pop(count 1)
+0230       3             Literal(8)
+0233       3             LoadGlobal [3]
+0236       3             Literal(7)
+0239       1             LoadVar(index 0)
+023a       1             ObjectSet()
+023b       1             Pop(count 1)
+023c       3             LoadGlobal [1]
+023f       1             Literal(lit undefined)
+0240       3             LoadGlobal [3]
+0243       1             Literal(lit 0)
+0244       1             ObjectGet()
+0245       1             Literal(lit 1)
+0246       2             Call(count 3, flag true)
+0248       3             LoadGlobal [1]
+024b       1             Literal(lit undefined)
+024c       3             LoadGlobal [3]
+024f       1             Literal(lit 2)
+0250       1             ObjectGet()
+0251       1             Literal(lit 3)
+0252       2             Call(count 3, flag true)
+0254       3             LoadGlobal [1]
+0257       1             Literal(lit undefined)
+0258       3             LoadGlobal [3]
+025b       1             Literal(lit 4)
+025c       1             ObjectGet()
+025d       1             Literal(lit undefined)
+025e       2             Call(count 3, flag true)
+0260       3             LoadGlobal [1]
+0263       1             Literal(lit undefined)
+0264       3             LoadGlobal [3]
+0267       3             Literal(7)
+026a       1             ObjectGet()
+026b       3             Literal(8)
+026e       2             Call(count 3, flag true)
+0270       3             LoadGlobal [1]
+0273       1             Literal(lit undefined)
+0274       3             LoadGlobal [3]
+0277       3             Literal(8)
+027a       1             ObjectGet()
 027b       1             Literal(lit undefined)
-027c       3             LoadGlobal [3]
-027f       3             Literal(7)
-0282       1             ObjectGet()
-0283       3             Literal(8)
-0286       2             Call(count 3)
-0288       1             Pop(count 1)
-0289       3             LoadGlobal [1]
-028c       1             Literal(lit undefined)
-028d       3             LoadGlobal [3]
-0290       3             Literal(8)
-0293       1             ObjectGet()
-0294       1             Literal(lit undefined)
-0295       2             Call(count 3)
-0297       1             Pop(count 1)
-0298       3             Literal(10)
-029b       3             LoadGlobal [2]
-029e       1             Literal(lit 0)
-029f       1             LoadVar(index 0)
-02a0       1             ObjectSet()
-02a1       1             Pop(count 1)
-02a2       3             Literal(20)
-02a5       3             LoadGlobal [2]
-02a8       1             Literal(lit 1)
-02a9       1             LoadVar(index 0)
-02aa       1             ObjectSet()
-02ab       1             Pop(count 1)
-02ac       3             LoadGlobal [1]
-02af       1             Literal(lit undefined)
-02b0       3             LoadGlobal [2]
-02b3       3             Literal('length')
+027c       2             Call(count 3, flag true)
+027e       3             Literal(10)
+0281       3             LoadGlobal [2]
+0284       1             Literal(lit 0)
+0285       1             LoadVar(index 0)
+0286       1             ObjectSet()
+0287       1             Pop(count 1)
+0288       3             Literal(20)
+028b       3             LoadGlobal [2]
+028e       1             Literal(lit 1)
+028f       1             LoadVar(index 0)
+0290       1             ObjectSet()
+0291       1             Pop(count 1)
+0292       3             LoadGlobal [1]
+0295       1             Literal(lit undefined)
+0296       3             LoadGlobal [2]
+0299       3             Literal('length')
+029c       1             ObjectGet()
+029d       1             Literal(lit 2)
+029e       2             Call(count 3, flag true)
+02a0       3             LoadGlobal [1]
+02a3       1             Literal(lit undefined)
+02a4       3             LoadGlobal [2]
+02a7       1             Literal(lit 0)
+02a8       1             ObjectGet()
+02a9       3             Literal(10)
+02ac       2             Call(count 3, flag true)
+02ae       3             LoadGlobal [1]
+02b1       1             Literal(lit undefined)
+02b2       3             LoadGlobal [2]
+02b5       1             Literal(lit 1)
 02b6       1             ObjectGet()
-02b7       1             Literal(lit 2)
-02b8       2             Call(count 3)
-02ba       1             Pop(count 1)
-02bb       3             LoadGlobal [1]
-02be       1             Literal(lit undefined)
-02bf       3             LoadGlobal [2]
-02c2       1             Literal(lit 0)
-02c3       1             ObjectGet()
-02c4       3             Literal(10)
-02c7       2             Call(count 3)
-02c9       1             Pop(count 1)
-02ca       3             LoadGlobal [1]
-02cd       1             Literal(lit undefined)
-02ce       3             LoadGlobal [2]
-02d1       1             Literal(lit 1)
+02b7       3             Literal(20)
+02ba       2             Call(count 3, flag true)
+02bc       3             LoadGlobal [1]
+02bf       1             Literal(lit undefined)
+02c0       3             LoadGlobal [2]
+02c3       1             Literal(lit 2)
+02c4       1             ObjectGet()
+02c5       1             Literal(lit undefined)
+02c6       2             Call(count 3, flag true)
+02c8       3             LoadGlobal [1]
+02cb       1             Literal(lit undefined)
+02cc       3             LoadGlobal [4]
+02cf       3             Literal('length')
 02d2       1             ObjectGet()
-02d3       3             Literal(20)
-02d6       2             Call(count 3)
-02d8       1             Pop(count 1)
-02d9       3             LoadGlobal [1]
-02dc       1             Literal(lit undefined)
-02dd       3             LoadGlobal [2]
-02e0       1             Literal(lit 2)
-02e1       1             ObjectGet()
-02e2       1             Literal(lit undefined)
-02e3       2             Call(count 3)
-02e5       1             Pop(count 1)
-02e6       3             LoadGlobal [1]
-02e9       1             Literal(lit undefined)
-02ea       3             LoadGlobal [4]
-02ed       3             Literal('length')
-02f0       1             ObjectGet()
-02f1       1             Literal(lit 4)
-02f2       2             Call(count 3)
-02f4       1             Pop(count 1)
-02f5       3             LoadGlobal [1]
-02f8       1             Literal(lit undefined)
-02f9       3             LoadGlobal [4]
-02fc       1             Literal(lit 0)
-02fd       1             ObjectGet()
-02fe       1             Literal(lit 1)
-02ff       2             Call(count 3)
-0301       1             Pop(count 1)
-0302       3             LoadGlobal [1]
-0305       1             Literal(lit undefined)
-0306       3             LoadGlobal [4]
-0309       1             Literal(lit 1)
-030a       1             ObjectGet()
-030b       1             Literal(lit undefined)
-030c       2             Call(count 3)
-030e       1             Pop(count 1)
-030f       3             LoadGlobal [1]
-0312       1             Literal(lit undefined)
-0313       3             LoadGlobal [4]
-0316       1             Literal(lit 2)
-0317       1             ObjectGet()
-0318       1             Literal(lit 3)
-0319       2             Call(count 3)
-031b       1             Pop(count 1)
-031c       3             LoadGlobal [1]
-031f       1             Literal(lit undefined)
-0320       3             LoadGlobal [4]
-0323       1             Literal(lit 3)
-0324       1             ObjectGet()
-0325       1             Literal(lit undefined)
-0326       2             Call(count 3)
-0328       1             Pop(count 1)
-0329       3             LoadGlobal [0]
-032c       1             Literal(lit undefined)
-032d       3             LoadGlobal [2]
-0330       3             Literal('__proto__')
-0333       1             ObjectGet()
-0334       1             Literal(lit null)
-0335       1             BinOp(op '!==')
-0336       2             Call(count 2)
-0338       1             Pop(count 1)
-0339       3             LoadGlobal [0]
-033c       1             Literal(lit undefined)
-033d       3             LoadGlobal [2]
-0340       3             Literal('__proto__')
-0343       1             ObjectGet()
-0344       3             Literal(&0030)
-0347       1             ObjectGet()
-0348       1             Literal(lit undefined)
-0349       1             BinOp(op '!==')
-034a       2             Call(count 2)
-034c       1             Pop(count 1)
-034d       3             LoadGlobal [0]
-0350       1             Literal(lit undefined)
-0351       3             LoadGlobal [2]
-0354       3             Literal(&0030)
-0357       1             ObjectGet()
-0358       1             Literal(lit undefined)
-0359       1             BinOp(op '!==')
-035a       2             Call(count 2)
-035c       1             Pop(count 1)
-035d       3             LoadGlobal [2]
-0360       1             LoadVar(index 0)
-0361       3             Literal(&0030)
-0364       1             ObjectGet()
-0365       1             LoadVar(index 0)
-0366       3             Literal(30)
-0369       2             Call(count 2)
-036b       1             StoreVar(index 0)
-036c       1             Pop(count 1)
-036d       3             LoadGlobal [1]
-0370       1             Literal(lit undefined)
-0371       3             LoadGlobal [2]
-0374       3             Literal('length')
-0377       1             ObjectGet()
-0378       1             Literal(lit 3)
-0379       2             Call(count 3)
-037b       1             Pop(count 1)
-037c       3             LoadGlobal [1]
-037f       1             Literal(lit undefined)
-0380       3             LoadGlobal [2]
-0383       1             Literal(lit 2)
-0384       1             ObjectGet()
-0385       3             Literal(30)
-0388       2             Call(count 3)
-038a       1             Pop(count 1)
-038b       3             LoadGlobal [1]
-038e       1             Literal(lit undefined)
-038f       3             LoadGlobal [5]
-0392       3             Literal('length')
-0395       1             ObjectGet()
-0396       1             Literal(lit 2)
-0397       2             Call(count 3)
-0399       1             Pop(count 1)
-039a       3             LoadGlobal [1]
-039d       1             Literal(lit undefined)
-039e       3             LoadGlobal [5]
-03a1       1             Literal(lit 0)
-03a2       1             ObjectGet()
-03a3       3             Literal('length')
-03a6       1             ObjectGet()
-03a7       1             Literal(lit 3)
-03a8       2             Call(count 3)
-03aa       1             Pop(count 1)
-03ab       3             LoadGlobal [1]
-03ae       1             Literal(lit undefined)
-03af       3             LoadGlobal [5]
-03b2       1             Literal(lit 0)
-03b3       1             ObjectGet()
-03b4       1             Literal(lit 0)
-03b5       1             ObjectGet()
-03b6       3             Literal('length')
-03b9       1             ObjectGet()
-03ba       1             Literal(lit 2)
-03bb       2             Call(count 3)
-03bd       1             Pop(count 1)
-03be       3             LoadGlobal [1]
-03c1       1             Literal(lit undefined)
-03c2       3             LoadGlobal [5]
-03c5       1             Literal(lit 0)
-03c6       1             ObjectGet()
-03c7       1             Literal(lit 0)
-03c8       1             ObjectGet()
+02d3       1             Literal(lit 4)
+02d4       2             Call(count 3, flag true)
+02d6       3             LoadGlobal [1]
+02d9       1             Literal(lit undefined)
+02da       3             LoadGlobal [4]
+02dd       1             Literal(lit 0)
+02de       1             ObjectGet()
+02df       1             Literal(lit 1)
+02e0       2             Call(count 3, flag true)
+02e2       3             LoadGlobal [1]
+02e5       1             Literal(lit undefined)
+02e6       3             LoadGlobal [4]
+02e9       1             Literal(lit 1)
+02ea       1             ObjectGet()
+02eb       1             Literal(lit undefined)
+02ec       2             Call(count 3, flag true)
+02ee       3             LoadGlobal [1]
+02f1       1             Literal(lit undefined)
+02f2       3             LoadGlobal [4]
+02f5       1             Literal(lit 2)
+02f6       1             ObjectGet()
+02f7       1             Literal(lit 3)
+02f8       2             Call(count 3, flag true)
+02fa       3             LoadGlobal [1]
+02fd       1             Literal(lit undefined)
+02fe       3             LoadGlobal [4]
+0301       1             Literal(lit 3)
+0302       1             ObjectGet()
+0303       1             Literal(lit undefined)
+0304       2             Call(count 3, flag true)
+0306       3             LoadGlobal [0]
+0309       1             Literal(lit undefined)
+030a       3             LoadGlobal [2]
+030d       3             Literal('__proto__')
+0310       1             ObjectGet()
+0311       1             Literal(lit null)
+0312       1             BinOp(op '!==')
+0313       2             Call(count 2, flag true)
+0315       3             LoadGlobal [0]
+0318       1             Literal(lit undefined)
+0319       3             LoadGlobal [2]
+031c       3             Literal('__proto__')
+031f       1             ObjectGet()
+0320       3             Literal(&0038)
+0323       1             ObjectGet()
+0324       1             Literal(lit undefined)
+0325       1             BinOp(op '!==')
+0326       2             Call(count 2, flag true)
+0328       3             LoadGlobal [0]
+032b       1             Literal(lit undefined)
+032c       3             LoadGlobal [2]
+032f       3             Literal(&0038)
+0332       1             ObjectGet()
+0333       1             Literal(lit undefined)
+0334       1             BinOp(op '!==')
+0335       2             Call(count 2, flag true)
+0337       1             Literal(lit undefined)
+0338       3             LoadGlobal [2]
+033b       1             LoadVar(index 1)
+033c       3             Literal(&0038)
+033f       1             ObjectGet()
+0340       1             StoreVar(index 0)
+0341       3             Literal(30)
+0344       2             Call(count 2, flag true)
+0346       3             LoadGlobal [1]
+0349       1             Literal(lit undefined)
+034a       3             LoadGlobal [2]
+034d       3             Literal('length')
+0350       1             ObjectGet()
+0351       1             Literal(lit 3)
+0352       2             Call(count 3, flag true)
+0354       3             LoadGlobal [1]
+0357       1             Literal(lit undefined)
+0358       3             LoadGlobal [2]
+035b       1             Literal(lit 2)
+035c       1             ObjectGet()
+035d       3             Literal(30)
+0360       2             Call(count 3, flag true)
+0362       3             LoadGlobal [1]
+0365       1             Literal(lit undefined)
+0366       3             LoadGlobal [5]
+0369       3             Literal('length')
+036c       1             ObjectGet()
+036d       1             Literal(lit 2)
+036e       2             Call(count 3, flag true)
+0370       3             LoadGlobal [1]
+0373       1             Literal(lit undefined)
+0374       3             LoadGlobal [5]
+0377       1             Literal(lit 0)
+0378       1             ObjectGet()
+0379       3             Literal('length')
+037c       1             ObjectGet()
+037d       1             Literal(lit 3)
+037e       2             Call(count 3, flag true)
+0380       3             LoadGlobal [1]
+0383       1             Literal(lit undefined)
+0384       3             LoadGlobal [5]
+0387       1             Literal(lit 0)
+0388       1             ObjectGet()
+0389       1             Literal(lit 0)
+038a       1             ObjectGet()
+038b       3             Literal('length')
+038e       1             ObjectGet()
+038f       1             Literal(lit 2)
+0390       2             Call(count 3, flag true)
+0392       3             LoadGlobal [1]
+0395       1             Literal(lit undefined)
+0396       3             LoadGlobal [5]
+0399       1             Literal(lit 0)
+039a       1             ObjectGet()
+039b       1             Literal(lit 0)
+039c       1             ObjectGet()
+039d       1             Literal(lit 0)
+039e       1             ObjectGet()
+039f       1             Literal(lit 1)
+03a0       2             Call(count 3, flag true)
+03a2       3             LoadGlobal [1]
+03a5       1             Literal(lit undefined)
+03a6       3             LoadGlobal [5]
+03a9       1             Literal(lit 0)
+03aa       1             ObjectGet()
+03ab       1             Literal(lit 0)
+03ac       1             ObjectGet()
+03ad       1             Literal(lit 1)
+03ae       1             ObjectGet()
+03af       1             Literal(lit 2)
+03b0       2             Call(count 3, flag true)
+03b2       3             LoadGlobal [1]
+03b5       1             Literal(lit undefined)
+03b6       3             LoadGlobal [5]
+03b9       1             Literal(lit 0)
+03ba       1             ObjectGet()
+03bb       1             Literal(lit 1)
+03bc       1             ObjectGet()
+03bd       1             Literal(lit 0)
+03be       1             ObjectGet()
+03bf       1             Literal(lit 3)
+03c0       2             Call(count 3, flag true)
+03c2       3             LoadGlobal [1]
+03c5       1             Literal(lit undefined)
+03c6       3             LoadGlobal [5]
 03c9       1             Literal(lit 0)
 03ca       1             ObjectGet()
 03cb       1             Literal(lit 1)
-03cc       2             Call(count 3)
-03ce       1             Pop(count 1)
-03cf       3             LoadGlobal [1]
-03d2       1             Literal(lit undefined)
-03d3       3             LoadGlobal [5]
-03d6       1             Literal(lit 0)
-03d7       1             ObjectGet()
-03d8       1             Literal(lit 0)
-03d9       1             ObjectGet()
-03da       1             Literal(lit 1)
-03db       1             ObjectGet()
-03dc       1             Literal(lit 2)
-03dd       2             Call(count 3)
-03df       1             Pop(count 1)
+03cc       1             ObjectGet()
+03cd       1             Literal(lit 1)
+03ce       1             ObjectGet()
+03cf       1             Literal(lit 4)
+03d0       2             Call(count 3, flag true)
+03d2       3             LoadGlobal [1]
+03d5       1             Literal(lit undefined)
+03d6       3             LoadGlobal [5]
+03d9       1             Literal(lit 0)
+03da       1             ObjectGet()
+03db       1             Literal(lit 2)
+03dc       1             ObjectGet()
+03dd       1             Literal(lit 5)
+03de       2             Call(count 3, flag true)
 03e0       3             LoadGlobal [1]
 03e3       1             Literal(lit undefined)
 03e4       3             LoadGlobal [5]
-03e7       1             Literal(lit 0)
+03e7       1             Literal(lit 1)
 03e8       1             ObjectGet()
-03e9       1             Literal(lit 1)
-03ea       1             ObjectGet()
-03eb       1             Literal(lit 0)
-03ec       1             ObjectGet()
-03ed       1             Literal(lit 3)
-03ee       2             Call(count 3)
-03f0       1             Pop(count 1)
-03f1       3             LoadGlobal [1]
+03e9       3             Literal(6)
+03ec       2             Call(count 3, flag true)
+03ee       3             LoadGlobal [6]
+03f1       1             Literal(lit undefined)
+03f2       2             Call(count 1, flag true)
 03f4       1             Literal(lit undefined)
-03f5       3             LoadGlobal [5]
-03f8       1             Literal(lit 0)
-03f9       1             ObjectGet()
-03fa       1             Literal(lit 1)
-03fb       1             ObjectGet()
-03fc       1             Literal(lit 1)
-03fd       1             ObjectGet()
-03fe       1             Literal(lit 4)
-03ff       2             Call(count 3)
-0401       1             Pop(count 1)
-0402       3             LoadGlobal [1]
-0405       1             Literal(lit undefined)
-0406       3             LoadGlobal [5]
-0409       1             Literal(lit 0)
-040a       1             ObjectGet()
-040b       1             Literal(lit 2)
-040c       1             ObjectGet()
-040d       1             Literal(lit 5)
-040e       2             Call(count 3)
-0410       1             Pop(count 1)
-0411       3             LoadGlobal [1]
-0414       1             Literal(lit undefined)
-0415       3             LoadGlobal [5]
-0418       1             Literal(lit 1)
-0419       1             ObjectGet()
-041a       3             Literal(6)
-041d       2             Call(count 3)
-041f       1             Pop(count 1)
-0420       3             LoadGlobal [6]
-0423       1             Literal(lit undefined)
-0424       2             Call(count 1)
-0426       1             Pop(count 1)
-0427       1             Literal(lit undefined)
-0428       1             Return()
-0429       1 <unused>
-042a   18  - # Globals
-042a       2     [0]: &0038
-042c       2     [1]: &003c
-042e       2     [2]: &044e
-0430       2     [3]: &0454
-0432       2     [4]: &0462
-0434       2     [5]: &0472
-0436       2     [6]: &0064
-0438       2     [7]: &00c8
-043a       2     [8]: deleted
-043c       2     Handle: &0444
-043e       2     Handle: deleted
-0440       2     Handle: undefined
-0442   60  - # GC allocations
-0442       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0444    8  -     # TsPropertyList
-0444       2         dpNext: null
-0446       2         dpProto: null
-0448       2         key: &0030
-044a       2         value: &0040
-044c       2     Header [Size: 4, Type: TC_REF_ARRAY]
-044e    4  -     # TsArray
-044e       2         dpData: null
-0450       2         viLength: 0
-0452       2     Header [Size: 4, Type: TC_REF_ARRAY]
-0454    4  -     # TsArray
-0454       2         dpData: &045a
-0456       2         viLength: 3
-0458       2     Header [Size: 6, Type: TC_REF_FIXED_LENGTH_ARRAY]
-045a    6  -     # TsFixedLengthArray
-045a       2         [0]: 1
-045c       2         [1]: 2
-045e       2         [2]: 3
-0460       2     Header [Size: 4, Type: TC_REF_ARRAY]
-0462    4  -     # TsArray
-0462       2         dpData: &0468
-0464       2         viLength: 4
-0466       2     Header [Size: 8, Type: TC_REF_FIXED_LENGTH_ARRAY]
-0468    8  -     # TsFixedLengthArray
-0468       2         [0]: 1
-046a       2         [1]: deleted
-046c       2         [2]: 3
-046e       2         [3]: deleted
-0470       2     Header [Size: 4, Type: TC_REF_ARRAY]
-0472    4  -     # TsArray
-0472       2         dpData: &0478
-0474       2         viLength: 2
-0476       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
-0478    4  -     # TsFixedLengthArray
-0478       2         [0]: &047e
-047a       2         [1]: 6
-047c       2     Header [Size: 4, Type: TC_REF_ARRAY]
-047e    4  -     # TsArray
-047e       2         dpData: &0484
-0480       2         viLength: 3
-0482       2     Header [Size: 6, Type: TC_REF_FIXED_LENGTH_ARRAY]
-0484    6  -     # TsFixedLengthArray
-0484       2         [0]: &048c
-0486       2         [1]: &0498
-0488       2         [2]: 5
-048a       2     Header [Size: 4, Type: TC_REF_ARRAY]
-048c    4  -     # TsArray
-048c       2         dpData: &0492
-048e       2         viLength: 2
-0490       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
-0492    4  -     # TsFixedLengthArray
-0492       2         [0]: 1
-0494       2         [1]: 2
-0496       2     Header [Size: 4, Type: TC_REF_ARRAY]
-0498    4  -     # TsArray
-0498       2         dpData: &049e
-049a       2         viLength: 2
-049c       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
-049e    4  -     # TsFixedLengthArray
-049e       2         [0]: 3
-04a0       2         [1]: 4
+03f5       1             Return()
+03f6   18  - # Globals
+03f6       2     [0]: &0040
+03f8       2     [1]: &0044
+03fa       2     [2]: &041a
+03fc       2     [3]: &0420
+03fe       2     [4]: &042e
+0400       2     [5]: &043e
+0402       2     [6]: &0068
+0404       2     [7]: &00cc
+0406       2     [8]: deleted
+0408       2     Handle: &0410
+040a       2     Handle: deleted
+040c       2     Handle: undefined
+040e   60  - # GC allocations
+040e       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+0410    8  -     # TsPropertyList
+0410       2         dpNext: null
+0412       2         dpProto: null
+0414       2         key: &0038
+0416       2         value: &0048
+0418       2     Header [Size: 4, Type: TC_REF_ARRAY]
+041a    4  -     # TsArray
+041a       2         dpData: null
+041c       2         viLength: 0
+041e       2     Header [Size: 4, Type: TC_REF_ARRAY]
+0420    4  -     # TsArray
+0420       2         dpData: &0426
+0422       2         viLength: 3
+0424       2     Header [Size: 6, Type: TC_REF_FIXED_LENGTH_ARRAY]
+0426    6  -     # TsFixedLengthArray
+0426       2         [0]: 1
+0428       2         [1]: 2
+042a       2         [2]: 3
+042c       2     Header [Size: 4, Type: TC_REF_ARRAY]
+042e    4  -     # TsArray
+042e       2         dpData: &0434
+0430       2         viLength: 4
+0432       2     Header [Size: 8, Type: TC_REF_FIXED_LENGTH_ARRAY]
+0434    8  -     # TsFixedLengthArray
+0434       2         [0]: 1
+0436       2         [1]: deleted
+0438       2         [2]: 3
+043a       2         [3]: deleted
+043c       2     Header [Size: 4, Type: TC_REF_ARRAY]
+043e    4  -     # TsArray
+043e       2         dpData: &0444
+0440       2         viLength: 2
+0442       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
+0444    4  -     # TsFixedLengthArray
+0444       2         [0]: &044a
+0446       2         [1]: 6
+0448       2     Header [Size: 4, Type: TC_REF_ARRAY]
+044a    4  -     # TsArray
+044a       2         dpData: &0450
+044c       2         viLength: 3
+044e       2     Header [Size: 6, Type: TC_REF_FIXED_LENGTH_ARRAY]
+0450    6  -     # TsFixedLengthArray
+0450       2         [0]: &0458
+0452       2         [1]: &0464
+0454       2         [2]: 5
+0456       2     Header [Size: 4, Type: TC_REF_ARRAY]
+0458    4  -     # TsArray
+0458       2         dpData: &045e
+045a       2         viLength: 2
+045c       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
+045e    4  -     # TsFixedLengthArray
+045e       2         [0]: 1
+0460       2         [1]: 2
+0462       2     Header [Size: 4, Type: TC_REF_ARRAY]
+0464    4  -     # TsArray
+0464       2         dpData: &046a
+0466       2         viLength: 2
+0468       2     Header [Size: 4, Type: TC_REF_FIXED_LENGTH_ARRAY]
+046a    4  -     # TsFixedLengthArray
+046a       2         [0]: 3
+046c       2         [1]: 4

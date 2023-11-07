@@ -22,5 +22,8 @@ dbg*
 .vs/VSWorkspaceState.json
 temp-proj
 .thoughts
+/test/getting-started/code/script.mvm-bc
+/.vscode/bookmarks.json
+*.source-map
 # https://github.com/coder-mike/microvium-playground
 microvium-playground

@@ -173,15 +173,16 @@ type Segment = (b: VisualBuffer) => CleanupFunction | void;
 type CleanupFunction = (checkFinalized: boolean) => void;
 const noCleanupRequired: CleanupFunction = () => {};
 
-//let futureIdCounter = 1;
+let futureIdCounter = 1;
 //const logFileName = `future.${Date.now()}.log`;
 
 // Value to be calculated later
 export class Future<T = number> extends EventEmitter {
+  public lastValue: T | undefined;
   private _value: T;
   private _resolved: boolean = false;
   private _assigned = false;
-  //private _id = futureIdCounter++;
+  private _id = futureIdCounter++;
   private _assignable: boolean;
 
   constructor(assignable: boolean = true) {
@@ -195,9 +196,9 @@ export class Future<T = number> extends EventEmitter {
   //   fs.appendFileSync(logFileName, `Future ${this._id}: ${message}\n`);
   // }
 
-  // toString() {
-  //   return 'Future ' + this._id;
-  // }
+  toString() {
+    return 'Future ' + this._id;
+  }
 
   assign(value: FutureLike<T>) {
     // this.log('Assign: ' + value);
@@ -338,6 +339,7 @@ export class Future<T = number> extends EventEmitter {
       return invalidOperation('Cannot resolve a future multiple times in the same context')
     }
     this._value = value;
+    this.lastValue = value;
     this._resolved = true;
     this.emit('resolve', value);
   }

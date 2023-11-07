@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 void codeCoverage(int id, int mode, int indexInTable, int tableSize, int lineNumber);
+void fatalError(void* vm, int error);
 
 #ifdef __cplusplus
 } // extern "C"
@@ -28,3 +29,5 @@ void codeCoverage(int id, int mode, int indexInTable, int tableSize, int lineNum
 #define CODE_COVERAGE_UNIMPLEMENTED(id) codeCoverage(id, COVERAGE_MODE_UNIMPLEMENTED, 0, 0, __LINE__)
 #define TABLE_COVERAGE(indexInTable, tableSize, id) codeCoverage(id, COVERAGE_MODE_TABLE, indexInTable, tableSize, __LINE__)
 
+#undef MVM_FATAL_ERROR
+#define MVM_FATAL_ERROR(vm, e) fatalError(vm, e)

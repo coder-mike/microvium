@@ -293,9 +293,9 @@ fixes and improvement from the original github or npm repository.
  * - 2: Full Unicode (unicode 0 to 0x10FFFF)
  *
  * Microvium strings are always stored internally as UTF-8, but JavaScript
- * operation treat strings as UTF-16. For example, the length of a string is the
- * number of UTF-16 code units. This port option controls how the VM translates
- * between the internal representation and the JavaScript spec.
+ * operations treat strings as UTF-16. For example, the length of a string is
+ * the number of UTF-16 code units. This port option controls how the VM
+ * translates between the internal representation and the JavaScript spec.
  *
  * The ASCII option is the most efficient, since it doesn't require any
  * translation, since ASCII characters have the same representation in UTF-16

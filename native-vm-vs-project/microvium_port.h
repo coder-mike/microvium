@@ -1,5 +1,5 @@
 
-#include "../native-vm/microvium_port_test.h"
+#include "microvium_port_test.h"
 #include "allocator.h"
 
 #ifdef __cplusplus
@@ -17,6 +17,7 @@ void fatalError(void* vm, int e);
 #undef MVM_INCLUDE_DEBUG_CAPABILITY
 #define MVM_INCLUDE_DEBUG_CAPABILITY 1
 
+// Note: don't use MVM_VERY_EXPENSIVE_MEMORY_CHECKS on the "gc" test case.
 #undef MVM_VERY_EXPENSIVE_MEMORY_CHECKS
 #define MVM_VERY_EXPENSIVE_MEMORY_CHECKS 1
 
@@ -34,6 +35,8 @@ void fatalError(void* vm, int e);
 
 #undef MVM_FREE
 #define MVM_FREE allocator_free
+
+#define MVM_DEBUG_UTILS 1
 
 #undef MVM_ALL_ERRORS_FATAL
 #define MVM_ALL_ERRORS_FATAL 1

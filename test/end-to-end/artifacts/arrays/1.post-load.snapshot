@@ -1,9 +1,9 @@
 export 0 = &function run;
 
-slot a = &allocation 8;
-slot b = &allocation 9;
-slot c = &allocation 10;
-slot d = &allocation 11;
+slot a = &allocation 12;
+slot b = &allocation 13;
+slot c = &allocation 14;
+slot d = &allocation 15;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
 slot init = &function init;
@@ -113,12 +113,10 @@ function run() {
     // arrays.
     LoadGlobal(name 'testArrays');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'testArrays');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -131,56 +129,49 @@ function testArrays() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 0);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'a');
     Literal(lit 0);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 0);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 1);
     ObjectGet();
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 2);
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 3);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Mutation
     Literal(lit 24);
     LoadGlobal(name 'b');
@@ -194,8 +185,7 @@ function testArrays() {
     Literal(lit 1);
     ObjectGet();
     Literal(lit 24);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Extend the array
     Literal(lit 5);
     LoadGlobal(name 'b');
@@ -209,40 +199,35 @@ function testArrays() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 0);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 3);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 4);
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 5);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Write to a hole
     Literal(lit 4);
     LoadGlobal(name 'b');
@@ -256,24 +241,21 @@ function testArrays() {
     Literal(lit 0);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 3);
     ObjectGet();
     Literal(lit 4);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 4);
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Shorten the array
     Literal(lit 3);
     LoadGlobal(name 'b');
@@ -287,32 +269,28 @@ function testArrays() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 0);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 2);
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 3);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Make the array longer by setting the length (this is likely not to increase
     // the _capacity_ of the array, since the capacity is probably still large
     // from earlier, so this tests that making the array shorter and then longer
@@ -329,32 +307,28 @@ function testArrays() {
     Literal(lit 0);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 2);
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 3);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 4);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Make the array longer by setting the length, but to a value that exceeds the original capacity
     Literal(lit 8);
     LoadGlobal(name 'b');
@@ -374,40 +348,35 @@ function testArrays() {
     Literal(lit 0);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 2);
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 4);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 7);
     ObjectGet();
     Literal(lit 8);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'b');
     Literal(lit 8);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Grow an empty array (`a` is an empty array so far)
     Literal(lit 10);
     LoadGlobal(name 'a');
@@ -427,32 +396,28 @@ function testArrays() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'a');
     Literal(lit 0);
     ObjectGet();
     Literal(lit 10);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'a');
     Literal(lit 1);
     ObjectGet();
     Literal(lit 20);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'a');
     Literal(lit 2);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Test elision
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -460,8 +425,7 @@ function testArrays() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 4);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Length is 4, even though it ends in a hole
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -469,32 +433,28 @@ function testArrays() {
     Literal(lit 0);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'c');
     Literal(lit 1);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'c');
     Literal(lit 2);
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'c');
     Literal(lit 3);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Test Array.push
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
@@ -503,8 +463,7 @@ function testArrays() {
     ObjectGet();
     Literal(lit null);
     BinOp(op '!==');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'a');
@@ -514,8 +473,7 @@ function testArrays() {
     ObjectGet();
     Literal(lit undefined);
     BinOp(op '!==');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadGlobal(name 'a');
@@ -523,33 +481,29 @@ function testArrays() {
     ObjectGet();
     Literal(lit undefined);
     BinOp(op '!==');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
+    Literal(lit undefined);
     LoadGlobal(name 'a');
-    LoadVar(index 0);
+    LoadVar(index 1);
     Literal(lit 'push');
     ObjectGet();
-    LoadVar(index 0);
-    Literal(lit 30);
-    Call(count 2);
     StoreVar(index 0);
-    Pop(count 1);
+    Literal(lit 30);
+    Call(count 2, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'a');
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'a');
     Literal(lit 2);
     ObjectGet();
     Literal(lit 30);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // See that the nested arrays are correct
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -557,8 +511,7 @@ function testArrays() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'd');
@@ -567,8 +520,7 @@ function testArrays() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'd');
@@ -579,8 +531,7 @@ function testArrays() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'd');
@@ -591,8 +542,7 @@ function testArrays() {
     Literal(lit 0);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'd');
@@ -603,8 +553,7 @@ function testArrays() {
     Literal(lit 1);
     ObjectGet();
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'd');
@@ -615,8 +564,7 @@ function testArrays() {
     Literal(lit 0);
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'd');
@@ -627,8 +575,7 @@ function testArrays() {
     Literal(lit 1);
     ObjectGet();
     Literal(lit 4);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'd');
@@ -637,63 +584,60 @@ function testArrays() {
     Literal(lit 2);
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'd');
     Literal(lit 1);
     ObjectGet();
     Literal(lit 6);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Reset the arrays to their initial state, because this test runs multiple
     // times (before and after the snapshot)
     LoadGlobal(name 'init');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     Literal(lit undefined);
     Return();
 }
 
-allocation 10 = [
-  1,
-  ,
-  3,
-  ,
-];
-
-allocation 11 = [
-  &allocation 12,
-  6,
-];
-
 allocation 12 = [
-  &allocation 13,
-  &allocation 14,
-  5,
 ];
 
 allocation 13 = [
   1,
   2,
+  3,
 ];
 
 allocation 14 = [
+  1,
+  ,
+  3,
+  ,
+];
+
+allocation 15 = [
+  &allocation 16,
+  6,
+];
+
+allocation 16 = [
+  &allocation 17,
+  &allocation 18,
+  5,
+];
+
+allocation 17 = [
+  1,
+  2,
+];
+
+allocation 18 = [
   3,
   4,
 ];
 
-allocation 5 = {
+allocation 7 = {
   push: &function Array_push,
 };
-
-allocation 8 = [
-];
-
-allocation 9 = [
-  1,
-  2,
-  3,
-];

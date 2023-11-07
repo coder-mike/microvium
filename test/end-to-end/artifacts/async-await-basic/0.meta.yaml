@@ -1,0 +1,9 @@
+runExportedFunction: 0
+description: Tests async-await functionality
+assertionCount: 39
+isAsync: true
+testOnly: false
+expectedPrintout: |
+  Before async function
+  Inside async function
+  After async synchronous return

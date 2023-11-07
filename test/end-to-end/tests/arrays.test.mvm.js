@@ -1,5 +1,8 @@
 /*---
+description: >
+  Testing basic array operations
 runExportedFunction: 0
+assertionCount: 104
 ---*/
 
 let a;

@@ -5,5 +5,6 @@
     "spec"
   ],
   "ui": "tdd",
-  "spec": "dist/test/**/*.test.js"
+  "spec": "dist/test/**/*.test.js",
+  "timeout": "30000"
 }

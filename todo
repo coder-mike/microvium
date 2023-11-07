@@ -9,7 +9,7 @@
   - I'm not sure why I can't do `import fs from 'fs'`
   - JS access to Microvium C code and port file
   - `vmImport` should have an argument to provide a separate compile-time implementation.
-  - `Microvium.onRestore` event
+  - `Microvium.onRestore` event (or `Promise`, like `await Microvium.restored`)
   - `process.env` and `process.argv`
   - Fix numeric object properties like `obj['123']`
   - Promises
@@ -26,6 +26,8 @@
   - Dynamic stack size (expand as needed), so I don't need to keep quoting the stack size as part of the size.
   - Job loop?
   - Add a hash ID to the bytecode file and make a way to create a crash dump to diagnose errors
+
+  - Try out computed jump for the main loop and see if it improves performance and/or code size. See [computed-jump-loop.md](doc/ideas/computed-jump-loop.md).
 
   - Optional chaining (`x?.y`, `x?[y]`, `new x?.()`) -- will only be a compiler front-end change.
   - Nullish coalescing `??` (probably by transpiler plugin https://babeljs.io/docs/en/babel-plugin-proposal-nullish-coalescing-operator)

@@ -1,7 +1,7 @@
 /*
 IL is a data format for virtual machine state.
 */
-import { hardAssert, notUndefined } from "./utils";
+import { hardAssert, notUndefined, unexpected } from "./utils";
 import { isUInt16, UInt8 } from './runtime-types';
 import { ModuleRelativeSource } from "./virtual-machine-types";
 import { opcodes, Opcode } from "./il-opcodes";
@@ -71,13 +71,19 @@ export interface OperationBase {
 
   nameHint?: string;
 
-  sourceLoc?: { filename: string, line: number; column: number; };
+  sourceLoc?: OperationSourceLoc;
   comments?: string[];
   /*
    * Optional annotations used by the bytecode emitter to choose specific
    * bytecode instructions
    */
   staticInfo?: any;
+}
+
+export interface OperationSourceLoc {
+  filename: string;
+  line: number; // Start at 1
+  column: number; // Start at 0, I think
 }
 
 export interface CallOperation extends OperationBase {
@@ -110,11 +116,18 @@ export interface OtherOperation extends OperationBase {
   opcode:
     | 'ArrayGet'
     | 'ArraySet'
+    | 'AsyncComplete'
+    | 'AsyncResume'
+    | 'AsyncReturn'
+    | 'AsyncStart'
+    | 'Await'
+    | 'AwaitCall'
     | 'BinOp'
     | 'Branch'
     | 'ClassCreate'
     | 'ClosureNew'
     | 'EndTry'
+    | 'EnqueueJob'
     | 'Jump'
     | 'Literal'
     | 'LoadArg'
@@ -133,6 +146,7 @@ export interface OtherOperation extends OperationBase {
     | 'ScopeDiscard'
     | 'ScopeNew'
     | 'ScopePop'
+    | 'ScopeSave'
     | 'ScopePush'
     | 'StartTry'
     | 'StoreGlobal'
@@ -177,6 +191,7 @@ export type Operand =
   | LiteralOperand
   | IndexOperand
   | OpOperand
+  | FlagOperand
 
 export type OperandType = Operand['type'];
 
@@ -205,6 +220,11 @@ export interface IndexOperand {
   index: number;
 }
 
+export interface FlagOperand {
+  type: 'FlagOperand';
+  flag: boolean;
+}
+
 export interface OpOperand {
   type: 'OpOperand';
   subOperation: string;
@@ -229,14 +249,22 @@ export type Value =
   | EphemeralObjectValue
   | ClassValue
   | ProgramAddressValue
-  | StackDepthValue
   | ClassValue
+  | NoOpFunction
+  | ResumePoint
 
 export type CallableValue =
   | FunctionValue
   | HostFunctionValue
   | EphemeralFunctionValue
+  | NoOpFunction
   | ReferenceValue<ClosureAllocation>
+  | ResumePoint
+
+// Represents a function that does nothing except return `undefined`
+export interface NoOpFunction {
+  type: 'NoOpFunction';
+}
 
 export interface ClassValue {
   type: 'ClassValue';
@@ -252,6 +280,12 @@ export interface ReferenceValue<T extends Allocation = Allocation> {
 export interface FunctionValue {
   type: 'FunctionValue';
   value: FunctionID;
+}
+
+// Like FunctionValue but doesn't need to point to only the start of a function
+export interface ResumePoint {
+  type: 'ResumePoint';
+  address: ProgramAddressValue;
 }
 
 export interface HostFunctionValue {
@@ -302,9 +336,7 @@ export interface ProgramAddressValue {
 }
 
 /**
- * The IL equivalent of a pointer to a position on the stack. An the native VM,
- * this is just an integer number of slots measured from the bottom of the
- * stack.
+ * The IL equivalent of a pointer to a position on the stack.
  */
 export interface StackDepthValue {
   type: 'StackDepthValue';
@@ -368,6 +400,10 @@ export function isLiteralOperand(value: Operand): value is LiteralOperand {
 export const deletedValue: DeletedValue = Object.freeze({
   type: 'DeletedValue',
   value: undefined
+});
+
+export const noOpFunction: NoOpFunction = Object.freeze({
+  type: 'NoOpFunction'
 });
 
 export const undefinedValue: UndefinedValue = Object.freeze({
@@ -456,6 +492,7 @@ export interface ObjectAllocation extends AllocationBase {
   prototype: Value; // NullValue or a a reference to another object
   // Set to true if the set of property names will never change
   keysAreFixed?: boolean;
+  internalSlots: Value[]; // Note: first two internal slots are always missing, to match runtime engine behavior where the first 2 slots represent dpNext and dpProto
   properties: ObjectProperties;
 }
 
@@ -492,9 +529,21 @@ export function calcStaticStackChangeOfOp(operation: Operation) {
   // Control flow operations
   switch (operation.opcode) {
     case 'Return': return -1; // Return pops the result off the stack
+    case 'AsyncReturn': return -1; // Return pops the result off the stack
     case 'Branch': return -1; // Pops predicate off the stack
     case 'Jump': return 0;
-    case 'Call': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
+    case 'Call': {
+      const forCall = calcDynamicStackChangeOfOp(operation) ?? unexpected(); // Arguments popped from stack
+      const isVoidCall = operation.operands[1] as FlagOperand;
+      hardAssert(isVoidCall.type === 'FlagOperand');
+      const forReturn = isVoidCall.flag ? 0 : 1; // Return value pushed to the stack
+      return forCall + forReturn;
+    }
+    case 'AwaitCall': {
+      const forCall = calcDynamicStackChangeOfOp(operation) ?? unexpected(); // Arguments popped from stack
+      const forReturn = 1;
+      return forCall + forReturn;
+    }
     case 'New': return notUndefined(calcDynamicStackChangeOfOp(operation)) + 1; // Includes the pushed return value
     default: return calcDynamicStackChangeOfOp(operation);
   }

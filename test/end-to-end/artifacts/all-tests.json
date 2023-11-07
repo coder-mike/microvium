@@ -65,5 +65,21 @@
     "modules import-for-side-effects",
     "native-api invoke-gc-from-closure",
     "end-to-end z-issue-48",
-    "native-api mvm_stopAfterNInstructions"
+    "end-to-end no-op-function",
+    "async-await void-call",
+    "end-to-end async-await-basic",
+    "async-await await-call",
+    "async-await async-result",
+    "async-await immediate-callback",
+    "async-await fail-callback",
+    "end-to-end async-await-promise",
+    "async-await host-async-returning-promise",
+    "async-await resolving-host-promise",
+    "async-await top-level-await-not-supported",
+    "async-await export-async-function",
+    "async-await await-over-snapshot",
+    "async-await await-over-snapshot-throw",
+    "async-await host-async-no-await",
+    "native-api mvm_stopAfterNInstructions",
+    "end-to-end globalThis"
 ]

@@ -71,9 +71,8 @@ export interface Microvium extends MicroviumNativeSubset {
   readonly globalThis: any;
 
   createSnapshot(opts?: SnapshottingOptions): Snapshot;
-  importHostFunction(hostFunctionID: IL.HostFunctionID): Function;
   vmExport(exportID: ExportID, value: any): void;
-  vmImport(importID: ExportID, compileTimeImplementation: any): void;
+  vmImport(importID: ExportID, defaultImplementation?: any): void;
   newObject(): any;
   newArray(): any;
   createSnapshotIL(): SnapshotIL;
@@ -145,6 +144,12 @@ export function addDefaultGlobals(vm: Microvium) {
   vmGlobal.JSON = vm.newObject();
   vmGlobal.JSON.parse = jsonParse(vm); // Only supported at build time
   vmGlobal.JSON.stringify = JSON.stringify; // Only supported at build time
+
+  // In order to actually use this to add new globals, you'd have to have a
+  // bootstrap module that assigns the globals before importing any other
+  // modules, since Microvium requires the globals to be present before
+  // any dependent modules are loaded.
+  vmGlobal.globalThis = vmGlobal;
 }
 
 export interface SnapshottingOptions {
@@ -153,6 +158,7 @@ export interface SnapshottingOptions {
   // the snapshotting will also output an IL file
   outputSnapshotIL?: boolean;
   snapshotILFilename?: string;
+  generateSourceMap?: boolean;
 }
 
 export interface ModuleSource {

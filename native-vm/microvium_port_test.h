@@ -19,3 +19,17 @@
 
 #undef MVM_ALL_ERRORS_FATAL
 #define MVM_ALL_ERRORS_FATAL 1
+
+#define MVM_DEBUG_UTILS 1
+
+// When running with a JS host, everything passed across the boundary is held at
+// least temporarily by the C++ `Value` class which has a handle to the value.
+// The handle will only be freed when the `Value` is released by the host, which
+// is subject to the garbage collection cycles of the host. For this reason, the
+// end-to-end tests running in node.js may consume a bit more memory while these
+// references hang around.
+#undef MVM_MAX_HEAP_SIZE
+#define MVM_MAX_HEAP_SIZE 2048
+
+#undef MVM_SAFE_MODE
+#define MVM_SAFE_MODE 1

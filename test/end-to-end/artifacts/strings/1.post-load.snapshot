@@ -3,20 +3,6 @@ export 0 = &function run;
 slot asciiTests = &function asciiTests;
 slot ['global:assertEqual'] = host function 3;
 
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
-
 function asciiTests() {
   entry:
     // ROM string
@@ -26,32 +12,28 @@ function asciiTests() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'abc');
     Literal(lit 0);
     ObjectGet();
     Literal(lit 'a');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'abc');
     Literal(lit 2);
     ObjectGet();
     Literal(lit 'c');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'abc');
     Literal(lit 3);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // RAM string (constructed)
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -61,8 +43,7 @@ function asciiTests() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'a');
@@ -71,8 +52,7 @@ function asciiTests() {
     Literal(lit 0);
     ObjectGet();
     Literal(lit 'a');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'a');
@@ -81,8 +61,7 @@ function asciiTests() {
     Literal(lit 2);
     ObjectGet();
     Literal(lit 'c');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'a');
@@ -91,8 +70,7 @@ function asciiTests() {
     Literal(lit 3);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Special strings
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -100,64 +78,56 @@ function asciiTests() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 6);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit '__proto__');
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 9);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'length');
     Literal(lit 0);
     ObjectGet();
     Literal(lit 'l');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'length');
     Literal(lit 5);
     ObjectGet();
     Literal(lit 'h');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'length');
     Literal(lit 6);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit '__proto__');
     Literal(lit 0);
     ObjectGet();
     Literal(lit '_');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit '__proto__');
     Literal(lit 8);
     ObjectGet();
     Literal(lit '_');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit '__proto__');
     Literal(lit 9);
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -168,16 +138,14 @@ function run() {
     Literal(lit undefined);
     Literal(lit 'abc');
     Literal(lit 'abc');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit 'cd');
     BinOp(op '+');
     Literal(lit 'ab_cd');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
@@ -186,8 +154,7 @@ function run() {
     Literal(lit 'ef');
     BinOp(op '+');
     Literal(lit 'ab_cdef');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Int14
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -195,8 +162,7 @@ function run() {
     Literal(lit 5);
     BinOp(op '+');
     Literal(lit 'ab_5');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Negative
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -204,8 +170,7 @@ function run() {
     Literal(lit -5);
     BinOp(op '+');
     Literal(lit 'ab_-5');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Int32
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -213,24 +178,21 @@ function run() {
     Literal(lit 500000);
     BinOp(op '+');
     Literal(lit 'ab_500000');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit -500000);
     BinOp(op '+');
     Literal(lit 'ab_-500000');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit -2147483648);
     BinOp(op '+');
     Literal(lit 'ab_-2147483648');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Some general constants
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -238,40 +200,35 @@ function run() {
     Literal(lit null);
     BinOp(op '+');
     Literal(lit 'ab_null');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit true);
     BinOp(op '+');
     Literal(lit 'ab_true');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit false);
     BinOp(op '+');
     Literal(lit 'ab_false');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit undefined);
     BinOp(op '+');
     Literal(lit 'ab_undefined');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit -0);
     BinOp(op '+');
     Literal(lit 'ab_0');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Special strings
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -279,45 +236,39 @@ function run() {
     Literal(lit 'proto');
     BinOp(op '+');
     Literal(lit 'ab_proto');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'proto');
     Literal(lit '_bc');
     BinOp(op '+');
     Literal(lit 'proto_bc');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab_');
     Literal(lit 'length');
     BinOp(op '+');
     Literal(lit 'ab_length');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'length');
     Literal(lit '_bc');
     BinOp(op '+');
     Literal(lit 'length_bc');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Interpolation
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit '');
     Literal(lit '');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'abc');
     Literal(lit 'abc');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit '');
@@ -326,16 +277,14 @@ function run() {
     Literal(lit 'abc');
     BinOp(op '+');
     Literal(lit '_abc');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'abc');
     Literal(lit '_');
     BinOp(op '+');
     Literal(lit 'abc_');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     Literal(lit 'ab');
@@ -344,19 +293,14 @@ function run() {
     Literal(lit 'c');
     BinOp(op '+');
     Literal(lit 'ab5c');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // TODO: Strings as properties (interning)
     // TODO: Strings in RAM vs ROM
     // TODO: check interning for `obj['len' + 'th']
     LoadGlobal(name 'asciiTests');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     Literal(lit undefined);
     Return();
 }
 
-allocation 5 = {
-  push: &function Array_push,
-};

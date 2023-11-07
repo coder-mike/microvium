@@ -2,6 +2,9 @@ import * as fs from 'fs-extra';
 import { assert } from 'chai';
 import * as path from 'path';
 import * as os from 'os';
+import { unexpected } from '../lib/utils';
+import { VirtualMachineFriendly } from '../lib/virtual-machine-friendly';
+import { addDefaultGlobals } from '../lib';
 
 export interface TestFilenames {
   [key: string]: TestFilenamePair | TestFilenames;
@@ -82,4 +85,12 @@ export function assertSameCode(actual: string, expected: string) {
   const normalizedActual = normalize(actual);
   const normalizedExpected = normalize(expected);
   assert.deepEqual(normalizedActual, normalizedExpected);
+}
+
+export function compileJs(src: TemplateStringsArray) {
+  src.length === 1 || unexpected();
+  const vm = VirtualMachineFriendly.create()
+  addDefaultGlobals(vm);
+  vm.evaluateModule({ sourceText: src[0] })
+  return vm.createSnapshot();
 }

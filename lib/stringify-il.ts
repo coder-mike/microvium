@@ -125,6 +125,10 @@ export function stringifyOperationLine(operation: IL.Operation, indent: string, 
   return line;
 }
 
+export function formatSourceLoc(loc: IL.OperationSourceLoc) {
+  return `${loc.filename}:${loc.line}:${loc.column + 1}`
+}
+
 export function stringifyOperation(operation: IL.Operation): string {
   switch (operation.opcode) {
     case 'Return': return stringifyReturnOperation(operation);
@@ -154,6 +158,7 @@ export function stringifyOperand(operand: IL.Operand): string {
     case 'LabelOperand': return `@${operand.targetBlockId}`;
     case 'LiteralOperand': return 'lit ' + stringifyValue(operand.literal);
     case 'CountOperand': return 'count ' + operand.count;
+    case 'FlagOperand': return 'flag ' + (operand.flag ? 'true' : 'false');
     case 'IndexOperand': return 'index ' + operand.index;
     case 'NameOperand': return `name '${operand.name}'`;
     case 'OpOperand': return `op '${operand.subOperation}'`;
@@ -192,6 +197,7 @@ export function stringifyValue(value: IL.Value): string {
     case 'DeletedValue': return 'deleted';
     case 'UndefinedValue': return 'undefined';
     case 'NullValue': return 'null';
+    case 'NoOpFunction': return `no-op-function`;
     case 'BooleanValue':
       return value.value ? 'true' : 'false';
     case 'NumberValue': {
@@ -214,8 +220,8 @@ export function stringifyValue(value: IL.Value): string {
     case 'ReferenceValue': return `&allocation ${value.value}`;
     case 'EphemeralFunctionValue': return `&ephemeral ${value.value}`;
     case 'EphemeralObjectValue': return `&ephemeral ${value.value}`;
-    case 'StackDepthValue': return `&stack ${value.frameNumber}[${value.frameNumber}]`;
     case 'ProgramAddressValue': return `&prog ${value.funcId}[${value.blockId}]`;
+    case 'ResumePoint': return `resume point (${value.address.funcId}, ${value.address.blockId}, ${value.address.operationIndex})`;
     default: return assertUnreachable(value);
   }
 }

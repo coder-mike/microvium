@@ -65,8 +65,7 @@ function ['#entry']() {
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/switch.test.mvm.js:29:1
     Literal(lit 0);                      // 4                 ./test/end-to-end/tests/switch.test.mvm.js:29:10
     LoadVar(index 0);                    // 5  run            ./test/end-to-end/tests/switch.test.mvm.js:29:13
-    Call(count 3);                       // 2                 ./test/end-to-end/tests/switch.test.mvm.js:29:13
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/switch.test.mvm.js:29:13
+    Call(count 3, flag true);            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:29:13
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:107:1
     Return();                            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:107:1
 }
@@ -75,79 +74,68 @@ function run() {
   entry:
     LoadGlobal(name 'emptySwitch');      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:32:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:32:3
-    Call(count 1);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:32:3
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:32:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:32:3
     LoadGlobal(name 'switchWithOnlyDefault'); // 1            ./test/end-to-end/tests/switch.test.mvm.js:33:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:33:3
-    Call(count 1);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:33:3
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:33:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:33:3
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:35:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:35:3
     LoadGlobal(name 'convert');          // 3                 ./test/end-to-end/tests/switch.test.mvm.js:35:15
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/switch.test.mvm.js:35:15
     Literal(lit 5);                      // 5                 ./test/end-to-end/tests/switch.test.mvm.js:35:23
-    Call(count 2);                       // 3                 ./test/end-to-end/tests/switch.test.mvm.js:35:23
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/switch.test.mvm.js:35:23
     Literal(lit 'It was 5');             // 4                 ./test/end-to-end/tests/switch.test.mvm.js:35:27
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:35:27
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:35:27
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:35:27
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:36:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:36:3
     LoadGlobal(name 'convert');          // 3                 ./test/end-to-end/tests/switch.test.mvm.js:36:15
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/switch.test.mvm.js:36:15
     Literal(lit 6);                      // 5                 ./test/end-to-end/tests/switch.test.mvm.js:36:23
-    Call(count 2);                       // 3                 ./test/end-to-end/tests/switch.test.mvm.js:36:23
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/switch.test.mvm.js:36:23
     Literal(lit 'It was 6');             // 4                 ./test/end-to-end/tests/switch.test.mvm.js:36:27
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:36:27
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:36:27
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:36:27
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:37:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:37:3
     LoadGlobal(name 'convert');          // 3                 ./test/end-to-end/tests/switch.test.mvm.js:37:15
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/switch.test.mvm.js:37:15
     Literal(lit 7);                      // 5                 ./test/end-to-end/tests/switch.test.mvm.js:37:23
-    Call(count 2);                       // 3                 ./test/end-to-end/tests/switch.test.mvm.js:37:23
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/switch.test.mvm.js:37:23
     Literal(lit 'It was 7');             // 4                 ./test/end-to-end/tests/switch.test.mvm.js:37:27
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:37:27
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:37:27
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:37:27
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:38:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:38:3
     LoadGlobal(name 'convert');          // 3                 ./test/end-to-end/tests/switch.test.mvm.js:38:15
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/switch.test.mvm.js:38:15
     Literal(lit 'x');                    // 5                 ./test/end-to-end/tests/switch.test.mvm.js:38:23
-    Call(count 2);                       // 3                 ./test/end-to-end/tests/switch.test.mvm.js:38:23
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/switch.test.mvm.js:38:23
     Literal(lit 'It was x');             // 4                 ./test/end-to-end/tests/switch.test.mvm.js:38:29
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:38:29
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:38:29
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:38:29
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:39:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:39:3
     LoadGlobal(name 'convert');          // 3                 ./test/end-to-end/tests/switch.test.mvm.js:39:15
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/switch.test.mvm.js:39:15
     Literal(lit 'something else');       // 5                 ./test/end-to-end/tests/switch.test.mvm.js:39:23
-    Call(count 2);                       // 3                 ./test/end-to-end/tests/switch.test.mvm.js:39:23
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/switch.test.mvm.js:39:23
     Literal(lit 'Don\'t know what it was'); // 4              ./test/end-to-end/tests/switch.test.mvm.js:39:42
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:39:42
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:39:42
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:39:42
     LoadGlobal(name 'weirdSwitch');      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:41:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:41:3
     Literal(lit 5);                      // 3                 ./test/end-to-end/tests/switch.test.mvm.js:41:15
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:41:15
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:41:15
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:41:15
     LoadGlobal(name 'weirdSwitch');      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:42:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:42:3
     Literal(lit 2);                      // 3                 ./test/end-to-end/tests/switch.test.mvm.js:42:15
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:42:15
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:42:15
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:42:15
     LoadGlobal(name 'switchFallThroughBottom'); // 1          ./test/end-to-end/tests/switch.test.mvm.js:44:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:44:3
-    Call(count 1);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:44:3
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:44:3
+    Call(count 1, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:44:3
     LoadGlobal(name 'assertEqual');      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:46:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:46:3
     LoadGlobal(name 'switchWithNoDefault'); // 3              ./test/end-to-end/tests/switch.test.mvm.js:46:15
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/switch.test.mvm.js:46:15
-    Call(count 1);                       // 3                 ./test/end-to-end/tests/switch.test.mvm.js:46:15
+    Call(count 1, flag false);           // 3                 ./test/end-to-end/tests/switch.test.mvm.js:46:15
     Literal(lit 22);                     // 4                 ./test/end-to-end/tests/switch.test.mvm.js:46:38
-    Call(count 3);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:46:38
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:46:38
+    Call(count 3, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:46:38
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/switch.test.mvm.js:47:2
     Return();                            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:47:2
 }
@@ -197,17 +185,17 @@ function convert() {
     Jump(@block11);                      // 2                 ./test/end-to-end/tests/switch.test.mvm.js:54:34
   block8:
     Literal(lit 'It was 7');             // 3                 ./test/end-to-end/tests/switch.test.mvm.js:55:22
-    Return();                            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:55:22
+    Return();                            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:55:15
   block9:
     Literal(lit 'It was x');             // 3                 ./test/end-to-end/tests/switch.test.mvm.js:56:22
-    Return();                            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:56:22
+    Return();                            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:56:15
   block10:
     Literal(lit 'Don\'t know what it was'); // 3              ./test/end-to-end/tests/switch.test.mvm.js:57:21
-    Return();                            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:57:21
+    Return();                            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:57:14
   block11:
     Pop(count 1);                        // 1                 ./test/end-to-end/tests/switch.test.mvm.js:51:11
     LoadVar(index 0);                    // 2  result         ./test/end-to-end/tests/switch.test.mvm.js:59:10
-    Return();                            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:59:10
+    Return();                            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:59:3
 }
 
 function weirdSwitch() {
@@ -223,7 +211,7 @@ function weirdSwitch() {
     LoadGlobal(name 'evaluateCase');     // 3                 ./test/end-to-end/tests/switch.test.mvm.js:68:10
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/switch.test.mvm.js:68:10
     Literal(lit 1);                      // 5                 ./test/end-to-end/tests/switch.test.mvm.js:68:23
-    Call(count 2);                       // 3                 ./test/end-to-end/tests/switch.test.mvm.js:68:23
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/switch.test.mvm.js:68:23
     BinOp(op '===');                     // 2                 ./test/end-to-end/tests/switch.test.mvm.js:68:23
     Branch(@block16, @block13);          // 1                 ./test/end-to-end/tests/switch.test.mvm.js:68:23
   block13:
@@ -231,7 +219,7 @@ function weirdSwitch() {
     LoadGlobal(name 'evaluateCase');     // 3                 ./test/end-to-end/tests/switch.test.mvm.js:69:10
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/switch.test.mvm.js:69:10
     Literal(lit 2);                      // 5                 ./test/end-to-end/tests/switch.test.mvm.js:69:23
-    Call(count 2);                       // 3                 ./test/end-to-end/tests/switch.test.mvm.js:69:23
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/switch.test.mvm.js:69:23
     BinOp(op '===');                     // 2                 ./test/end-to-end/tests/switch.test.mvm.js:69:23
     Branch(@block17, @block14);          // 1                 ./test/end-to-end/tests/switch.test.mvm.js:69:23
   block14:
@@ -239,7 +227,7 @@ function weirdSwitch() {
     LoadGlobal(name 'evaluateCase');     // 3                 ./test/end-to-end/tests/switch.test.mvm.js:71:10
     Literal(lit undefined);              // 4                 ./test/end-to-end/tests/switch.test.mvm.js:71:10
     Literal(lit 4);                      // 5                 ./test/end-to-end/tests/switch.test.mvm.js:71:23
-    Call(count 2);                       // 3                 ./test/end-to-end/tests/switch.test.mvm.js:71:23
+    Call(count 2, flag false);           // 3                 ./test/end-to-end/tests/switch.test.mvm.js:71:23
     BinOp(op '===');                     // 2                 ./test/end-to-end/tests/switch.test.mvm.js:71:23
     Branch(@block19, @block15);          // 1                 ./test/end-to-end/tests/switch.test.mvm.js:71:23
   block15:
@@ -248,37 +236,32 @@ function weirdSwitch() {
     LoadGlobal(name 'print');            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:68:27
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/switch.test.mvm.js:68:27
     Literal(lit 'a');                    // 4                 ./test/end-to-end/tests/switch.test.mvm.js:68:33
-    Call(count 2);                       // 2                 ./test/end-to-end/tests/switch.test.mvm.js:68:33
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/switch.test.mvm.js:68:33
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:68:33
     Jump(@block17);                      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:68:33
   block17:
     LoadGlobal(name 'print');            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:69:27
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/switch.test.mvm.js:69:27
     Literal(lit 'b');                    // 4                 ./test/end-to-end/tests/switch.test.mvm.js:69:33
-    Call(count 2);                       // 2                 ./test/end-to-end/tests/switch.test.mvm.js:69:33
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/switch.test.mvm.js:69:33
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:69:33
     Jump(@block18);                      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:69:33
   block18:
     LoadGlobal(name 'evaluateCase');     // 2                 ./test/end-to-end/tests/switch.test.mvm.js:70:14
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/switch.test.mvm.js:70:14
     Literal(lit 'c');                    // 4                 ./test/end-to-end/tests/switch.test.mvm.js:70:27
-    Call(count 2);                       // 2                 ./test/end-to-end/tests/switch.test.mvm.js:70:27
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/switch.test.mvm.js:70:27
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:70:27
     Jump(@block19);                      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:70:27
   block19:
     LoadGlobal(name 'print');            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:71:27
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/switch.test.mvm.js:71:27
     Literal(lit 'd');                    // 4                 ./test/end-to-end/tests/switch.test.mvm.js:71:33
-    Call(count 2);                       // 2                 ./test/end-to-end/tests/switch.test.mvm.js:71:33
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/switch.test.mvm.js:71:33
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:71:33
     Jump(@block20);                      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:71:33
   block20:
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:67:11
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:73:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:73:3
     Literal(lit '!');                    // 3                 ./test/end-to-end/tests/switch.test.mvm.js:73:9
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:73:9
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:73:9
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:73:9
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/switch.test.mvm.js:74:2
     Return();                            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:74:2
 }
@@ -288,10 +271,9 @@ function evaluateCase() {
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:77:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:77:3
     LoadArg(index 1);                    // 3  x              ./test/end-to-end/tests/switch.test.mvm.js:77:9
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:77:9
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:77:9
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:77:9
     LoadArg(index 1);                    // 1  x              ./test/end-to-end/tests/switch.test.mvm.js:78:10
-    Return();                            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:78:10
+    Return();                            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:78:3
 }
 
 function switchWithNoDefault() {
@@ -315,17 +297,17 @@ function switchWithNoDefault() {
     Branch(@block26, @block27);          // 1                 ./test/end-to-end/tests/switch.test.mvm.js:85:10
   block24:
     Literal(lit 1);                      // 2                 ./test/end-to-end/tests/switch.test.mvm.js:83:20
-    Return();                            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:83:20
+    Return();                            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:83:13
   block25:
     Literal(lit 2);                      // 2                 ./test/end-to-end/tests/switch.test.mvm.js:84:20
-    Return();                            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:84:20
+    Return();                            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:84:13
   block26:
     Literal(lit 3);                      // 2                 ./test/end-to-end/tests/switch.test.mvm.js:85:20
-    Return();                            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:85:20
+    Return();                            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:85:13
   block27:
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:82:11
     Literal(lit 22);                     // 1                 ./test/end-to-end/tests/switch.test.mvm.js:88:10
-    Return();                            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:88:10
+    Return();                            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:88:3
 }
 
 function switchFallThroughBottom() {
@@ -351,30 +333,26 @@ function switchFallThroughBottom() {
     LoadGlobal(name 'print');            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:93:13
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/switch.test.mvm.js:93:13
     Literal(lit 'w');                    // 4                 ./test/end-to-end/tests/switch.test.mvm.js:93:19
-    Call(count 2);                       // 2                 ./test/end-to-end/tests/switch.test.mvm.js:93:19
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/switch.test.mvm.js:93:19
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:93:19
     Jump(@block32);                      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:93:19
   block32:
     LoadGlobal(name 'print');            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:94:13
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/switch.test.mvm.js:94:13
     Literal(lit 'x');                    // 4                 ./test/end-to-end/tests/switch.test.mvm.js:94:19
-    Call(count 2);                       // 2                 ./test/end-to-end/tests/switch.test.mvm.js:94:19
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/switch.test.mvm.js:94:19
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:94:19
     Jump(@block33);                      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:94:19
   block33:
     LoadGlobal(name 'print');            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:95:13
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/switch.test.mvm.js:95:13
     Literal(lit 'y');                    // 4                 ./test/end-to-end/tests/switch.test.mvm.js:95:19
-    Call(count 2);                       // 2                 ./test/end-to-end/tests/switch.test.mvm.js:95:19
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/switch.test.mvm.js:95:19
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:95:19
     Jump(@block34);                      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:95:19
   block34:
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:92:11
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:98:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:98:3
     Literal(lit 'z');                    // 3                 ./test/end-to-end/tests/switch.test.mvm.js:98:9
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:98:9
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:98:9
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:98:9
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/switch.test.mvm.js:99:2
     Return();                            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:99:2
 }
@@ -388,8 +366,7 @@ function emptySwitch() {
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:104:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:104:3
     Literal(lit 'emptySwitch:after');    // 3                 ./test/end-to-end/tests/switch.test.mvm.js:104:9
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:104:9
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:104:9
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:104:9
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/switch.test.mvm.js:105:2
     Return();                            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:105:2
 }
@@ -404,16 +381,14 @@ function switchWithOnlyDefault() {
     LoadGlobal(name 'print');            // 2                 ./test/end-to-end/tests/switch.test.mvm.js:109:14
     Literal(lit undefined);              // 3                 ./test/end-to-end/tests/switch.test.mvm.js:109:14
     Literal(lit 'switchWithOnlyDefault:default'); // 4        ./test/end-to-end/tests/switch.test.mvm.js:109:20
-    Call(count 2);                       // 2                 ./test/end-to-end/tests/switch.test.mvm.js:109:20
-    Pop(count 1);                        // 1                 ./test/end-to-end/tests/switch.test.mvm.js:109:20
+    Call(count 2, flag true);            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:109:20
     Jump(@block38);                      // 1                 ./test/end-to-end/tests/switch.test.mvm.js:109:20
   block38:
     Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:108:11
     LoadGlobal(name 'print');            // 1                 ./test/end-to-end/tests/switch.test.mvm.js:111:3
     Literal(lit undefined);              // 2                 ./test/end-to-end/tests/switch.test.mvm.js:111:3
     Literal(lit 'switchWithOnlyDefault:after'); // 3          ./test/end-to-end/tests/switch.test.mvm.js:111:9
-    Call(count 2);                       // 1                 ./test/end-to-end/tests/switch.test.mvm.js:111:9
-    Pop(count 1);                        // 0                 ./test/end-to-end/tests/switch.test.mvm.js:111:9
+    Call(count 2, flag true);            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:111:9
     Literal(lit undefined);              // 1                 ./test/end-to-end/tests/switch.test.mvm.js:112:2
     Return();                            // 0                 ./test/end-to-end/tests/switch.test.mvm.js:112:2
 }

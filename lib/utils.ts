@@ -49,7 +49,7 @@ export function reserved(message?: string): never {
   throwError('Internal error: reserved path' + (message ? ': ' + message : ''));
 }
 
-export function hardAssert(predicate: any, message?: string): void {
+export function hardAssert(predicate: any, message?: string): asserts predicate {
   if (!predicate) {
     throwError('Internal error' + (message ? ': ' + message : ''));
   }

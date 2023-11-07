@@ -4,9 +4,9 @@ import { entriesInOrder, stringifyIdentifier } from './utils';
 import { stringifyValue, stringifyFunction, stringifyAllocation, StringifyILOpts } from './stringify-il';
 import { crc16ccitt } from 'crc';
 
-export const ENGINE_MAJOR_VERSION = 7  /* aka MVM_BYTECODE_VERSION */;
+export const ENGINE_MAJOR_VERSION = 8  /* aka MVM_BYTECODE_VERSION */;
 export const HEADER_SIZE = 28;
-export const ENGINE_MINOR_VERSION = 8  /* aka MVM_ENGINE_VERSION */;
+export const ENGINE_MINOR_VERSION = 0  /* aka MVM_ENGINE_VERSION */;
 
 /**
  * A snapshot represents the state of the machine captured at a specific moment
@@ -24,6 +24,10 @@ export interface SnapshotIL {
   flags: Set<IL.ExecutionFlag>;
   builtins: {
     arrayPrototype: IL.Value;
+    promisePrototype: IL.Value;
+    asyncContinue: IL.Value;
+    asyncCatchBlock: IL.Value;
+    asyncHostCallback: IL.Value;
   }
 }
 

@@ -53,4 +53,10 @@ std::map<mvm_TeError, std::string> errorDescriptions = {
   { MVM_E_WRONG_BYTECODE_VERSION, "The version of bytecode is different to what the engine supports" },
   { MVM_E_USING_NEW_ON_NON_CLASS, "The `new` operator can only be used on classes" },
   { MVM_E_INSTRUCTION_COUNT_REACHED, "The instruction count set by `mvm_stopAfterNInstructions` has been reached" },
+  { MVM_E_REQUIRES_ACTIVE_VM, "The given operation requires that the VM has active calls on the stack" },
+  { MVM_E_ASYNC_START_ERROR, "mvm_asyncStart must be called exactly once at the beginning of a host function that is called from JS" },
+  { MVM_E_ASYNC_WITHOUT_AWAIT, "mvm_asyncStart can only be used with a script that has await points. Add at least one (reachable) await point to the script." },
+  { MVM_E_TYPE_ERROR_AWAIT_NON_PROMISE, "Can only await a promise in Microvium" },
+  { MVM_E_HEAP_CORRUPT, "Microvium's internal heap is not in a consistent state" },
+  { MVM_E_CLASS_PROTOTYPE_MUST_BE_NULL_OR_OBJECT, "The prototype property of a class must be null or a plain object" },
 };

@@ -1,116 +1,119 @@
-Bytecode size: 190 B
+Bytecode size: 194 B
 
 Addr    Size
 ==== =======
 0000   1c  - # Header
-0000       1     bytecodeVersion: 7
+0000       1     bytecodeVersion: 8
 0001       1     headerSize: 28
-0002       1     requiredEngineVersion: 8
+0002       1     requiredEngineVersion: 0
 0003       1     reserved: 0
-0004       2     bytecodeSize: 190
-0006       2     expectedCRC: 4b28
+0004       2     bytecodeSize: 194
+0006       2     expectedCRC: d063
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 0028
-0016       2     BCS_ROM: 0032
-0018       2     BCS_GLOBALS: 008a
-001a       2     BCS_HEAP: 0096
+0014       2     BCS_STRING_TABLE: 0030
+0016       2     BCS_ROM: 003a
+0018       2     BCS_GLOBALS: 008e
+001a       2     BCS_HEAP: 009a
 001c    2  - # Import Table
 001c       2     [0]: 100
 001e    4  - # Export Table
-001e       4     [42]: &006c
-0022    6  - # Builtins
-0022       2     [BIN_INTERNED_STRINGS]: &0094
-0024       2     [BIN_ARRAY_PROTO]: &0090
+001e       4     [42]: &0074
+0022    e  - # Builtins
+0022       2     [BIN_INTERNED_STRINGS]: &0098
+0024       2     [BIN_ARRAY_PROTO]: &0094
 0026       2     [BIN_STR_PROTOTYPE]: undefined
-0028    a  - # String Table
-0028       2     [0]: &0040
-002a       2     [1]: &0034
-002c       2     [2]: &003c
-002e       2     [3]: &0050
-0030       2     [4]: &0054
-0032   57  - # ROM allocations
-0032       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-0034       5     Value: 'push'
-0039       1     <unused>
-003a       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
-003c       2     Value: 'x'
-003e       2     Header [Size: 14, Type: TC_REF_INTERNED_STRING]
-0040       e     Value: 'Hello, World!'
-004e       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
-0050       2     Value: 'y'
-0052       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
-0054       2     Value: 'z'
-0056       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0058       2     Value: Import Table [0] (&001c)
-005a       2     Header [Size: 13, Type: TC_REF_FUNCTION]
-005c    d  -     # Function Array_push
-005c       1         maxStackDepth: 4
-005d    c  -         # Block entry
-005d       1             LoadArg(index 1)
-005e       1             LoadArg(index 0)
-005f       1             LoadArg(index 0)
-0060       3             Literal('length')
-0063       1             ObjectGet()
-0064       1             LoadVar(index 0)
-0065       1             ObjectSet()
-0066       1             Pop(count 1)
-0067       1             Literal(lit undefined)
-0068       1             Return()
-0069       1     <unused>
-006a       2     Header [Size: 29, Type: TC_REF_FUNCTION]
-006c   1d  -     # Function run
-006c       1         maxStackDepth: 4
-006d   1c  -         # Block entry
-006d       3             LoadGlobal [0]
-0070       1             Literal(lit undefined)
-0071       3             LoadGlobal [1]
-0074       3             Literal(&003c)
-0077       1             ObjectGet()
-0078       2             Call(count 2)
-007a       1             Pop(count 1)
-007b       3             LoadGlobal [0]
-007e       1             Literal(lit undefined)
-007f       3             LoadGlobal [2]
-0082       1             Literal(lit 0)
-0083       1             ObjectGet()
-0084       2             Call(count 2)
-0086       1             Pop(count 1)
-0087       1             Literal(lit undefined)
-0088       1             Return()
-0089       1 <unused>
-008a    c  - # Globals
-008a       2     [0]: &0058
-008c       2     [1]: &00a2
-008e       2     [2]: &00ba
-0090       2     Handle: &0098
-0092       2     Handle: deleted
-0094       2     Handle: undefined
-0096   28  - # GC allocations
-0096       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-0098    8  -     # TsPropertyList
-0098       2         dpNext: null
-009a       2         dpProto: null
-009c       2         key: &0034
-009e       2         value: &005c
-00a0       2     Header [Size: 12, Type: TC_REF_PROPERTY_LIST]
-00a2    c  -     # TsPropertyList
-00a2       2         dpNext: null
-00a4       2         dpProto: null
-00a6       2         key: &003c
-00a8       2         value: &0040
-00aa       2         key: &0050
-00ac       2         value: &00b0
-00ae       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-00b0    8  -     # TsPropertyList
-00b0       2         dpNext: null
-00b2       2         dpProto: null
-00b4       2         key: &0054
-00b6       2         value: &0040
-00b8       2     Header [Size: 4, Type: TC_REF_ARRAY]
-00ba    4  -     # TsArray
-00ba       2         dpData: null
-00bc       2         viLength: 0
+0028       2     [BIN_ASYNC_CONTINUE]: undefined
+002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
+002c       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
+002e       2     [BIN_PROMISE_PROTOTYPE]: undefined
+0030    a  - # String Table
+0030       2     [0]: &0048
+0032       2     [1]: &003c
+0034       2     [2]: &0044
+0036       2     [3]: &0058
+0038       2     [4]: &005c
+003a   54  - # ROM allocations
+003a       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
+003c       5     Value: 'push'
+0041       1     <unused>
+0042       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
+0044       2     Value: 'x'
+0046       2     Header [Size: 14, Type: TC_REF_INTERNED_STRING]
+0048       e     Value: 'Hello, World!'
+0056       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
+0058       2     Value: 'y'
+005a       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
+005c       2     Value: 'z'
+005e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0060       2     Value: Import Table [0] (&001c)
+0062       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+0064    c  -     # Function Array_push
+0064       0         maxStackDepth: 4
+0064       0         isContinuation: 0
+0064    c  -         # Block entry
+0064       1             LoadArg(index 1)
+0065       1             LoadArg(index 0)
+0066       1             LoadArg(index 0)
+0067       3             Literal('length')
+006a       1             ObjectGet()
+006b       1             LoadVar(index 0)
+006c       1             ObjectSet()
+006d       1             Pop(count 1)
+006e       1             Literal(lit undefined)
+006f       1             Return()
+0070       2     <unused>
+0072       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+0074   1a  -     # Function run
+0074       0         maxStackDepth: 4
+0074       0         isContinuation: 0
+0074   1a  -         # Block entry
+0074       3             LoadGlobal [0]
+0077       1             Literal(lit undefined)
+0078       3             LoadGlobal [1]
+007b       3             Literal(&0044)
+007e       1             ObjectGet()
+007f       2             Call(count 2, flag true)
+0081       3             LoadGlobal [0]
+0084       1             Literal(lit undefined)
+0085       3             LoadGlobal [2]
+0088       1             Literal(lit 0)
+0089       1             ObjectGet()
+008a       2             Call(count 2, flag true)
+008c       1             Literal(lit undefined)
+008d       1             Return()
+008e    c  - # Globals
+008e       2     [0]: &0060
+0090       2     [1]: &00a6
+0092       2     [2]: &00be
+0094       2     Handle: &009c
+0096       2     Handle: deleted
+0098       2     Handle: undefined
+009a   28  - # GC allocations
+009a       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+009c    8  -     # TsPropertyList
+009c       2         dpNext: null
+009e       2         dpProto: null
+00a0       2         key: &003c
+00a2       2         value: &0064
+00a4       2     Header [Size: 12, Type: TC_REF_PROPERTY_LIST]
+00a6    c  -     # TsPropertyList
+00a6       2         dpNext: null
+00a8       2         dpProto: null
+00aa       2         key: &0044
+00ac       2         value: &0048
+00ae       2         key: &0058
+00b0       2         value: &00b4
+00b2       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+00b4    8  -     # TsPropertyList
+00b4       2         dpNext: null
+00b6       2         dpProto: null
+00b8       2         key: &005c
+00ba       2         value: &0048
+00bc       2     Header [Size: 4, Type: TC_REF_ARRAY]
+00be    4  -     # TsArray
+00be       2         dpData: null
+00c0       2         viLength: 0

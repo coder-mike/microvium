@@ -1,0 +1,53 @@
+Bytecode size: 74 B
+
+Addr    Size
+==== =======
+0000   1c  - # Header
+0000       1     bytecodeVersion: 7
+0001       1     headerSize: 28
+0002       1     requiredEngineVersion: 7
+0003       1     reserved: 0
+0004       2     bytecodeSize: 74
+0006       2     expectedCRC: 297a
+0008       4     requiredFeatureFlags: 3
+000c       2     BCS_IMPORT_TABLE: 001c
+000e       2     BCS_EXPORT_TABLE: 001e
+0010       2     BCS_SHORT_CALL_TABLE: 0022
+0012       2     BCS_BUILTINS: 0022
+0014       2     BCS_STRING_TABLE: 0030
+0016       2     BCS_ROM: 0030
+0018       2     BCS_GLOBALS: 0046
+001a       2     BCS_HEAP: 004a
+001c    2  - # Import Table
+001c       2     [0]: 0
+001e    4  - # Export Table
+001e       4     [0]: &0038
+0022    e  - # Builtins
+0022       2     [BIN_INTERNED_STRINGS]: &0048
+0024       2     [BIN_ARRAY_PROTO]: undefined
+0026       2     [BIN_STR_PROTOTYPE]: undefined
+0028       2     [BIN_ASYNC_CONTINUE]: undefined
+002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
+002c       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
+002e       2     [BIN_PROMISE_PROTOTYPE]: undefined
+0030       2 <unused>
+0032   13  - # ROM allocations
+0032       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0034       2     Value: Import Table [0] (&001c)
+0036       2     Header [Size: 3, Type: TC_REF_FUNCTION]
+0038    d  -     # Function run
+0038       0         maxStackDepth: 3
+0038       0         isContinuation: 0
+0038    d  -         # Block entry
+0038       3             Literal(deleted)
+003b       3             LoadGlobal [0]
+003e       1             Literal(lit undefined)
+003f       2             Call(count 1, flag false)
+0041       1             StoreVar(index 0)
+0042       1             Pop(count 1)
+0043       1             Literal(lit undefined)
+0044       1             Return()
+0045       1 <unused>
+0046    4  - # Globals
+0046       2     [0]: &0034
+0048       2     Handle: undefined

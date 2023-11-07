@@ -12,6 +12,7 @@ type StackChanges = { [opcode: string]: StackChange };
 // calculate the corresponding stack change given the specific operands
 const stackChanges: StackChanges = {
   call: argCount => -count(argCount) - 1,
+  awaitCall: argCount => -count(argCount) - 1,
   pop: popCount => -count(popCount),
 }
 
@@ -26,12 +27,19 @@ export const opcodes = {
   'ArrayGet':      { operands: ['LiteralOperand'              ], stackChange: 0                      },
   'ArrayNew':      { operands: [                              ], stackChange: 1                      },
   'ArraySet':      { operands: ['LiteralOperand'              ], stackChange: -2                     },
+  'AsyncComplete': { operands: [                              ], stackChange: -3                     },
+  'AsyncResume':   { operands: ['CountOperand', 'CountOperand'], stackChange: 1 /*inverse of Await*/ },
+  'AsyncReturn':   { operands: [                              ], stackChange: undefined              },
+  'AsyncStart':    { operands: ['CountOperand', 'FlagOperand' ], stackChange: 3                      },
+  'Await':         { operands: [                              ], stackChange: -1                     },
+  'AwaitCall':     { operands: ['CountOperand'                ], stackChange: stackChanges.awaitCall },
   'BinOp':         { operands: ['OpOperand'                   ], stackChange: -1                     },
   'Branch':        { operands: ['LabelOperand', 'LabelOperand'], stackChange: -1                     },
-  'Call':          { operands: ['CountOperand'                ], stackChange: stackChanges.call      },
+  'Call':          { operands: ['CountOperand', 'FlagOperand' ], stackChange: stackChanges.call      },
   'ClassCreate':   { operands: [                              ], stackChange: -1                     },
   'ClosureNew':    { operands: [                              ], stackChange: 0                      },
   'EndTry':        { operands: [                              ], stackChange: undefined              },
+  'EnqueueJob':    { operands: [                              ], stackChange: 0                      },
   'Jump':          { operands: ['LabelOperand'                ], stackChange: 0                      },
   'Literal':       { operands: ['LiteralOperand'              ], stackChange: 1                      },
   'LoadArg':       { operands: ['IndexOperand'                ], stackChange: 1                      },
@@ -52,6 +60,7 @@ export const opcodes = {
   'ScopeNew':      { operands: ['CountOperand'                ], stackChange: 0                      },
   'ScopePop':      { operands: [                              ], stackChange: 0                      },
   'ScopePush':     { operands: ['CountOperand'                ], stackChange: 0                      },
+  'ScopeSave':     { operands: [                              ], stackChange: 1                      },
   'StartTry':      { operands: ['LabelOperand'                ], stackChange: 2                      },
   'StoreGlobal':   { operands: ['NameOperand'                 ], stackChange: -1                     },
   'StoreScoped':   { operands: ['IndexOperand'                ], stackChange: -1                     },
@@ -64,7 +73,7 @@ export const opcodes = {
 
 export type Opcode = keyof typeof opcodes;
 
-export const blockTerminatingOpcodes = new Set<Opcode>(['Jump', 'Branch', 'Return', 'Throw']);
+export const blockTerminatingOpcodes = new Set<Opcode>(['Jump', 'Branch', 'Return', 'AsyncReturn', 'Throw', 'AsyncComplete']);
 
 function count(operand: IL.Operand): number {
   if (!operand || operand.type !== 'CountOperand') unexpected();

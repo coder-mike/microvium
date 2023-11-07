@@ -169,6 +169,9 @@ export interface ScopeBase {
   embeddedChildClosure?: FunctionScope;
 
   accessesParentScope?: boolean;
+
+  isAsyncFunction: boolean;
+  awaitExpressions: B.AwaitExpression[];
 }
 
 export interface BlockScope extends ScopeBase {
@@ -246,6 +249,7 @@ export interface ClassScope extends ScopeBase {
 export type PrologueStep =
   | { type: 'ScopePush', slotCount: number }
   | { type: 'ScopeNew', slotCount: number }
+  | { type: 'AsyncStart', slotCount: number, captureParent: boolean }
   | { type: 'InitFunctionDeclaration', slot: SlotAccessInfo, functionId: string, closureType: 'none' | 'embedded' | 'non-embedded' }
   | { type: 'InitVarDeclaration', slot: SlotAccessInfo }
   | { type: 'InitLexicalDeclaration', slot: SlotAccessInfo, nameHint: string }
@@ -318,6 +322,8 @@ export interface Binding {
    * assigned to, then the argument slot (`LoadArg`) can be used directly.
    */
   isWrittenTo: boolean;
+
+  isUsed: boolean;
 
   isAccessedByNestedFunction: boolean;
 

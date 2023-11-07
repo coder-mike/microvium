@@ -1,8 +1,8 @@
 export 0 = &function run;
 
 slot ['global:assertEqual'] = host function 3;
-slot ['global:console'] = &allocation 6;
-slot log = &allocation 8;
+slot ['global:console'] = &allocation 10;
+slot log = &allocation 12;
 slot sayHello = &function sayHello;
 
 function Array_push() {
@@ -21,14 +21,14 @@ function Array_push() {
 
 function anonymous() {
   entry:
+    Literal(lit undefined);
     LoadGlobal(name 'log');
-    LoadVar(index 0);
+    LoadVar(index 1);
     Literal(lit 'push');
     ObjectGet();
-    LoadVar(index 0);
-    LoadArg(index 1);
-    Call(count 2);
     StoreVar(index 0);
+    LoadArg(index 1);
+    Call(count 2, flag false);
     Return();
 }
 
@@ -36,48 +36,42 @@ function run() {
   entry:
     LoadGlobal(name 'sayHello');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'log');
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 6);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'log');
     Literal(lit 0);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'log');
     Literal(lit 2);
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'log');
     Literal(lit 3);
     ObjectGet();
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'log');
     Literal(lit 5);
     ObjectGet();
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     ArrayNew();
     LoadVar(index 0);
     StoreGlobal(name 'log');
@@ -113,17 +107,16 @@ function sayHello() {
     BinOp(op '<');
     Branch(@block2, @block3);
   block2:
+    Literal(lit undefined);
     LoadGlobal(name 'global:console');
-    LoadVar(index 2);
+    LoadVar(index 3);
     Literal(lit 'log');
     ObjectGet();
-    LoadVar(index 2);
+    StoreVar(index 2);
     LoadVar(index 0);
     LoadVar(index 1);
     ObjectGet();
-    Call(count 2);
-    StoreVar(index 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     LoadVar(index 1);
     Literal(lit 1);
     BinOp(op '+');
@@ -141,17 +134,16 @@ function sayHello() {
     BinOp(op '<');
     Branch(@block5, @block6);
   block5:
+    Literal(lit undefined);
     LoadGlobal(name 'global:console');
-    LoadVar(index 2);
+    LoadVar(index 3);
     Literal(lit 'log');
     ObjectGet();
-    LoadVar(index 2);
+    StoreVar(index 2);
     LoadVar(index 0);
     LoadVar(index 1);
     ObjectGet();
-    Call(count 2);
-    StoreVar(index 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     LoadVar(index 1);
     Literal(lit 1);
     BinOp(op '+');
@@ -164,13 +156,13 @@ function sayHello() {
     Return();
 }
 
-allocation 5 = {
-  push: &function Array_push,
-};
-
-allocation 6 = {
+allocation 10 = {
   log: &function anonymous,
 };
 
-allocation 8 = [
+allocation 12 = [
 ];
+
+allocation 7 = {
+  push: &function Array_push,
+};

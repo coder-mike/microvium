@@ -111,6 +111,15 @@ argParse.addArgument(
 );
 
 argParse.addArgument(
+  [ '--output-source-map' ],
+  {
+    help: 'Output file that maps bytecode offsets to source code locations',
+    action: 'storeTrue',
+    dest: 'outputSourceMap',
+  }
+);
+
+argParse.addArgument(
   [ 'input' ],
   {
     nargs: '*',

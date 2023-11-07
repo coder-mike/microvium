@@ -1,20 +1,6 @@
-export 0 = &allocation 8;
+export 0 = &allocation 12;
 
 slot ['global:assertEqual'] = host function 3;
-
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
 
 function run() {
   entry:
@@ -22,17 +8,12 @@ function run() {
     Literal(lit undefined);
     LoadScoped(index 1);
     Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
 
-allocation 5 = {
-  push: &function Array_push,
-};
-
-allocation 8 = Closure [
+allocation 12 = Closure [
   &function run,
   1,
 ];

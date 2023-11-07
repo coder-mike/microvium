@@ -40,7 +40,7 @@ There are two workflows I use, depending on whether I'm developing just the Type
 
   2. Run the default build task in VSCode (ctrl+shift+B), which runs typescript continuously in the background (or use the script `npm run build:watch`)
 
-  3. Each time you make a change, run the tests using the script `npm run test:js`. This runs the JS rather than TS code (it does not use ts-node) and so is faster than `npm run test:ts` but requires that you have the build-watch running in the background. Also, error printouts with `npm run test:js` point to the JS file instead of the TS file. You can also run `npx mocha -fgrep xyz` to run a specific test case.
+  3. Each time you make a change, run the tests using the script `npm run test:js`. This runs the JS rather than TS code (it does not use ts-node) and so is faster than `npm run test:ts` but requires that you have the build-watch running in the background. Also, error printouts with `npm run test:js` point to the JS file instead of the TS file. You can also run `npx mocha --config=ts.mocharc.json --fgrep=xyz` to run a specific test case.
 
 ### Native and TS code
 
@@ -94,6 +94,22 @@ npm run test:js -- -g scope-analysis
 
 When you're stopped on an instruction, you can inspect the current source code position using
 `VirtualMachine.currentSourceLocation`.
+
+### Heap corruption
+
+Enable `MVM_VERY_EXPENSIVE_MEMORY_CHECKS` and `MVM_DEBUG_UTILS`.
+
+Use `mvm_checkHeap` to validate the heap.
+
+Use `mvm_checkValue` to check that a value points to a valid allocation if it's a pointer.
+
+Use `mvm_readCallStack(vm, 0)` to list the current stack frames.
+
+Use `mvm_readHeapCount(vm)` to count the number of heap allocations.
+
+Use `mvm_readHeap(vm, 0)` to parse the whole heap into a structure that's easier to view in a debugger.
+
+In the C++ project, there is also `allocator_checkHeap`.
 
 ## VS Code
 

@@ -14,7 +14,7 @@
           "--timeout",
           "999999",
           "--colors",
-          "--fgrep=strings",
+          // "--fgrep=async-await",
           "${workspaceFolder}/test"
       ],
       "console": "internalConsole",

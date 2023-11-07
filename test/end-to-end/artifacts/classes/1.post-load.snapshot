@@ -1,12 +1,12 @@
 export 0 = &function run;
 
-slot GlobalClass = class (&function GlobalClass, &allocation 8);
-slot ['global:Microvium'] = &allocation 2;
-slot ['global:Number'] = &allocation 4;
-slot ['global:Reflect'] = &allocation 1;
+slot GlobalClass = class (&function GlobalClass, &allocation 12);
+slot ['global:Microvium'] = &allocation 4;
+slot ['global:Number'] = &allocation 6;
+slot ['global:Reflect'] = &allocation 3;
 slot ['global:assert'] = host function 2;
 slot ['global:assertEqual'] = host function 3;
-slot globalInst = &allocation 10;
+slot globalInst = &allocation 14;
 slot test_classAsMember = &function test_classAsMember;
 slot test_classProperty = &function test_classProperty;
 slot test_classStaticProperty = &function test_classStaticProperty;
@@ -28,20 +28,6 @@ slot test_staticInitializerClosingUsingThis = &function test_staticInitializerCl
 slot test_staticInitializerUsingThis = &function test_staticInitializerUsingThis;
 slot test_thisInInitializer = &function test_thisInInitializer;
 slot x = 'my';
-
-function Array_push() {
-  entry:
-    LoadArg(index 1);
-    LoadArg(index 0);
-    LoadArg(index 0);
-    Literal(lit 'length');
-    ObjectGet();
-    LoadVar(index 0);
-    ObjectSet();
-    Pop(count 1);
-    Literal(lit undefined);
-    Return();
-}
 
 function GlobalClass() {
   entry:
@@ -385,33 +371,27 @@ function LocalClass_myStaticMethod() {
     Return();
 }
 
-function Number_isNaN() {
-  entry:
-    // NaN is the only value that is not equal to itself
-    LoadArg(index 1);
-    LoadArg(index 1);
-    BinOp(op '!==');
-    Return();
-}
-
-function Reflect_ownKeys() {
-  entry:
-    LoadArg(index 1);
-    ObjectKeys();
-    Return();
-}
-
-function Reflect_ownKeys1() {
+function ['Microvium.newUint8Array']() {
   entry:
     LoadArg(index 1);
     Uint8ArrayNew();
     Return();
 }
 
-function Reflect_ownKeys2() {
+function Number_isNaN() {
+  entry:
+    // NaN is the only value that is not equal to itself
+    LoadArg(index 1);
+    LoadArg(index 1);
+    BinOp(op '!==');
+    // NaN is the only value that is not equal to itself
+    Return();
+}
+
+function ['Reflect.ownKeys']() {
   entry:
     LoadArg(index 1);
-    TypeCodeOf();
+    ObjectKeys();
     Return();
 }
 
@@ -514,84 +494,64 @@ function run() {
   entry:
     LoadGlobal(name 'test_globalClass');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_globalInstance');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_localClass');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_inheritedProperties');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_proto');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_returnFromConstructor');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_operators');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_classAsMember');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_closingOverClass');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_closureInConstructor');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_classProperty');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_classStaticProperty');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_closureMethod');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_thisInInitializer');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_initializerClosingOverThis');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_initializerClosingOverOuter');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_staticInitializerUsingThis');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_staticInitializerClosingUsingThis');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_closureOverThisInConstructor');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     LoadGlobal(name 'test_closureOverThisInMethod');
     Literal(lit undefined);
-    Call(count 1);
-    Pop(count 1);
+    Call(count 1, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -631,20 +591,18 @@ function test_classAsMember() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 2);
-    LoadVar(index 5);
+    LoadVar(index 6);
     Literal(lit 'foo');
     ObjectGet();
-    LoadVar(index 5);
-    Call(count 1);
     StoreVar(index 5);
+    Call(count 1, flag false);
     Literal(lit 10);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 3);
     Literal(lit undefined);
     Return();
@@ -678,8 +636,7 @@ function test_classProperty() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadVar(index 1);
     Literal(lit 'x');
     ObjectGet();
@@ -698,8 +655,7 @@ function test_classProperty() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 6);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
@@ -708,8 +664,7 @@ function test_classProperty() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // The property is not on the prototype
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -717,17 +672,16 @@ function test_classProperty() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Test that properties are independent
+    Literal(lit undefined);
     LoadGlobal(name 'global:Reflect');
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'ownKeys');
     ObjectGet();
-    LoadVar(index 4);
-    LoadVar(index 1);
-    Call(count 2);
     StoreVar(index 4);
+    LoadVar(index 1);
+    Call(count 2, flag false);
     StoreVar(index 3);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -735,24 +689,21 @@ function test_classProperty() {
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 3);
     Literal(lit 0);
     ObjectGet();
     Literal(lit 'x');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 3);
     Literal(lit 1);
     ObjectGet();
     Literal(lit 'y');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // y is a key
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -760,8 +711,7 @@ function test_classProperty() {
     Literal(lit 'y');
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 4);
     Literal(lit undefined);
     Return();
@@ -793,51 +743,46 @@ function test_classStaticProperty() {
     StoreVar(index 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadGlobal(name 'global:Reflect');
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'ownKeys');
     ObjectGet();
-    LoadVar(index 4);
-    LoadVar(index 1);
-    Call(count 2);
     StoreVar(index 4);
+    LoadVar(index 1);
+    Call(count 2, flag false);
     Literal(lit 'length');
     ObjectGet();
     Literal(lit 0);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
     Literal(lit 'x');
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
     Literal(lit 'y');
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'y');
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -850,9 +795,9 @@ function test_closingOverClass() {
     Literal(lit deleted);
     LoadVar(index 0);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     StoreVar(index 1);
     LoadVar(index 1);
     Literal(lit undefined);
@@ -864,20 +809,18 @@ function test_closingOverClass() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 2);
-    LoadVar(index 5);
+    LoadVar(index 6);
     Literal(lit 'foo');
     ObjectGet();
-    LoadVar(index 5);
-    Call(count 1);
     StoreVar(index 5);
+    Call(count 1, flag false);
     Literal(lit 20);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 3);
     Literal(lit undefined);
     Return();
@@ -910,32 +853,29 @@ function test_closureInConstructor() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit undefined);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 1);
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'foo');
     ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
     StoreVar(index 4);
+    Call(count 1, flag false);
     Literal(lit 16);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 1);
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'foo');
     ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
     StoreVar(index 4);
+    Call(count 1, flag false);
     Literal(lit 17);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -968,34 +908,31 @@ function test_closureMethod() {
     StoreVar(index 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadVar(index 1);
-    LoadVar(index 4);
-    Literal(lit 'method');
-    ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
-    StoreVar(index 4);
-    Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'method');
     ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
     StoreVar(index 4);
+    Call(count 1, flag false);
+    Literal(lit 1);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 1);
+    LoadVar(index 5);
+    Literal(lit 'method');
+    ObjectGet();
+    StoreVar(index 4);
+    Call(count 1, flag false);
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadScoped(index 1);
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -1023,20 +960,18 @@ function test_closureOverThisInConstructor() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 1);
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'y');
     ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
     StoreVar(index 4);
+    Call(count 1, flag false);
     Literal(lit 8);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -1068,22 +1003,20 @@ function test_closureOverThisInMethod() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 1);
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'method');
     ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
     StoreVar(index 4);
+    Call(count 1, flag false);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 8);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -1094,36 +1027,33 @@ function test_globalClass() {
     Literal(lit deleted);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadGlobal(name 'GlobalClass');
-    LoadVar(index 3);
-    Literal(lit 'myStaticMethod');
-    ObjectGet();
-    LoadVar(index 3);
-    Call(count 1);
-    StoreVar(index 3);
-    Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'GlobalClass');
-    LoadVar(index 3);
+    LoadVar(index 4);
     Literal(lit 'myStaticMethod');
     ObjectGet();
-    LoadVar(index 3);
-    Call(count 1);
     StoreVar(index 3);
+    Call(count 1, flag false);
+    Literal(lit 2);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadGlobal(name 'GlobalClass');
+    LoadVar(index 4);
+    Literal(lit 'myStaticMethod');
+    ObjectGet();
+    StoreVar(index 3);
+    Call(count 1, flag false);
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadGlobal(name 'GlobalClass');
     Literal(lit 'myProp');
     ObjectGet();
     Literal(lit 42);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // Accessing instance created at runtime of a class created at compile time
     LoadGlobal(name 'GlobalClass');
     Literal(lit undefined);
@@ -1136,32 +1066,29 @@ function test_globalClass() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 25);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 0);
-    LoadVar(index 3);
+    LoadVar(index 4);
     Literal(lit 'myMethod');
     ObjectGet();
-    LoadVar(index 3);
-    Call(count 1);
     StoreVar(index 3);
+    Call(count 1, flag false);
     Literal(lit 26);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 0);
-    LoadVar(index 3);
+    LoadVar(index 4);
     Literal(lit 'myMethod');
     ObjectGet();
-    LoadVar(index 3);
-    Call(count 1);
     StoreVar(index 3);
+    Call(count 1, flag false);
     Literal(lit 27);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1179,48 +1106,44 @@ function test_globalInstance() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 15);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadGlobal(name 'globalInst');
-    LoadVar(index 3);
+    LoadVar(index 4);
     Literal(lit 'myMethod');
     ObjectGet();
-    LoadVar(index 3);
-    Call(count 1);
     StoreVar(index 3);
+    Call(count 1, flag false);
     Literal(lit 16);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadGlobal(name 'globalInst');
-    LoadVar(index 3);
+    LoadVar(index 4);
     Literal(lit 'myMethod');
     ObjectGet();
-    LoadVar(index 3);
-    Call(count 1);
     StoreVar(index 3);
+    Call(count 1, flag false);
     Literal(lit 17);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadGlobal(name 'globalInst');
-    LoadVar(index 3);
+    LoadVar(index 4);
     LoadGlobal(name 'x');
     Literal(lit 'M');
     BinOp(op '+');
     LoadVar(index 0);
     BinOp(op '+');
     ObjectGet();
-    LoadVar(index 3);
-    Call(count 1);
     StoreVar(index 3);
+    Call(count 1, flag false);
     Literal(lit 18);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1261,16 +1184,14 @@ function test_inheritedProperties() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Literal(lit 10);
     LoadVar(index 1);
     Literal(lit 'x');
@@ -1291,8 +1212,7 @@ function test_inheritedProperties() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 10);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // instance property
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -1300,8 +1220,7 @@ function test_inheritedProperties() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 20);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     // prototype property
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
@@ -1311,8 +1230,7 @@ function test_inheritedProperties() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 20);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 3);
     Literal(lit undefined);
     Return();
@@ -1340,34 +1258,31 @@ function test_initializerClosingOverOuter() {
     StoreVar(index 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadVar(index 1);
-    LoadVar(index 4);
-    Literal(lit 'x');
-    ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
-    StoreVar(index 4);
-    Literal(lit 1);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'x');
     ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
     StoreVar(index 4);
+    Call(count 1, flag false);
+    Literal(lit 1);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 1);
+    LoadVar(index 5);
+    Literal(lit 'x');
+    ObjectGet();
+    StoreVar(index 4);
+    Call(count 1, flag false);
     Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadScoped(index 0);
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -1399,26 +1314,23 @@ function test_initializerClosingOverThis() {
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 6);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 2);
     Literal(lit undefined);
-    Call(count 1);
+    Call(count 1, flag false);
     Literal(lit 7);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 7);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 3);
     Literal(lit undefined);
     Return();
@@ -1452,36 +1364,33 @@ function test_localClass() {
     Pop(count 1);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
-    LoadVar(index 0);
-    LoadVar(index 4);
-    Literal(lit 'myStaticMethod');
-    ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
-    StoreVar(index 4);
-    Literal(lit 2);
-    Call(count 3);
-    Pop(count 1);
-    LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'myStaticMethod');
     ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
     StoreVar(index 4);
+    Call(count 1, flag false);
+    Literal(lit 2);
+    Call(count 3, flag true);
+    LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
+    Literal(lit undefined);
+    LoadVar(index 0);
+    LoadVar(index 5);
+    Literal(lit 'myStaticMethod');
+    ObjectGet();
+    StoreVar(index 4);
+    Call(count 1, flag false);
     Literal(lit 3);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'myProp');
     ObjectGet();
     Literal(lit 42);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadVar(index 0);
     Literal(lit undefined);
     Literal(lit 30);
@@ -1493,32 +1402,29 @@ function test_localClass() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 37);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 1);
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'myMethod');
     ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
     StoreVar(index 4);
+    Call(count 1, flag false);
     Literal(lit 39);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadVar(index 1);
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'myMethod');
     ObjectGet();
-    LoadVar(index 4);
-    Call(count 1);
     StoreVar(index 4);
+    Call(count 1, flag false);
     Literal(lit 40);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -1545,83 +1451,75 @@ function test_operators() {
     LoadVar(index 0);
     UnOp(op 'typeof');
     Literal(lit 'function');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
     UnOp(op 'typeof');
     Literal(lit 'object');
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadGlobal(name 'global:Microvium');
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'typeCodeOf');
     ObjectGet();
-    LoadVar(index 4);
-    LoadVar(index 0);
-    Call(count 2);
     StoreVar(index 4);
+    LoadVar(index 0);
+    Call(count 2, flag false);
     Literal(lit 9);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
+    Literal(lit undefined);
     Literal(lit undefined);
     LoadGlobal(name 'global:Microvium');
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'typeCodeOf');
     ObjectGet();
-    LoadVar(index 4);
-    LoadVar(index 1);
-    Call(count 2);
     StoreVar(index 4);
+    LoadVar(index 1);
+    Call(count 2, flag false);
     Literal(lit 6);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     UnOp(op '!');
     UnOp(op '!');
     Literal(lit true);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
     UnOp(op '!');
     UnOp(op '!');
     Literal(lit true);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadGlobal(name 'global:Number');
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'isNaN');
     ObjectGet();
-    LoadVar(index 4);
+    StoreVar(index 4);
     LoadVar(index 0);
     UnOp(op '+');
-    Call(count 2);
-    StoreVar(index 4);
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag false);
+    Call(count 2, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadGlobal(name 'global:Number');
-    LoadVar(index 4);
+    LoadVar(index 5);
     Literal(lit 'isNaN');
     ObjectGet();
-    LoadVar(index 4);
+    StoreVar(index 4);
     LoadVar(index 1);
     UnOp(op '+');
-    Call(count 2);
-    StoreVar(index 4);
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag false);
+    Call(count 2, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -1661,8 +1559,7 @@ function test_proto() {
     Literal(lit 'prototype');
     ObjectGet();
     BinOp(op '===');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadVar(index 2);
@@ -1672,8 +1569,7 @@ function test_proto() {
     Literal(lit 'prototype');
     ObjectGet();
     BinOp(op '!==');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     Pop(count 3);
     Literal(lit undefined);
     Return();
@@ -1704,8 +1600,7 @@ function test_returnFromConstructor() {
     Literal(lit 'prototype');
     ObjectGet();
     BinOp(op '!==');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     LoadGlobal(name 'global:assert');
     Literal(lit undefined);
     LoadVar(index 1);
@@ -1713,8 +1608,7 @@ function test_returnFromConstructor() {
     ObjectGet();
     Literal(lit 10);
     BinOp(op '===');
-    Call(count 2);
-    Pop(count 1);
+    Call(count 2, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
@@ -1747,20 +1641,18 @@ function test_staticInitializerClosingUsingThis() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
+    Literal(lit undefined);
     LoadScoped(index 1);
-    LoadVar(index 2);
+    LoadVar(index 3);
     Literal(lit 'y');
     ObjectGet();
-    LoadVar(index 2);
-    Call(count 1);
     StoreVar(index 2);
+    Call(count 1, flag false);
     Literal(lit 8);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Literal(lit undefined);
     Return();
 }
@@ -1794,16 +1686,14 @@ function test_staticInitializerUsingThis() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 0);
     Literal(lit 'y');
     ObjectGet();
     Literal(lit 8);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 1);
     Literal(lit undefined);
     Return();
@@ -1831,48 +1721,51 @@ function test_thisInInitializer() {
     Literal(lit 'x');
     ObjectGet();
     Literal(lit 5);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     LoadGlobal(name 'global:assertEqual');
     Literal(lit undefined);
     LoadVar(index 1);
     Literal(lit 'y');
     ObjectGet();
     Literal(lit 6);
-    Call(count 3);
-    Pop(count 1);
+    Call(count 3, flag true);
     Pop(count 2);
     Literal(lit undefined);
     Return();
 }
 
-allocation 1 = {
-  ownKeys: &function Reflect_ownKeys,
+function typeCodeOf() {
+  entry:
+    LoadArg(index 1);
+    TypeCodeOf();
+    Return();
+}
+
+allocation 12 = {
+  myProp: 42,
+  myStaticMethod: &function GlobalClass_myStaticMethod,
+  prototype: &allocation 13,
 };
 
-allocation 10 = {
+allocation 13 = {
+  myMethod: &function GlobalClass_myMethod,
+};
+
+allocation 14 = {
   x: 15,
 };
 
-allocation 2 = {
-  newUint8Array: &function Reflect_ownKeys1,
-  typeCodeOf: &function Reflect_ownKeys2,
+allocation 3 = {
+  ownKeys: &function ['Reflect.ownKeys'],
 };
 
 allocation 4 = {
+  isMicrovium: true,
+  newUint8Array: &function ['Microvium.newUint8Array'],
+  noOpFunction: no-op-function,
+  typeCodeOf: &function typeCodeOf,
+};
+
+allocation 6 = {
   isNaN: &function Number_isNaN,
-};
-
-allocation 5 = {
-  push: &function Array_push,
-};
-
-allocation 8 = {
-  myProp: 42,
-  myStaticMethod: &function GlobalClass_myStaticMethod,
-  prototype: &allocation 9,
-};
-
-allocation 9 = {
-  myMethod: &function GlobalClass_myMethod,
 };

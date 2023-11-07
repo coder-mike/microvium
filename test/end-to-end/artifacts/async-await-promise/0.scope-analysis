@@ -1,0 +1,1485 @@
+[this module slot] 'thisModule'
+[free var] 'vmExport'
+[free var] 'asyncTestComplete'
+[free var] 'undefined'
+[free var] 'assert'
+[free var] 'Promise'
+[free var] 'Reflect'
+[free var] 'assertEqual'
+[global slot] 'thisModule'
+[global slot] 'Error'
+[global slot] 'runAsync'
+[global slot] 'test_asyncReturnsPromise'
+[global slot] 'myAsyncFunc'
+[global slot] 'test_promiseKeys'
+[global slot] 'test_promiseAwait'
+[global slot] 'test_promiseAwaitReject'
+[global slot] 'myAsyncFuncReject'
+[global slot] 'test_awaitMustBeAsynchronous'
+[global slot] 'test_promiseConstructor'
+[global slot] 'test_unresolvedPromise1Subscriber'
+[global slot] 'test_unresolvedPromise2Subscribers'
+[global slot] 'test_unresolvedPromise3Subscribers'
+[global slot] 'test_awaitBeforeAndAfterResolved'
+[global slot] 'test_awaitUnrejected'
+[global slot] 'test_immediatelyRejectedPromise'
+[global slot] 'test_augmentingPromisePrototype'
+
+module with entry 'moduleEntry' {
+  [no closure scope]; [0 var declarations]
+
+  bindings {
+    class 'Error' # binding_1 @ global['Error'];
+    function 'run' # binding_2 @ local[0];
+    function 'runAsync' # binding_3 @ global['runAsync'];
+    function 'test_asyncReturnsPromise' # binding_4 @ global['test_asyncReturnsPromise'];
+    function 'myAsyncFunc' # binding_5 @ global['myAsyncFunc'];
+    function 'test_promiseKeys' # binding_6 @ global['test_promiseKeys'];
+    function 'test_promiseAwait' # binding_7 @ global['test_promiseAwait'];
+    function 'test_promiseAwaitReject' # binding_8 @ global['test_promiseAwaitReject'];
+    function 'myAsyncFuncReject' # binding_9 @ global['myAsyncFuncReject'];
+    function 'test_awaitMustBeAsynchronous' # binding_10 @ global['test_awaitMustBeAsynchronous'];
+    function 'test_promiseConstructor' # binding_11 @ global['test_promiseConstructor'];
+    function 'test_unresolvedPromise1Subscriber' # binding_12 @ global['test_unresolvedPromise1Subscriber'];
+    function 'test_unresolvedPromise2Subscribers' # binding_13 @ global['test_unresolvedPromise2Subscribers'];
+    function 'test_unresolvedPromise3Subscribers' # binding_14 @ global['test_unresolvedPromise3Subscribers'];
+    function 'test_awaitBeforeAndAfterResolved' # binding_15 @ global['test_awaitBeforeAndAfterResolved'];
+    function 'test_awaitUnrejected' # binding_16 @ global['test_awaitUnrejected'];
+    function 'test_immediatelyRejectedPromise' # binding_17 @ global['test_immediatelyRejectedPromise'];
+    function 'test_augmentingPromisePrototype' # binding_18 @ global['test_augmentingPromisePrototype']
+  }
+
+  references { vmExport @ free vmExport; run @ binding_2 }
+
+  prologue {
+    func 'run' -> local[0]
+    func 'runAsync' -> global['runAsync']
+    func 'test_asyncReturnsPromise' -> global['test_asyncReturnsPromise']
+    func 'myAsyncFunc' -> global['myAsyncFunc']
+    func 'test_promiseKeys' -> global['test_promiseKeys']
+    func 'test_promiseAwait' -> global['test_promiseAwait']
+    func 'test_promiseAwaitReject' -> global['test_promiseAwaitReject']
+    func 'myAsyncFuncReject' -> global['myAsyncFuncReject']
+    func 'test_awaitMustBeAsynchronous' -> global['test_awaitMustBeAsynchronous']
+    func 'test_promiseConstructor' -> global['test_promiseConstructor']
+    func 'test_unresolvedPromise1Subscriber' -> global['test_unresolvedPromise1Subscriber']
+    func 'test_unresolvedPromise2Subscribers' -> global['test_unresolvedPromise2Subscribers']
+    func 'test_unresolvedPromise3Subscribers' -> global['test_unresolvedPromise3Subscribers']
+    func 'test_awaitBeforeAndAfterResolved' -> global['test_awaitBeforeAndAfterResolved']
+    func 'test_awaitUnrejected' -> global['test_awaitUnrejected']
+    func 'test_immediatelyRejectedPromise' -> global['test_immediatelyRejectedPromise']
+    func 'test_augmentingPromisePrototype' -> global['test_augmentingPromisePrototype']
+  }
+
+  class Error with {
+    bindings {  }
+
+    prologue {  }
+
+    epilogue {  }
+
+    No references
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings { this '#this' # binding_19 @ arg[0] }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+    }
+
+    function Error as 'Error' {
+      [no closure scope]; [0 var declarations]
+
+      bindings { this '#this' # binding_20 @ arg[0] }
+
+      No references
+
+      prologue {  }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings { param 'message' # binding_21 @ arg[1] }
+
+        prologue {  }
+
+        epilogue {  }
+
+        No references
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            '#this' @ binding_20; message @ binding_21
+          }
+        }
+      }
+    }
+  }
+
+  function run as 'run' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_22 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references { runAsync @ binding_3 }
+    }
+  }
+
+  function runAsync as 'runAsync' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_23 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references {
+          test_asyncReturnsPromise @ binding_4
+          test_promiseKeys @ binding_6
+          test_promiseAwait @ binding_7
+          test_promiseAwaitReject @ binding_8
+          test_awaitMustBeAsynchronous @ binding_10
+          test_promiseConstructor @ binding_11
+          test_unresolvedPromise1Subscriber @ binding_12
+          test_unresolvedPromise2Subscribers @ binding_13
+          test_unresolvedPromise3Subscribers @ binding_14
+          test_awaitBeforeAndAfterResolved @ binding_15
+          test_awaitUnrejected @ binding_16
+          test_immediatelyRejectedPromise @ binding_17
+          test_augmentingPromisePrototype @ binding_18
+          asyncTestComplete @ free asyncTestComplete
+          undefined @ free undefined
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings { catch-param 'e' # binding_24 @ local[3] }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          asyncTestComplete @ free asyncTestComplete
+          e @ binding_24
+        }
+      }
+    }
+  }
+
+  function test_asyncReturnsPromise as 'test_asyncReturnsPromise' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_25 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'promise' # binding_26 @ local[0]
+      }
+
+      prologue { new let -> local[0] }
+
+      epilogue { Pop(1) }
+
+      references {
+        myAsyncFunc @ binding_5
+        assert @ free assert
+        promise @ binding_26
+        Promise @ free Promise
+      }
+    }
+  }
+
+  function myAsyncFunc as 'myAsyncFunc' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_27 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+    }
+  }
+
+  function test_promiseKeys as 'test_promiseKeys' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_28 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'promise' # binding_29 @ local[3];
+        readonly const 'keys' # binding_30 @ local[4];
+        readonly const 'keys2' # binding_31 @ local[5]
+      }
+
+      prologue {
+        new let -> local[3]
+        new let -> local[4]
+        new let -> local[5]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        myAsyncFunc @ binding_5
+        Reflect @ free Reflect
+        promise @ binding_29
+        assertEqual @ free assertEqual
+        keys @ binding_30
+        promise @ binding_29
+        Reflect @ free Reflect
+        promise @ binding_29
+        assertEqual @ free assertEqual
+        keys2 @ binding_31
+        assertEqual @ free assertEqual
+        keys2 @ binding_31
+      }
+    }
+  }
+
+  function test_promiseAwait as 'test_promiseAwait' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_32 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'promise' # binding_33 @ local[3];
+        readonly const 'result' # binding_34 @ local[4]
+      }
+
+      prologue { new let -> local[3]; new let -> local[4] }
+
+      epilogue { Pop(2) }
+
+      references {
+        myAsyncFunc @ binding_5
+        promise @ binding_33
+        assertEqual @ free assertEqual
+        result @ binding_34
+      }
+    }
+  }
+
+  function test_promiseAwaitReject as 'test_promiseAwaitReject' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_35 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'promise' # binding_36 @ local[3]
+      }
+
+      prologue { new let -> local[3] }
+
+      epilogue { Pop(1) }
+
+      references { myAsyncFuncReject @ binding_9 }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue { StartTry }
+
+        epilogue { !EndTry }
+
+        references {
+          promise @ binding_36; assert @ free assert
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings { catch-param 'e' # binding_37 @ local[4] }
+
+        prologue { Stack has exception }
+
+        epilogue { Pop(1) }
+
+        references {
+          assertEqual @ free assertEqual; e @ binding_37
+        }
+      }
+    }
+  }
+
+  function myAsyncFuncReject as 'myAsyncFuncReject' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_38 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      references { Error @ binding_1 }
+    }
+  }
+
+  function test_awaitMustBeAsynchronous as 'test_awaitMustBeAsynchronous' {
+    [closure scope with 3 slots: async-continuation, async-callback, s]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_39 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(3, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 's' # binding_40 @ scoped[!2];
+        readonly const 'promise' # binding_41 @ local[4];
+        function 'inner' # binding_42 @ local[3]
+      }
+
+      prologue {
+        func 'inner' -> local[3] [non-embedded closure]
+        new let -> local[4]
+      }
+
+      epilogue { Pop(2) }
+
+      references {
+        inner @ binding_42
+        s @ binding_40 using relative slot index 2
+        promise @ binding_41
+        assertEqual @ free assertEqual
+        s @ binding_40 using relative slot index 2
+      }
+
+      closure function inner as 'inner' {
+        [closure scope with 3 slots: async-continuation, async-callback, parent-reference]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_43 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(3, true) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            readonly const 'promise' # binding_44 @ local[3]
+          }
+
+          prologue { new let -> local[3] }
+
+          epilogue { Pop(1) }
+
+          references {
+            myAsyncFunc @ binding_5
+            s @ binding_40 using relative slot index 7
+            promise @ binding_44
+            s @ binding_40 using relative slot index 7
+          }
+        }
+      }
+    }
+  }
+
+  function test_promiseConstructor as 'test_promiseConstructor' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_45 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'promise' # binding_46 @ local[3];
+        readonly const 'result' # binding_47 @ local[4]
+      }
+
+      prologue { new let -> local[3]; new let -> local[4] }
+
+      epilogue { Pop(2) }
+
+      references {
+        Promise @ free Promise
+        promise @ binding_46
+        assertEqual @ free assertEqual
+        result @ binding_47
+      }
+
+      function '<anonymous>' as 'anonymous' {
+        [no closure scope]; [0 var declarations]
+
+        bindings {
+          param 'resolve' # binding_48 @ arg[1];
+          param 'reject' # binding_49 @ arg[2]
+        }
+
+        No references
+
+        prologue {  }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references { resolve @ binding_48 }
+        }
+      }
+    }
+  }
+
+  function test_unresolvedPromise1Subscriber as 'test_unresolvedPromise1Subscriber' {
+    [closure scope with 4 slots: async-continuation, async-callback, s, resolve]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_50 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(4, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 's' # binding_51 @ scoped[!2];
+        writable let 'resolve' # binding_52 @ scoped[!3];
+        readonly const 'promise' # binding_53 @ local[4];
+        readonly const 'p1' # binding_54 @ local[5];
+        function 'subscriber1' # binding_55 @ local[3]
+      }
+
+      prologue {
+        func 'subscriber1' -> local[3] [non-embedded closure]
+        new let -> local[4]
+        new let -> local[5]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        Promise @ free Promise
+        subscriber1 @ binding_55
+        promise @ binding_53
+        assertEqual @ free assertEqual
+        s @ binding_51 using relative slot index 2
+        resolve @ binding_52 using relative slot index 3
+        p1 @ binding_54
+        assertEqual @ free assertEqual
+        s @ binding_51 using relative slot index 2
+      }
+
+      closure function '<anonymous>' as 'anonymous1' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { param 'r' # binding_56 @ arg[1] }
+
+        references {
+          resolve @ binding_52 using relative slot index 5
+          r @ binding_56
+        }
+
+        prologue {  }
+      }
+
+      closure function subscriber1 as 'subscriber1' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_57 @ arg[0];
+          param 'promise' # binding_58 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            readonly const 'result' # binding_59 @ local[3]
+          }
+
+          prologue { new let -> local[3] }
+
+          epilogue { Pop(1) }
+
+          references {
+            s @ binding_51 using relative slot index 8
+            promise @ binding_58 using relative slot index 2
+            s @ binding_51 using relative slot index 8
+            result @ binding_59
+          }
+        }
+      }
+    }
+  }
+
+  function test_unresolvedPromise2Subscribers as 'test_unresolvedPromise2Subscribers' {
+    [closure scope with 4 slots: async-continuation, async-callback, s, resolve]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_60 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(4, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 's' # binding_61 @ scoped[!2];
+        writable let 'resolve' # binding_62 @ scoped[!3];
+        readonly const 'promise' # binding_63 @ local[5];
+        readonly const 'p1' # binding_64 @ local[6];
+        readonly const 'p2' # binding_65 @ local[7];
+        function 'subscriber1' # binding_66 @ local[3];
+        function 'subscriber2' # binding_67 @ local[4]
+      }
+
+      prologue {
+        func 'subscriber2' -> local[3] [non-embedded closure]
+        func 'subscriber3' -> local[4] [non-embedded closure]
+        new let -> local[5]
+        new let -> local[6]
+        new let -> local[7]
+      }
+
+      epilogue { Pop(5) }
+
+      references {
+        Promise @ free Promise
+        subscriber1 @ binding_66
+        promise @ binding_63
+        subscriber2 @ binding_67
+        promise @ binding_63
+        assertEqual @ free assertEqual
+        s @ binding_61 using relative slot index 2
+        resolve @ binding_62 using relative slot index 3
+        p1 @ binding_64
+        p2 @ binding_65
+        assertEqual @ free assertEqual
+        s @ binding_61 using relative slot index 2
+      }
+
+      closure function '<anonymous>' as 'anonymous2' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { param 'r' # binding_68 @ arg[1] }
+
+        references {
+          resolve @ binding_62 using relative slot index 5
+          r @ binding_68
+        }
+
+        prologue {  }
+      }
+
+      closure function subscriber1 as 'subscriber2' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_69 @ arg[0];
+          param 'promise' # binding_70 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            readonly const 'result' # binding_71 @ local[3]
+          }
+
+          prologue { new let -> local[3] }
+
+          epilogue { Pop(1) }
+
+          references {
+            s @ binding_61 using relative slot index 8
+            promise @ binding_70 using relative slot index 2
+            s @ binding_61 using relative slot index 8
+            result @ binding_71
+          }
+        }
+      }
+
+      closure function subscriber2 as 'subscriber3' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_72 @ arg[0];
+          param 'promise' # binding_73 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            readonly const 'result' # binding_74 @ local[3]
+          }
+
+          prologue { new let -> local[3] }
+
+          epilogue { Pop(1) }
+
+          references {
+            s @ binding_61 using relative slot index 8
+            promise @ binding_73 using relative slot index 2
+            s @ binding_61 using relative slot index 8
+            result @ binding_74
+          }
+        }
+      }
+    }
+  }
+
+  function test_unresolvedPromise3Subscribers as 'test_unresolvedPromise3Subscribers' {
+    [closure scope with 4 slots: async-continuation, async-callback, s, resolve]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_75 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(4, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 's' # binding_76 @ scoped[!2];
+        writable let 'resolve' # binding_77 @ scoped[!3];
+        readonly const 'promise' # binding_78 @ local[6];
+        readonly const 'p1' # binding_79 @ local[7];
+        readonly const 'p2' # binding_80 @ local[8];
+        readonly const 'p3' # binding_81 @ local[9];
+        function 'subscriber1' # binding_82 @ local[3];
+        function 'subscriber2' # binding_83 @ local[4];
+        function 'subscriber3' # binding_84 @ local[5]
+      }
+
+      prologue {
+        func 'subscriber4' -> local[3] [non-embedded closure]
+        func 'subscriber5' -> local[4] [non-embedded closure]
+        func 'subscriber6' -> local[5] [non-embedded closure]
+        new let -> local[6]
+        new let -> local[7]
+        new let -> local[8]
+        new let -> local[9]
+      }
+
+      epilogue { Pop(7) }
+
+      references {
+        Promise @ free Promise
+        subscriber1 @ binding_82
+        promise @ binding_78
+        subscriber2 @ binding_83
+        promise @ binding_78
+        subscriber3 @ binding_84
+        promise @ binding_78
+        assertEqual @ free assertEqual
+        s @ binding_76 using relative slot index 2
+        resolve @ binding_77 using relative slot index 3
+        p1 @ binding_79
+        p2 @ binding_80
+        p3 @ binding_81
+        assertEqual @ free assertEqual
+        s @ binding_76 using relative slot index 2
+      }
+
+      closure function '<anonymous>' as 'anonymous3' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { param 'r' # binding_85 @ arg[1] }
+
+        references {
+          resolve @ binding_77 using relative slot index 5
+          r @ binding_85
+        }
+
+        prologue {  }
+      }
+
+      closure function subscriber1 as 'subscriber4' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_86 @ arg[0];
+          param 'promise' # binding_87 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            readonly const 'result' # binding_88 @ local[3]
+          }
+
+          prologue { new let -> local[3] }
+
+          epilogue { Pop(1) }
+
+          references {
+            s @ binding_76 using relative slot index 8
+            promise @ binding_87 using relative slot index 2
+            s @ binding_76 using relative slot index 8
+            result @ binding_88
+          }
+        }
+      }
+
+      closure function subscriber2 as 'subscriber5' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_89 @ arg[0];
+          param 'promise' # binding_90 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            readonly const 'result' # binding_91 @ local[3]
+          }
+
+          prologue { new let -> local[3] }
+
+          epilogue { Pop(1) }
+
+          references {
+            s @ binding_76 using relative slot index 8
+            promise @ binding_90 using relative slot index 2
+            s @ binding_76 using relative slot index 8
+            result @ binding_91
+          }
+        }
+      }
+
+      closure function subscriber3 as 'subscriber6' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_92 @ arg[0];
+          param 'promise' # binding_93 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            readonly const 'result' # binding_94 @ local[3]
+          }
+
+          prologue { new let -> local[3] }
+
+          epilogue { Pop(1) }
+
+          references {
+            s @ binding_76 using relative slot index 8
+            promise @ binding_93 using relative slot index 2
+            s @ binding_76 using relative slot index 8
+            result @ binding_94
+          }
+        }
+      }
+    }
+  }
+
+  function test_awaitBeforeAndAfterResolved as 'test_awaitBeforeAndAfterResolved' {
+    [closure scope with 4 slots: async-continuation, async-callback, s, resolve]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_95 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(4, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 's' # binding_96 @ scoped[!2];
+        writable let 'resolve' # binding_97 @ scoped[!3];
+        readonly const 'promise' # binding_98 @ local[5];
+        readonly const 'p1' # binding_99 @ local[6];
+        readonly const 'p2' # binding_100 @ local[7];
+        function 'subscriber1' # binding_101 @ local[3];
+        function 'subscriber2' # binding_102 @ local[4]
+      }
+
+      prologue {
+        func 'subscriber7' -> local[3] [non-embedded closure]
+        func 'subscriber8' -> local[4] [non-embedded closure]
+        new let -> local[5]
+        new let -> local[6]
+        new let -> local[7]
+      }
+
+      epilogue { Pop(5) }
+
+      references {
+        Promise @ free Promise
+        subscriber1 @ binding_101
+        promise @ binding_98
+        assertEqual @ free assertEqual
+        s @ binding_96 using relative slot index 2
+        resolve @ binding_97 using relative slot index 3
+        assertEqual @ free assertEqual
+        s @ binding_96 using relative slot index 2
+        p1 @ binding_99
+        assertEqual @ free assertEqual
+        s @ binding_96 using relative slot index 2
+        subscriber2 @ binding_102
+        promise @ binding_98
+        assertEqual @ free assertEqual
+        s @ binding_96 using relative slot index 2
+        p2 @ binding_100
+        assertEqual @ free assertEqual
+        s @ binding_96 using relative slot index 2
+      }
+
+      closure function '<anonymous>' as 'anonymous4' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { param 'r' # binding_103 @ arg[1] }
+
+        references {
+          resolve @ binding_97 using relative slot index 5
+          r @ binding_103
+        }
+
+        prologue {  }
+      }
+
+      closure function subscriber1 as 'subscriber7' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_104 @ arg[0];
+          param 'promise' # binding_105 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            readonly const 'result' # binding_106 @ local[3]
+          }
+
+          prologue { new let -> local[3] }
+
+          epilogue { Pop(1) }
+
+          references {
+            s @ binding_96 using relative slot index 8
+            promise @ binding_105 using relative slot index 2
+            s @ binding_96 using relative slot index 8
+            result @ binding_106
+          }
+        }
+      }
+
+      closure function subscriber2 as 'subscriber8' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_107 @ arg[0];
+          param 'promise' # binding_108 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {
+            readonly const 'result' # binding_109 @ local[3]
+          }
+
+          prologue { new let -> local[3] }
+
+          epilogue { Pop(1) }
+
+          references {
+            s @ binding_96 using relative slot index 8
+            promise @ binding_108 using relative slot index 2
+            s @ binding_96 using relative slot index 8
+            result @ binding_109
+          }
+        }
+      }
+    }
+  }
+
+  function test_awaitUnrejected as 'test_awaitUnrejected' {
+    [closure scope with 4 slots: async-continuation, async-callback, s, reject]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_110 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(4, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 's' # binding_111 @ scoped[!2];
+        writable let 'reject' # binding_112 @ scoped[!3];
+        readonly const 'promise' # binding_113 @ local[4];
+        readonly const 'p1' # binding_114 @ local[5];
+        function 'subscriber1' # binding_115 @ local[3]
+      }
+
+      prologue {
+        func 'subscriber9' -> local[3] [non-embedded closure]
+        new let -> local[4]
+        new let -> local[5]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        Promise @ free Promise
+        subscriber1 @ binding_115
+        promise @ binding_113
+        assertEqual @ free assertEqual
+        s @ binding_111 using relative slot index 2
+        reject @ binding_112 using relative slot index 3
+        Error @ binding_1
+        p1 @ binding_114
+        assertEqual @ free assertEqual
+        s @ binding_111 using relative slot index 2
+      }
+
+      closure function '<anonymous>' as 'anonymous5' {
+        [no closure scope]; [0 var declarations]
+
+        bindings {
+          param '_' # binding_116 @ arg[1];
+          param 'r' # binding_117 @ arg[2]
+        }
+
+        references {
+          reject @ binding_112 using relative slot index 5
+          r @ binding_117
+        }
+
+        prologue {  }
+      }
+
+      closure function subscriber1 as 'subscriber9' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_118 @ arg[0];
+          param 'promise' # binding_119 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            s @ binding_111 using relative slot index 8
+          }
+
+          block {
+            sameInstanceCountAsParent: true
+            [no closure scope]
+
+            bindings {  }
+
+            prologue { StartTry }
+
+            epilogue { !EndTry }
+
+            references {
+              promise @ binding_119 using relative slot index 2
+              s @ binding_111 using relative slot index 8
+            }
+          }
+
+          block {
+            sameInstanceCountAsParent: true
+            [no closure scope]
+
+            bindings {
+              catch-param 'e' # binding_120 @ local[3]
+            }
+
+            prologue { Stack has exception }
+
+            epilogue { Pop(1) }
+
+            references {
+              s @ binding_111 using relative slot index 8
+              e @ binding_120
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function test_immediatelyRejectedPromise as 'test_immediatelyRejectedPromise' {
+    [closure scope with 3 slots: async-continuation, async-callback, s]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_121 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(3, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        writable let 's' # binding_122 @ scoped[!2];
+        readonly const 'promise' # binding_123 @ local[4];
+        readonly const 'p1' # binding_124 @ local[5];
+        function 'subscriber1' # binding_125 @ local[3]
+      }
+
+      prologue {
+        func 'subscriber10' -> local[3] [non-embedded closure]
+        new let -> local[4]
+        new let -> local[5]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        Promise @ free Promise
+        subscriber1 @ binding_125
+        promise @ binding_123
+        assertEqual @ free assertEqual
+        s @ binding_122 using relative slot index 2
+        p1 @ binding_124
+        assertEqual @ free assertEqual
+        s @ binding_122 using relative slot index 2
+      }
+
+      function '<anonymous>' as 'anonymous6' {
+        [no closure scope]; [0 var declarations]
+
+        bindings {
+          param '_' # binding_126 @ arg[1];
+          param 'reject' # binding_127 @ arg[2]
+        }
+
+        references {
+          reject @ binding_127; Error @ binding_1
+        }
+
+        prologue {  }
+      }
+
+      closure function subscriber1 as 'subscriber10' {
+        [closure scope with 4 slots: async-continuation,
+        async-callback,
+        promise,
+        parent-reference]
+        [0 var declarations]
+
+        bindings {
+          this '#this' # binding_128 @ arg[0];
+          param 'promise' # binding_129 @ scoped[!2]
+        }
+
+        No references
+
+        prologue {
+          AsyncStart(4, true); arg[1] -> scoped[+2]
+        }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references {
+            s @ binding_122 using relative slot index 8
+          }
+
+          block {
+            sameInstanceCountAsParent: true
+            [no closure scope]
+
+            bindings {  }
+
+            prologue { StartTry }
+
+            epilogue { !EndTry }
+
+            references {
+              promise @ binding_129 using relative slot index 2
+              s @ binding_122 using relative slot index 8
+            }
+          }
+
+          block {
+            sameInstanceCountAsParent: true
+            [no closure scope]
+
+            bindings {
+              catch-param 'e' # binding_130 @ local[3]
+            }
+
+            prologue { Stack has exception }
+
+            epilogue { Pop(1) }
+
+            references {
+              s @ binding_122 using relative slot index 8
+              e @ binding_130
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function test_augmentingPromisePrototype as 'test_augmentingPromisePrototype' {
+    [closure scope with 2 slots: async-continuation, async-callback]
+    [0 var declarations]
+
+    bindings { this '#this' # binding_131 @ arg[0] }
+
+    No references
+
+    prologue { AsyncStart(2, false) }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {
+        readonly const 'promise' # binding_132 @ local[4];
+        readonly const 'p1' # binding_133 @ local[5];
+        function 'myAsync' # binding_134 @ local[3]
+      }
+
+      prologue {
+        func 'myAsync' -> local[3]
+        new let -> local[4]
+        new let -> local[5]
+      }
+
+      epilogue { Pop(3) }
+
+      references {
+        Promise @ free Promise
+        Promise @ free Promise
+        Promise @ free Promise
+        myAsync @ binding_134
+        assertEqual @ free assertEqual
+        promise @ binding_132
+        assertEqual @ free assertEqual
+        promise @ binding_132
+        assertEqual @ free assertEqual
+        p1 @ binding_133
+        assertEqual @ free assertEqual
+        p1 @ binding_133
+        p1 @ binding_133
+        assertEqual @ free assertEqual
+        p1 @ binding_133
+        assertEqual @ free assertEqual
+        p1 @ binding_133
+        p1 @ binding_133
+        assertEqual @ free assertEqual
+        promise @ binding_132
+        assertEqual @ free assertEqual
+        p1 @ binding_133
+      }
+
+      function '<anonymous>' as 'anonymous7' {
+        [no closure scope]; [0 var declarations]
+
+        bindings { this '#this' # binding_135 @ arg[0] }
+
+        No references
+
+        prologue {  }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          references { '#this' @ binding_135 }
+        }
+      }
+
+      function '<anonymous>' as 'anonymous8' {
+        [no closure scope]; [0 var declarations]
+
+        bindings {
+          param '_' # binding_136 @ arg[1];
+          param 'reject' # binding_137 @ arg[2]
+        }
+
+        references {
+          reject @ binding_137; Error @ binding_1
+        }
+
+        prologue {  }
+      }
+
+      function myAsync as 'myAsync' {
+        [closure scope with 2 slots: async-continuation, async-callback]
+        [0 var declarations]
+
+        bindings { this '#this' # binding_138 @ arg[0] }
+
+        No references
+
+        prologue { AsyncStart(2, false) }
+
+        block {
+          sameInstanceCountAsParent: true
+          [no closure scope]
+
+          bindings {  }
+
+          prologue {  }
+
+          epilogue {  }
+
+          No references
+        }
+      }
+    }
+  }
+}
