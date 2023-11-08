@@ -144,7 +144,7 @@ Strings support the following operations:
 
 ### Unicode Support
 
-The compile-time engine has full unicode support and uses UTF16 internally to store strings. The runtime
+The compile-time engine has full unicode support and uses UTF16 internally to store strings. The runtime (WIP)
 
 ### MicroviumCompileTime.defineStringMethod
 
