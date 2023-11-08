@@ -24,6 +24,7 @@ export interface SnapshotIL {
   flags: Set<IL.ExecutionFlag>;
   builtins: {
     arrayPrototype: IL.Value;
+    stringPrototype: IL.Value;
     promisePrototype: IL.Value;
     asyncContinue: IL.Value;
     asyncCatchBlock: IL.Value;

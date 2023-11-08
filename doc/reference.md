@@ -129,3 +129,39 @@ console.log = vmImport(27, ephemeralConsoleLog);
 The default `console.log` is [ephemeral](#ephemerals) and so won't work at runtime. You can bind it to a runtime import using `vmImport`, and optionally supply the default value such as the original ephemeral `console.log` to use when the function is called at compile time.
 
 It's up to the hosts to provide a stable implementation of the imported function across multiple environments.
+
+
+## String Operations
+
+Strings support the following operations:
+
+- `s.length` gives the string length
+- `s1 + s2` concatenates strings
+- `s[n]` gets the nth UTF16 code-point, subject to unicode support (see corresponding section below)
+- `MicroviumCompileTime.defineStringMethod` defines a method that can be called on strings.
+- `s.myMethod()` accesses a method on the string prototype, subject to the existence of the string prototype. See corresponding section below.
+- Template strings can be used but not with custom tags
+
+### Unicode Support
+
+The compile-time engine has full unicode support and uses UTF16 internally to store strings. The runtime
+
+### MicroviumCompileTime.defineStringMethod
+
+WIP: I haven't actually decided the final design here.
+
+For memory efficiency, the string prototype object is not included by default, since it would occupy memory even for people who don't use it.
+
+To create the string prototype object, simply access it at compile time. It is created lazily when you access it and then will persist to runtime. For example:
+
+```js
+// At compile-time
+MicroviumCompileTime.defineStringMethod('myMethod', s => s.length * 10);
+
+function atRuntime() {
+  const s = 'abc';
+  s.myMethod(); // Returns 30
+}
+```
+
+String prototype methods are not invoked in a spec-compliant way, because the `this` value will be the string primitive itself.

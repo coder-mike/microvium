@@ -5901,7 +5901,7 @@ SUB_GET_PROPERTY:
       // .__proto__
       else if (propertyName == VM_VALUE_STR_PROTO) {
         CODE_COVERAGE_UNTESTED(670); // Not hit
-        *out_propertyValue = getBuiltin(vm, BIN_STR_PROTOTYPE);
+        *out_propertyValue = getBuiltin(vm, BIN_STRING_PROTOTYPE);
         return MVM_E_SUCCESS;
       }
       // [i]
@@ -5919,7 +5919,7 @@ SUB_GET_PROPERTY:
       else {
         CODE_COVERAGE_UNTESTED(672); // Not hit
         // Defer to the prototype
-        *pObjectValue = getBuiltin(vm, BIN_STR_PROTOTYPE);
+        *pObjectValue = getBuiltin(vm, BIN_STRING_PROTOTYPE);
         goto SUB_GET_PROPERTY;
       }
     }

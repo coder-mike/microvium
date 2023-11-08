@@ -7,6 +7,8 @@ assertionCount: 38
 
 vmExport(0, run);
 
+compileTimeStringPrototypeSetup();
+
 function run() {
   assertEqual('abc', "abc");
   assertEqual('ab_' + 'cd', 'ab_cd');
@@ -40,11 +42,23 @@ function run() {
   assertEqual(`abc${'_'}`, 'abc_');
   assertEqual(`ab${5}c`, 'ab5c');
 
-  // TODO: Strings as properties (interning)
-  // TODO: Strings in RAM vs ROM
-  // TODO: check interning for `obj['len' + 'th']
+  testStringPrototypeMethods();
 
   asciiTests();
+
+  // The `textSupport` global is set by the test harness depending on the value
+  // of MVM_TEXT_SUPPORT in the port file.
+  if (textSupport === 1 /* BMP */ || textSupport === 2 /* Full unicode */) {
+    basicMultilingualPlaneTests();
+  }
+
+  if (textSupport === 2 /* Full unicode */) {
+    fullUnicodeTests();
+  }
+}
+
+function testStringPrototypeMethods() {
+  // WIP
 }
 
 function asciiTests() {
@@ -69,5 +83,19 @@ function asciiTests() {
   assertEqual('__proto__'[0], '_');
   assertEqual('__proto__'[8], '_');
   assertEqual('__proto__'[9], undefined);
+}
+
+function basicMultilingualPlaneTests() {
 
 }
+
+function fullUnicodeTests() {
+
+}
+
+function compileTimeStringPrototypeSetup() {
+
+}
+
+// WIP: The snapshot encoder needs to identify if any literal strings require
+// different levels of unicode support and correspondingly set the flags

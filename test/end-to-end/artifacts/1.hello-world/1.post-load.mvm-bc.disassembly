@@ -1,4 +1,4 @@
-Bytecode size: 90 B
+Bytecode size: 94 B
 
 Addr    Size
 ==== =======
@@ -7,49 +7,51 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 0
 0003       1     reserved: 0
-0004       2     bytecodeSize: 90
-0006       2     expectedCRC: 7820
+0004       2     bytecodeSize: 94
+0006       2     expectedCRC: 2c68
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 0030
-0016       2     BCS_ROM: 0032
-0018       2     BCS_GLOBALS: 0054
-001a       2     BCS_HEAP: 005a
+0014       2     BCS_STRING_TABLE: 0032
+0016       2     BCS_ROM: 0034
+0018       2     BCS_GLOBALS: 0058
+001a       2     BCS_HEAP: 005e
 001c    2  - # Import Table
 001c       2     [0]: 1
 001e    4  - # Export Table
-001e       4     [42]: &0048
-0022    e  - # Builtins
-0022       2     [BIN_INTERNED_STRINGS]: &0058
+001e       4     [42]: &004c
+0022   10  - # Builtins
+0022       2     [BIN_INTERNED_STRINGS]: &005c
 0024       2     [BIN_ARRAY_PROTO]: undefined
 0026       2     [BIN_STR_PROTOTYPE]: undefined
 0028       2     [BIN_ASYNC_CONTINUE]: undefined
 002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
 002c       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
 002e       2     [BIN_PROMISE_PROTOTYPE]: undefined
-0030    2  - # String Table
-0030       2     [0]: &0034
-0032   21  - # ROM allocations
-0032       2     Header [Size: 14, Type: TC_REF_INTERNED_STRING]
-0034       e     Value: 'Hello, World!'
-0042       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0044       2     Value: Import Table [0] (&001c)
-0046       2     Header [Size: 3, Type: TC_REF_FUNCTION]
-0048    b  -     # Function run
-0048       0         maxStackDepth: 3
-0048       0         isContinuation: 0
-0048    b  -         # Block entry
-0048       3             LoadGlobal [0]
-004b       1             Literal(lit undefined)
-004c       3             Literal(&0034)
-004f       2             Call(count 2, flag true)
-0051       1             Literal(lit undefined)
-0052       1             Return()
-0053       1 <unused>
-0054    6  - # Globals
-0054       2     [0]: &0044
-0056       2     [1]: deleted
-0058       2     Handle: undefined
+0030       2     [BIN_STRING_PROTOTYPE]: undefined
+0032    2  - # String Table
+0032       2     [0]: &0038
+0034       2 <unused>
+0036   21  - # ROM allocations
+0036       2     Header [Size: 14, Type: TC_REF_INTERNED_STRING]
+0038       e     Value: 'Hello, World!'
+0046       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0048       2     Value: Import Table [0] (&001c)
+004a       2     Header [Size: 3, Type: TC_REF_FUNCTION]
+004c    b  -     # Function run
+004c       0         maxStackDepth: 3
+004c       0         isContinuation: 0
+004c    b  -         # Block entry
+004c       3             LoadGlobal [0]
+004f       1             Literal(lit undefined)
+0050       3             Literal(&0038)
+0053       2             Call(count 2, flag true)
+0055       1             Literal(lit undefined)
+0056       1             Return()
+0057       1 <unused>
+0058    6  - # Globals
+0058       2     [0]: &0048
+005a       2     [1]: deleted
+005c       2     Handle: undefined

@@ -2,27 +2,44 @@
 [free var] 'vmExport'
 [free var] 'assertEqual'
 [free var] 'undefined'
-[global slot] 'thisModule'; [global slot] 'asciiTests'
+[free var] 'textSupport'
+[global slot] 'thisModule'
+[global slot] 'testStringPrototypeMethods'
+[global slot] 'asciiTests'
+[global slot] 'basicMultilingualPlaneTests'
+[global slot] 'fullUnicodeTests'
 
 module with entry 'moduleEntry' {
   [no closure scope]; [0 var declarations]
 
   bindings {
     function 'run' # binding_1 @ local[0];
-    function 'asciiTests' # binding_2 @ global['asciiTests']
+    function 'testStringPrototypeMethods' # binding_2 @ global['testStringPrototypeMethods'];
+    function 'asciiTests' # binding_3 @ global['asciiTests'];
+    function 'basicMultilingualPlaneTests' # binding_4 @ global['basicMultilingualPlaneTests'];
+    function 'fullUnicodeTests' # binding_5 @ global['fullUnicodeTests'];
+    function 'compileTimeStringPrototypeSetup' # binding_6 @ local[1]
   }
 
-  references { vmExport @ free vmExport; run @ binding_1 }
+  references {
+    vmExport @ free vmExport
+    run @ binding_1
+    compileTimeStringPrototypeSetup @ binding_6
+  }
 
   prologue {
     func 'run' -> local[0]
+    func 'testStringPrototypeMethods' -> global['testStringPrototypeMethods']
     func 'asciiTests' -> global['asciiTests']
+    func 'basicMultilingualPlaneTests' -> global['basicMultilingualPlaneTests']
+    func 'fullUnicodeTests' -> global['fullUnicodeTests']
+    func 'compileTimeStringPrototypeSetup' -> local[1]
   }
 
   function run as 'run' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_3 @ arg[0] }
+    bindings { this '#this' # binding_7 @ arg[0] }
 
     No references
 
@@ -61,15 +78,67 @@ module with entry 'moduleEntry' {
         assertEqual @ free assertEqual
         assertEqual @ free assertEqual
         assertEqual @ free assertEqual
-        asciiTests @ binding_2
+        testStringPrototypeMethods @ binding_2
+        asciiTests @ binding_3
+        textSupport @ free textSupport
+        textSupport @ free textSupport
+        textSupport @ free textSupport
       }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        references {
+          basicMultilingualPlaneTests @ binding_4
+        }
+      }
+
+      block {
+        sameInstanceCountAsParent: true; [no closure scope]
+
+        bindings {  }
+
+        prologue {  }
+
+        epilogue {  }
+
+        references { fullUnicodeTests @ binding_5 }
+      }
+    }
+  }
+
+  function testStringPrototypeMethods as 'testStringPrototypeMethods' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_8 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
     }
   }
 
   function asciiTests as 'asciiTests' {
     [no closure scope]; [0 var declarations]
 
-    bindings { this '#this' # binding_4 @ arg[0] }
+    bindings { this '#this' # binding_9 @ arg[0] }
 
     No references
 
@@ -106,6 +175,72 @@ module with entry 'moduleEntry' {
         assertEqual @ free assertEqual
         undefined @ free undefined
       }
+    }
+  }
+
+  function basicMultilingualPlaneTests as 'basicMultilingualPlaneTests' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_10 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+    }
+  }
+
+  function fullUnicodeTests as 'fullUnicodeTests' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_11 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
+    }
+  }
+
+  function compileTimeStringPrototypeSetup as 'compileTimeStringPrototypeSetup' {
+    [no closure scope]; [0 var declarations]
+
+    bindings { this '#this' # binding_12 @ arg[0] }
+
+    No references
+
+    prologue {  }
+
+    block {
+      sameInstanceCountAsParent: true; [no closure scope]
+
+      bindings {  }
+
+      prologue {  }
+
+      epilogue {  }
+
+      No references
     }
   }
 }

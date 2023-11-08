@@ -38,6 +38,7 @@ void NativeVM::Init(Napi::Env env, Napi::Object exports) {
     NativeVM::InstanceMethod("stopAfterNInstructions", &NativeVM::stopAfterNInstructions),
     NativeVM::InstanceMethod("getInstructionCountRemaining", &NativeVM::getInstructionCountRemaining),
     NativeVM::StaticValue("MVM_PORT_INT32_OVERFLOW_CHECKS", Napi::Boolean::New(env, MVM_PORT_INT32_OVERFLOW_CHECKS)),
+    NativeVM::StaticValue("MVM_TEXT_SUPPORT", Napi::Boolean::New(env, MVM_TEXT_SUPPORT)),
   });
   constructor = Napi::Persistent(ctr);
   exports.Set(Napi::String::New(env, "NativeVM"), ctr);

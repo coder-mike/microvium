@@ -132,11 +132,12 @@ typedef enum mvm_TeBytecodeSection {
 typedef enum mvm_TeBuiltins {
   BIN_INTERNED_STRINGS,
   BIN_ARRAY_PROTO,
-  BIN_STR_PROTOTYPE, // If the string "prototype" is interned, this builtin points to it.
+  BIN_STR_PROTOTYPE, // If the literal string "prototype" is interned, this builtin points to it.
   BIN_ASYNC_CONTINUE, // A function used to construct a closure for the job queue to complete async operations
   BIN_ASYNC_CATCH_BLOCK, // A block, bundled as a function, for the root try-catch in async functions
   BIN_ASYNC_HOST_CALLBACK, // Bytecode to use as the callback for host async operations
   BIN_PROMISE_PROTOTYPE,
+  BIN_STRING_PROTOTYPE, // Object representing the prototype of strings
 
   BIN_BUILTIN_COUNT
 } mvm_TeBuiltins;
@@ -163,8 +164,8 @@ typedef struct mvm_TsBytecodeHeader { // Size = 12B + sectionOffsets
 
 typedef enum mvm_TeFeatureFlags {
   FF_FLOAT_SUPPORT = 0,
-  FF_UNICODE_BMP_SUPPORT = 1,
-  FF_UNICODE_FULL_SUPPORT = 2,
+  FF_UNICODE_BMP_SUPPORT = 1, // WIP: populate and check this
+  FF_UNICODE_FULL_SUPPORT = 2, // WIP: populate and check this
 } mvm_TeFeatureFlags;
 
 typedef struct vm_TsExportTableEntry {

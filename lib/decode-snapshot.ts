@@ -117,6 +117,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     allocations: new Map(),
     flags: new Set(),
     builtins: {
+      stringPrototype: IL.undefinedValue,
       promisePrototype: IL.undefinedValue,
       arrayPrototype: IL.undefinedValue,
       asyncCatchBlock: IL.undefinedValue,
@@ -212,6 +213,7 @@ export function decodeSnapshot(snapshot: Snapshot): { snapshotInfo: SnapshotIL, 
     }
     endRegion('Builtins');
 
+    snapshotInfo.builtins.stringPrototype = builtins[mvm_TeBuiltins.BIN_STRING_PROTOTYPE];
     snapshotInfo.builtins.promisePrototype = builtins[mvm_TeBuiltins.BIN_PROMISE_PROTOTYPE];
     snapshotInfo.builtins.arrayPrototype = builtins[mvm_TeBuiltins.BIN_ARRAY_PROTO];
     snapshotInfo.builtins.asyncCatchBlock = builtins[mvm_TeBuiltins.BIN_ASYNC_CATCH_BLOCK];

@@ -296,6 +296,7 @@ async function runTest(anySkips: boolean, testArtifactDir: string, yamlText: str
   vmGlobal.runGC = vm.vmImport(HOST_FUNCTION_RUN_GC_ID);
   vmGlobal.vmExport = vmExport;
   vmGlobal.overflowChecks = NativeVM.MVM_PORT_INT32_OVERFLOW_CHECKS;
+  vmGlobal.textSupport = NativeVM.MVM_TEXT_SUPPORT;
   vmGlobal.asyncTestComplete = vm.vmImport(HOST_FUNCTION_ASYNC_TEST_COMPLETE);
   const vmConsole = vmGlobal.console = vm.newObject();
   vmConsole.log = vmGlobal.print; // Alternative way of accessing the print function

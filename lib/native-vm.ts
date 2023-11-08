@@ -27,6 +27,7 @@ export interface NativeVMClass {
   // Used for code coverage analysis
   setCoverageCallback(callback: CoverageCallback | undefined): void;
   readonly MVM_PORT_INT32_OVERFLOW_CHECKS: boolean;
+  readonly MVM_TEXT_SUPPORT: number;
 }
 
 export interface NativeVM {

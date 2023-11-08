@@ -133,6 +133,7 @@ export class VirtualMachine {
 
     this.builtins = {
       arrayPrototype: IL.nullValue,
+      stringPrototype: IL.nullValue, // null initially
       promisePrototype: this.createPromisePrototype(),
       asyncContinue:  this.createAsyncContinueFunction(),
       asyncCatchBlock: this.createAsyncCatchBlock(),
@@ -2728,7 +2729,11 @@ export class VirtualMachine {
       if (propertyName === 'length') {
         return this.numberValue(objectValue.value.length);
       } else if (propertyName === '__proto__') {
-        return this.runtimeError('Prototype of string is not accessible in Microvium');
+        // Create string prototype lazily (at compile-time only)
+        if (this.builtins.stringPrototype.type === 'NullValue') {
+          this.builtins.stringPrototype = this.newObject(IL.nullValue, 0);
+        }
+        return this.builtins.stringPrototype;
       }
       if (typeof propertyName !== 'number' || (propertyName | 0) !== propertyName) {
         return IL.undefinedValue;

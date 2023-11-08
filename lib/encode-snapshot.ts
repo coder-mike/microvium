@@ -263,6 +263,7 @@ export function encodeSnapshot(snapshot: SnapshotIL, generateDebugHTML: boolean,
       // This is just for the runtime-interned strings, so it starts off as null
       // but may not be null in successive snapshots.
       [mvm_TeBuiltins.BIN_INTERNED_STRINGS]: makeHandle(encodeValue(IL.undefinedValue, 'bytecode'), 'bytecode', 'gc', 'interned-strings'),
+      [mvm_TeBuiltins.BIN_STRING_PROTOTYPE]: encodeValue(snapshot.builtins.stringPrototype, 'bytecode'),
 
 
       // Not a real builtin

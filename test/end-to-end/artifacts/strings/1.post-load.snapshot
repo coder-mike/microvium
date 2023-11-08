@@ -1,7 +1,11 @@
 export 0 = &function run;
 
 slot asciiTests = &function asciiTests;
+slot basicMultilingualPlaneTests = &function basicMultilingualPlaneTests;
+slot fullUnicodeTests = &function fullUnicodeTests;
 slot ['global:assertEqual'] = host function 3;
+slot ['global:textSupport'] = false;
+slot testStringPrototypeMethods = &function testStringPrototypeMethods;
 
 function asciiTests() {
   entry:
@@ -128,6 +132,18 @@ function asciiTests() {
     ObjectGet();
     Literal(lit undefined);
     Call(count 3, flag true);
+    Literal(lit undefined);
+    Return();
+}
+
+function basicMultilingualPlaneTests() {
+  entry:
+    Literal(lit undefined);
+    Return();
+}
+
+function fullUnicodeTests() {
+  entry:
     Literal(lit undefined);
     Return();
 }
@@ -294,12 +310,49 @@ function run() {
     BinOp(op '+');
     Literal(lit 'ab5c');
     Call(count 3, flag true);
-    // TODO: Strings as properties (interning)
-    // TODO: Strings in RAM vs ROM
-    // TODO: check interning for `obj['len' + 'th']
+    LoadGlobal(name 'testStringPrototypeMethods');
+    Literal(lit undefined);
+    Call(count 1, flag true);
     LoadGlobal(name 'asciiTests');
     Literal(lit undefined);
     Call(count 1, flag true);
+    // The `textSupport` global is set by the test harness depending on the value
+    // of MVM_TEXT_SUPPORT in the port file.
+    LoadGlobal(name 'global:textSupport');
+    Literal(lit 1);
+    BinOp(op '===');
+    LoadVar(index 0);
+    Branch(@block2, @block1);
+  block1:
+    Pop(count 1);
+    LoadGlobal(name 'global:textSupport');
+    Literal(lit 2);
+    BinOp(op '===');
+    Jump(@block2);
+  block2:
+    Branch(@block3, @block4);
+  block3:
+    LoadGlobal(name 'basicMultilingualPlaneTests');
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    Jump(@block4);
+  block4:
+    LoadGlobal(name 'global:textSupport');
+    Literal(lit 2);
+    BinOp(op '===');
+    Branch(@block5, @block6);
+  block5:
+    LoadGlobal(name 'fullUnicodeTests');
+    Literal(lit undefined);
+    Call(count 1, flag true);
+    Jump(@block6);
+  block6:
+    Literal(lit undefined);
+    Return();
+}
+
+function testStringPrototypeMethods() {
+  entry:
     Literal(lit undefined);
     Return();
 }

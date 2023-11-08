@@ -1,4 +1,4 @@
-Bytecode size: 194 B
+Bytecode size: 198 B
 
 Addr    Size
 ==== =======
@@ -7,113 +7,115 @@ Addr    Size
 0001       1     headerSize: 28
 0002       1     requiredEngineVersion: 0
 0003       1     reserved: 0
-0004       2     bytecodeSize: 194
-0006       2     expectedCRC: d063
+0004       2     bytecodeSize: 198
+0006       2     expectedCRC: 4824
 0008       4     requiredFeatureFlags: 3
 000c       2     BCS_IMPORT_TABLE: 001c
 000e       2     BCS_EXPORT_TABLE: 001e
 0010       2     BCS_SHORT_CALL_TABLE: 0022
 0012       2     BCS_BUILTINS: 0022
-0014       2     BCS_STRING_TABLE: 0030
-0016       2     BCS_ROM: 003a
-0018       2     BCS_GLOBALS: 008e
-001a       2     BCS_HEAP: 009a
+0014       2     BCS_STRING_TABLE: 0032
+0016       2     BCS_ROM: 003c
+0018       2     BCS_GLOBALS: 0092
+001a       2     BCS_HEAP: 009e
 001c    2  - # Import Table
 001c       2     [0]: 100
 001e    4  - # Export Table
-001e       4     [42]: &0074
-0022    e  - # Builtins
-0022       2     [BIN_INTERNED_STRINGS]: &0098
-0024       2     [BIN_ARRAY_PROTO]: &0094
+001e       4     [42]: &0078
+0022   10  - # Builtins
+0022       2     [BIN_INTERNED_STRINGS]: &009c
+0024       2     [BIN_ARRAY_PROTO]: &0098
 0026       2     [BIN_STR_PROTOTYPE]: undefined
 0028       2     [BIN_ASYNC_CONTINUE]: undefined
 002a       2     [BIN_ASYNC_CATCH_BLOCK]: undefined
 002c       2     [BIN_ASYNC_HOST_CALLBACK]: undefined
 002e       2     [BIN_PROMISE_PROTOTYPE]: undefined
-0030    a  - # String Table
-0030       2     [0]: &0048
-0032       2     [1]: &003c
-0034       2     [2]: &0044
-0036       2     [3]: &0058
-0038       2     [4]: &005c
-003a   54  - # ROM allocations
-003a       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
-003c       5     Value: 'push'
-0041       1     <unused>
-0042       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
-0044       2     Value: 'x'
-0046       2     Header [Size: 14, Type: TC_REF_INTERNED_STRING]
-0048       e     Value: 'Hello, World!'
-0056       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
-0058       2     Value: 'y'
+0030       2     [BIN_STRING_PROTOTYPE]: undefined
+0032    a  - # String Table
+0032       2     [0]: &004c
+0034       2     [1]: &0040
+0036       2     [2]: &0048
+0038       2     [3]: &005c
+003a       2     [4]: &0060
+003c       2 <unused>
+003e   54  - # ROM allocations
+003e       2     Header [Size: 5, Type: TC_REF_INTERNED_STRING]
+0040       5     Value: 'push'
+0045       1     <unused>
+0046       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
+0048       2     Value: 'x'
+004a       2     Header [Size: 14, Type: TC_REF_INTERNED_STRING]
+004c       e     Value: 'Hello, World!'
 005a       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
-005c       2     Value: 'z'
-005e       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
-0060       2     Value: Import Table [0] (&001c)
-0062       2     Header [Size: 4, Type: TC_REF_FUNCTION]
-0064    c  -     # Function Array_push
-0064       0         maxStackDepth: 4
-0064       0         isContinuation: 0
-0064    c  -         # Block entry
-0064       1             LoadArg(index 1)
-0065       1             LoadArg(index 0)
-0066       1             LoadArg(index 0)
-0067       3             Literal('length')
-006a       1             ObjectGet()
-006b       1             LoadVar(index 0)
-006c       1             ObjectSet()
-006d       1             Pop(count 1)
-006e       1             Literal(lit undefined)
-006f       1             Return()
-0070       2     <unused>
-0072       2     Header [Size: 4, Type: TC_REF_FUNCTION]
-0074   1a  -     # Function run
-0074       0         maxStackDepth: 4
-0074       0         isContinuation: 0
-0074   1a  -         # Block entry
-0074       3             LoadGlobal [0]
-0077       1             Literal(lit undefined)
-0078       3             LoadGlobal [1]
-007b       3             Literal(&0044)
-007e       1             ObjectGet()
-007f       2             Call(count 2, flag true)
-0081       3             LoadGlobal [0]
-0084       1             Literal(lit undefined)
-0085       3             LoadGlobal [2]
-0088       1             Literal(lit 0)
-0089       1             ObjectGet()
-008a       2             Call(count 2, flag true)
-008c       1             Literal(lit undefined)
-008d       1             Return()
-008e    c  - # Globals
-008e       2     [0]: &0060
-0090       2     [1]: &00a6
-0092       2     [2]: &00be
-0094       2     Handle: &009c
-0096       2     Handle: deleted
-0098       2     Handle: undefined
-009a   28  - # GC allocations
-009a       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-009c    8  -     # TsPropertyList
-009c       2         dpNext: null
-009e       2         dpProto: null
-00a0       2         key: &003c
-00a2       2         value: &0064
-00a4       2     Header [Size: 12, Type: TC_REF_PROPERTY_LIST]
-00a6    c  -     # TsPropertyList
-00a6       2         dpNext: null
-00a8       2         dpProto: null
-00aa       2         key: &0044
-00ac       2         value: &0048
-00ae       2         key: &0058
-00b0       2         value: &00b4
-00b2       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
-00b4    8  -     # TsPropertyList
-00b4       2         dpNext: null
-00b6       2         dpProto: null
-00b8       2         key: &005c
-00ba       2         value: &0048
-00bc       2     Header [Size: 4, Type: TC_REF_ARRAY]
-00be    4  -     # TsArray
-00be       2         dpData: null
-00c0       2         viLength: 0
+005c       2     Value: 'y'
+005e       2     Header [Size: 2, Type: TC_REF_INTERNED_STRING]
+0060       2     Value: 'z'
+0062       2     Header [Size: 2, Type: TC_REF_HOST_FUNC]
+0064       2     Value: Import Table [0] (&001c)
+0066       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+0068    c  -     # Function Array_push
+0068       0         maxStackDepth: 4
+0068       0         isContinuation: 0
+0068    c  -         # Block entry
+0068       1             LoadArg(index 1)
+0069       1             LoadArg(index 0)
+006a       1             LoadArg(index 0)
+006b       3             Literal('length')
+006e       1             ObjectGet()
+006f       1             LoadVar(index 0)
+0070       1             ObjectSet()
+0071       1             Pop(count 1)
+0072       1             Literal(lit undefined)
+0073       1             Return()
+0074       2     <unused>
+0076       2     Header [Size: 4, Type: TC_REF_FUNCTION]
+0078   1a  -     # Function run
+0078       0         maxStackDepth: 4
+0078       0         isContinuation: 0
+0078   1a  -         # Block entry
+0078       3             LoadGlobal [0]
+007b       1             Literal(lit undefined)
+007c       3             LoadGlobal [1]
+007f       3             Literal(&0048)
+0082       1             ObjectGet()
+0083       2             Call(count 2, flag true)
+0085       3             LoadGlobal [0]
+0088       1             Literal(lit undefined)
+0089       3             LoadGlobal [2]
+008c       1             Literal(lit 0)
+008d       1             ObjectGet()
+008e       2             Call(count 2, flag true)
+0090       1             Literal(lit undefined)
+0091       1             Return()
+0092    c  - # Globals
+0092       2     [0]: &0064
+0094       2     [1]: &00aa
+0096       2     [2]: &00c2
+0098       2     Handle: &00a0
+009a       2     Handle: deleted
+009c       2     Handle: undefined
+009e   28  - # GC allocations
+009e       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+00a0    8  -     # TsPropertyList
+00a0       2         dpNext: null
+00a2       2         dpProto: null
+00a4       2         key: &0040
+00a6       2         value: &0068
+00a8       2     Header [Size: 12, Type: TC_REF_PROPERTY_LIST]
+00aa    c  -     # TsPropertyList
+00aa       2         dpNext: null
+00ac       2         dpProto: null
+00ae       2         key: &0048
+00b0       2         value: &004c
+00b2       2         key: &005c
+00b4       2         value: &00b8
+00b6       2     Header [Size: 8, Type: TC_REF_PROPERTY_LIST]
+00b8    8  -     # TsPropertyList
+00b8       2         dpNext: null
+00ba       2         dpProto: null
+00bc       2         key: &0060
+00be       2         value: &004c
+00c0       2     Header [Size: 4, Type: TC_REF_ARRAY]
+00c2    4  -     # TsArray
+00c2       2         dpData: null
+00c4       2         viLength: 0
